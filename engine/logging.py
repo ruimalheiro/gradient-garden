@@ -183,6 +183,8 @@ def get_multiple_choice_log_labels(step_metrics: StepMetrics):
         return 'hellaswag', 'HellaSwag'
     elif step_metrics.step_type == StepType.WINOGRANDE:
         return 'winogrande', 'WinoGrande'
+    elif step_metrics.step_type == StepType.ARC_CHALLENGE:
+        return 'arc_challenge', 'ARC-Challenge'
     else:
         raise ValueError(f'Invalid step type for multiple choice labels: {step_metrics.step_type.value}')
 
@@ -191,7 +193,11 @@ def prepare_multiple_choice_log(
     step_metrics: StepMetrics,
     trainer_state: TrainerState
 ):
-    if step_metrics.step_type not in (StepType.HELLASWAG, StepType.WINOGRANDE,):
+    if step_metrics.step_type not in (
+        StepType.HELLASWAG,
+        StepType.WINOGRANDE,
+        StepType.ARC_CHALLENGE
+    ):
         raise ValueError(f'Invalid step type for logging: {step_metrics.step_type.value}')
 
     console_log_label, wandb_label = get_multiple_choice_log_labels(step_metrics)

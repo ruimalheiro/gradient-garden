@@ -53,6 +53,7 @@ The project began with a Llama-inspired transformer baseline and has evolved int
 - Shared multiple-choice evaluation path
   - HellaSwag
   - WinoGrande
+  - ARC-Challenge
 - Additional benchmarks can be added through the same multiple-choice evaluation flow
 
 ## Notes
@@ -66,7 +67,10 @@ The project began with a Llama-inspired transformer baseline and has evolved int
 - `datasets_preparation/` Components used for downloading, preparing, and tokenizing datasets.
 - `engine/` Trainer and runtime core components.
 - `evals/` Shared evaluation loading and scoring utilities.
-  - Multiple choice evals: HellaSwag, WinoGrande.
+  - Multiple choice evals:
+    - HellaSwag
+    - WinoGrande
+    - ARC-Challenge
 - `examples/` Templates for the `.env` config and dataset mix.
 - `metrics/` Utilities for metric aggregation.
 - `tasks/` Groups the training tasks.
@@ -101,6 +105,7 @@ The project began with a Llama-inspired transformer baseline and has evolved int
   - Evals:
     - HellaSwag: `python prepare_datasets.py --hellaswag`
     - WinoGrande: `python prepare_datasets.py --winogrande`
+    - ARC-Challenge: `python prepare_datasets.py --arc-challenge`
   - Training and validation:
     - pretraining: `python prepare_datasets.py --pretraining`
     - instruct: `python prepare_datasets.py --instruct`

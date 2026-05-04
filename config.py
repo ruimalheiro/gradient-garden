@@ -54,6 +54,7 @@ class TrainConfig(BaseSettings):
     # paths for eval datasets
     hellaswag_path: str = Field(alias='HELLASWAG_PATH')
     winogrande_path: str = Field(alias='WINOGRANDE_PATH')
+    arc_challenge_path: str = Field(alias='ARC_CHALLENGE_PATH')
 
     # system prompt
     system_prompt: str = Field(default='You are a helpful AI assistant', alias='SYSTEM_PROMPT')
@@ -129,6 +130,8 @@ class TrainConfig(BaseSettings):
     hellaswag_number_of_examples: int = Field(alias='HELLASWAG_NUMBER_OF_EXAMPLES')
     winogrande_every_x_steps: int = Field(alias='WINOGRANDE_EVERY_X_STEPS')
     winogrande_number_of_examples: int = Field(alias='WINOGRANDE_NUMBER_OF_EXAMPLES')
+    arc_challenge_every_x_steps: int = Field(alias='ARC_CHALLENGE_EVERY_X_STEPS')
+    arc_challenge_number_of_examples: int = Field(alias='ARC_CHALLENGE_NUMBER_OF_EXAMPLES')
 
     # generation
     test_prompts_path: str = Field(alias='TEST_PROMPTS_FILE')
@@ -218,7 +221,8 @@ class TrainConfig(BaseSettings):
             },
             'eval_data': {
                 'hellaswag_path': data['hellaswag_path'],
-                'winogrande_path': data['winogrande_path']
+                'winogrande_path': data['winogrande_path'],
+                'arc_challenge_path': data['arc_challenge_path']
             },
             'generation_data': {
                 'test_prompts_path': data['test_prompts_path']
@@ -305,7 +309,9 @@ class TrainConfig(BaseSettings):
                 'hellaswag_every_x_steps': data['hellaswag_every_x_steps'],
                 'hellaswag_number_of_examples': data['hellaswag_number_of_examples'],
                 'winogrande_every_x_steps': data['winogrande_every_x_steps'],
-                'winogrande_number_of_examples': data['winogrande_number_of_examples']
+                'winogrande_number_of_examples': data['winogrande_number_of_examples'],
+                'arc_challenge_every_x_steps': data['arc_challenge_every_x_steps'],
+                'arc_challenge_number_of_examples': data['arc_challenge_number_of_examples']
             },
             'generation_config': {
                 'generate_every_x_steps': data['generate_every_x_steps'],

@@ -9,23 +9,29 @@ def load_multiple_choice_eval_file(
     filepath,
     ddp,
     is_master_process,
-    num_choices,
     size=None
 ):
     # Loads the file and broadcasts to other ranks
     def prepare_line(line):
         example = json.loads(line)
+        tokens = torch.tensor(example['tokens'], dtype=torch.long)
+        mask = torch.tensor(example['mask'], dtype=torch.long)
+        label_index = int(example['label_index'])
+
+        assert tokens.ndim == 2
+        assert mask.shape == tokens.shape
+        assert 0 <= label_index < tokens.size(0)
         return {
-            'tokens': torch.tensor(example['tokens'], dtype=torch.long),
-            'mask': torch.tensor(example['mask'], dtype=torch.long),
-            'label_index': int(example['label_index']),
+            'tokens': tokens,
+            'mask': mask,
+            'label_index': label_index,
             'valid': True
         }
 
-    def create_dummy(shards):
+    def create_dummy():
         return {
-            'tokens': torch.zeros_like(shards[0][0]['tokens']) if shards and shards[0] else torch.zeros((num_choices, 2), dtype=torch.long),
-            'mask': torch.ones_like(shards[0][0]['mask']) if shards and shards[0] else torch.ones((num_choices, 2), dtype=torch.long),
+            'tokens': torch.zeros((1, 2), dtype=torch.long),
+            'mask': torch.zeros((1, 2), dtype=torch.long),
             'label_index': -1,
             'valid': False
         }
@@ -47,7 +53,7 @@ def load_multiple_choice_eval_file(
             shards.append([])
 
         # need to pad as each shard needs to have same size so all ranks call forward()
-        dummy = create_dummy(shards)
+        dummy = create_dummy()
         for i in range(world_size):
             target = shard_size - len(shards[i])
             if target > 0:
@@ -82,8 +88,11 @@ def estimate_best_candidate_index_from_logits(tokens, mask, logits):
     masked_shift_losses = shift_losses.masked_fill(shift_mask == 0, 0.0)
 
     # calculate loss for each candidate completion.
+    scored_token_counts = shift_mask.sum(dim=1)
     sum_loss = masked_shift_losses.sum(dim=1)
-    avg_loss = sum_loss / shift_mask.sum(dim=1).clamp_min(1)
+
+    avg_loss = sum_loss / scored_token_counts.clamp_min(1)
+    avg_loss = avg_loss.masked_fill(scored_token_counts == 0, float('inf'))
 
     # Pick the one with lowest loss.
     estimated_correct = avg_loss.argmin().item()

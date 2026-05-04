@@ -38,27 +38,29 @@ def prepare_hellaswag_dataset():
         context = example['ctx']
         label_index = int(example['label']) # Index for the correct completion
         endings = example['endings'] # Candidates - always 4
+        num_choices = len(endings)
 
         context_tokens = tokenizer.encode(context)
 
         tokens_rows = []
         mask_rows = []
         for ending in endings:
-            ending_tokens = tokenizer.encode(ending)
-            tokens_rows.append(context_tokens + ending_tokens)
+            candidate_text = context + ending
+            candidate_tokens = tokenizer.encode(candidate_text)
+            tokens_rows.append(candidate_tokens)
 
             mask_row = torch.cat([
                 torch.zeros(len(context_tokens), dtype=torch.long),
-                torch.ones(len(ending_tokens), dtype=torch.long)
+                torch.ones(len(candidate_tokens) - len(context_tokens), dtype=torch.long)
             ])
             mask_rows.append(mask_row)
 
         # rows can have different lengths so pick max for row length.
         max_len = max(len(row) for row in tokens_rows)
 
-        # (4 candidates * max length)
-        tokens = torch.zeros((4, max_len), dtype=torch.long)
-        mask = torch.zeros((4, max_len), dtype=torch.long)
+        # (num_choices candidates * max length)
+        tokens = torch.zeros((num_choices, max_len), dtype=torch.long)
+        mask = torch.zeros((num_choices, max_len), dtype=torch.long)
         for i, (tokens_row, mask_row) in enumerate(zip(tokens_rows, mask_rows)):
             tokens[i, :len(tokens_row)] = torch.tensor(tokens_row, dtype=torch.long)
             mask[i, :len(mask_row)] = mask_row
