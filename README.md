@@ -2,7 +2,7 @@
 
 Gradient Garden is a research playground for model training, evaluation, and experimentation across architectures, benchmarks, and recipes.
 
-The project began with a Llama-inspired transformer baseline and has evolved into a broader codebase for training, evaluation, and experimentation across modern machine learning models, distributed training workflows, and post-training methods.
+The project began with a decoder-only transformer baseline and has evolved into a broader codebase for training, evaluation, and experimentation across modern machine learning models, distributed training workflows, and post-training methods.
 
 ## Current focus
 - Distributed training
@@ -58,10 +58,10 @@ The project began with a Llama-inspired transformer baseline and has evolved int
 
 ## Notes
 - The project is currently focused on CUDA-based training workflows.
-- The initial model implementation was inspired by the Llama family, but the codebase is not intended to stay tied to Llama specifically.
+- The current model implementation is a decoder-only transformer with optional MoE feed-forward blocks, but the codebase is intended to support multiple model architectures over time.
 - The project can be adapted to other datasets and model architectures.
 - By default, the project uses a Hugging Face tokenizer.
-- It also supports a `tiktoken`-based tokenizer with a configuration similar to the Llama 3 tokenizer, but the local BPE/tokenizer file is **not** included in this repository and must be provided separately.
+- It also supports a `tiktoken` tokenizer that can be loaded from a local BPE file. For now, this path expects a tokenizer compatible with the Llama 3 tiktoken configuration and chat/control tokens, e.g. (`<|begin_of_text|>`, `<|end_of_text|>`, `<|start_header_id|>`, `<|end_header_id|>`, `<|eot_id|>`). The local tokenizer file is **not** included in this repository and must be provided separately. This will be made more generic later.
 
 ## Project structure
 - `datasets_preparation/` Components used for downloading, preparing, and tokenizing datasets.
@@ -107,9 +107,9 @@ The project began with a Llama-inspired transformer baseline and has evolved int
     - WinoGrande: `python prepare_datasets.py --winogrande`
     - ARC-Challenge: `python prepare_datasets.py --arc-challenge`
   - Training and validation:
-    - pretraining: `python prepare_datasets.py --pretraining`
-    - instruct: `python prepare_datasets.py --instruct`
-    - dpo: `python prepare_datasets.py --dpo`
+    - Pretraining: `python prepare_datasets.py --pretraining`
+    - Instruct: `python prepare_datasets.py --instruct`
+    - DPO: `python prepare_datasets.py --dpo`
   - **NOTE**: All the target paths can be modified in the `.env` file. (Check config.py for more details.)
   - The training dataset preparation commands also support a custom mix file by passing `--mix-file <file_path>`. Check `examples/pretraining_data_mix.example.json` for an example. Local custom mix files should use the `.local.json` suffix, for example `pretraining_debug.local.json`, so they are ignored by Git. If no `--mix-file` is provided, the built-in default mix for that stage is used.
     - The default mix can be found in `datasets_preparation/default_mixes.py`
