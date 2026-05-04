@@ -95,6 +95,7 @@ class Trainer:
         self.trainer_ctx = None
         self.hellaswag_data = None
         self.winogrande_data = None
+        self.arc_challenge_data = None
         self.test_generation_prompts = None
         self.tokenizer = None
         self.model_config = None
@@ -161,6 +162,7 @@ class Trainer:
     def load_eval_assets(self):
         self.load_hellaswag_eval_data()
         self.load_winogrande_eval_data()
+        self.load_arc_challenge_eval_data()
 
     def load_generation_assets(self):
         self.load_test_generation_prompts()
@@ -293,6 +295,16 @@ class Trainer:
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
             size=self.config.winogrande_number_of_examples
+        )
+
+    def load_arc_challenge_eval_data(self):
+        if self.config.arc_challenge_every_x_steps <= 0 or self.config.training_stage != TrainingStage.PRETRAIN:
+            return
+        self.arc_challenge_data = load_multiple_choice_eval_file(
+            filepath=f'{self.config.arc_challenge_path}/arc_challenge_val.jsonl',
+            ddp=self.distributed_ctx.ddp,
+            is_master_process=self.distributed_ctx.is_master_process,
+            size=self.config.arc_challenge_number_of_examples
         )
     
     def build_tokenizer(self):
@@ -599,7 +611,11 @@ class Trainer:
                 moe_metrics=moe_metrics,
                 console_logs=console_logs
             )
-        elif step_metrics.step_type == StepType.HELLASWAG or step_metrics.step_type == StepType.WINOGRANDE:
+        elif step_metrics.step_type in (
+            StepType.HELLASWAG,
+            StepType.WINOGRANDE,
+            StepType.ARC_CHALLENGE
+        ):
             console_logs, wanb_log = prepare_multiple_choice_log(
                 step_metrics=step_metrics,
                 trainer_state=self.trainer_state
@@ -951,6 +967,15 @@ class Trainer:
         )
 
     @torch.inference_mode()
+    def run_arc_challenge_eval(self, pbar):
+        self.run_multiple_choice_eval(
+            pbar=pbar,
+            data=self.arc_challenge_data,
+            tqdm_label='ARC-Challenge validation',
+            step_type=StepType.ARC_CHALLENGE
+        )
+
+    @torch.inference_mode()
     def run_generation(self, pbar):
         if not self.trainer_ctx.distributed.is_master_process:
             return
@@ -984,6 +1009,8 @@ class Trainer:
             self.run_hellaswag_eval(pbar)
         if self.should_run(step, self.config.winogrande_every_x_steps, is_last_step):
             self.run_winogrande_eval(pbar)
+        if self.should_run(step, self.config.arc_challenge_every_x_steps, is_last_step):
+            self.run_arc_challenge_eval(pbar)
         if self.should_run(step, self.config.generate_every_x_steps, is_last_step):
             self.run_generation(pbar)
 
