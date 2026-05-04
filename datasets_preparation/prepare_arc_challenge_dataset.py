@@ -10,14 +10,14 @@ from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_pr
 from datasets import load_dataset
 
 
-def prepare_winogrande_dataset():
+def prepare_arc_challenge_dataset():
     number_of_processes = get_max_number_of_cpu_processes()
 
     current_dir = Path(__file__).resolve().parent.parent
 
-    data_cache_dir = current_dir / config.winogrande_path
+    data_cache_dir = current_dir / config.arc_challenge_path
     data_cache_dir.mkdir(parents=True, exist_ok=True)
-    data_filename = data_cache_dir / 'winogrande_val.jsonl'
+    data_filename = data_cache_dir / 'arc_challenge_val.jsonl'
 
     tokenizer = init_tokenizer(config.tokenizer_checkpoint_path, config.huggingface_tokenizer)
 
@@ -25,35 +25,41 @@ def prepare_winogrande_dataset():
         """
         Sample example:
         {
-            "sentence": "Only the bag got melted and not the wood when they were inside the flame. The _ is soft.",
-            "option1": "wood",
-            "option2": "bag",
-            "answer": "2",
+            "id": "Mercury_SC_407695",
+            "question": "Juan and LaKeisha roll a few objects down a ramp. They want to see which object rolls the farthest. What should they do so they can repeat their investigation?",
+            "choices": {
+                "text": [
+                    "Put the objects in groups.",
+                    "Change the height of the ramp.",
+                    "Choose different objects to roll.",
+                    "Record the details of the investigation.",
+                ],
+                "label": ["A", "B", "C", "D"],
+            },
+            "answerKey": "D",
         }
-
         """
-        sentence = example['sentence']
-        options = [example['option1'].strip(), example['option2'].strip()]
-        num_choices = len(options)
-        label_index = int(example['answer']) - 1
+        question = example['question']
+        choices_texts = example['choices']['text']
+        num_choices = len(choices_texts)
+        label_index = example['choices']['label'].index(example['answerKey'])
 
-        if sentence.count('_') != 1:
-            raise ValueError(f'Expected exactly one blank in sentence, got: {sentence}')
-        prefix, suffix = sentence.split('_', 1)
-        prefix_tokens = tokenizer.encode(prefix)
+        prompt = f'Question: {question}\nAnswer: '
+        prompt_tokens = tokenizer.encode(prompt)
 
         tokens_rows = []
         mask_rows = []
-        for option in options:
-            candidate_text = prefix + option + suffix
+        for choice_text in choices_texts:
+            candidate_text = prompt + choice_text
             candidate_tokens = tokenizer.encode(candidate_text)
 
+            tokens_rows.append(candidate_tokens)
+
             mask_row = torch.cat([
-                torch.zeros(len(prefix_tokens), dtype=torch.long),
-                torch.ones(len(candidate_tokens) - len(prefix_tokens), dtype=torch.long)
+                torch.zeros(len(prompt_tokens), dtype=torch.long),
+                torch.ones(len(candidate_tokens) - len(prompt_tokens), dtype=torch.long)
             ])
 
-            tokens_rows.append(candidate_tokens)
             mask_rows.append(mask_row)
 
         max_len = max(len(row) for row in tokens_rows)
@@ -74,18 +80,18 @@ def prepare_winogrande_dataset():
 
     if not data_filename.exists():
         ds = load_dataset(
-            'allenai/winogrande',
-            name='winogrande_debiased',
+            'allenai/ai2_arc',
+            name='ARC-Challenge',
             split='validation',
             num_proc=number_of_processes,
             token=config.hf_token
         )
 
         with open(data_filename, 'w', encoding='utf-8') as file:
-            for example in tqdm(ds, desc='Preparing WinoGrande eval dataset'):
+            for example in tqdm(ds, desc='Preparing ARC-Challenge eval dataset'):
                 processed_example = prepare_example(example)
                 json.dump(processed_example, file, ensure_ascii=False)
                 file.write('\n')
-        print(f'WinoGrande preprocessing completed and stored at: {data_filename}')
+        print(f'ARC-Challenge preprocessing completed and stored at: {data_filename}')
     else:
-        print(f'WinoGrande preprocessed file already exists: {data_filename}')
+        print(f'ARC-Challenge preprocessed file already exists: {data_filename}')

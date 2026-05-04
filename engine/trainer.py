@@ -282,7 +282,6 @@ class Trainer:
             filepath=f'{self.config.hellaswag_path}/hellaswag_val.jsonl',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
-            num_choices=4,
             size=self.config.hellaswag_number_of_examples
         )
 
@@ -293,7 +292,6 @@ class Trainer:
             filepath=f'{self.config.winogrande_path}/winogrande_val.jsonl',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
-            num_choices=2,
             size=self.config.winogrande_number_of_examples
         )
     
@@ -907,15 +905,16 @@ class Trainer:
             leave=False
         ):
             tokens, mask, label_index, valid = example['tokens'], example['mask'], example['label_index'], example['valid']
-            if self.config.use_fsdp and not valid:
-                # Some examples might be dummy in FSDP
-                continue
 
             tokens = tokens.to(device)
             mask = mask.to(device)
 
             with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
                 logits = self.model(tokens)['logits']
+
+            if not valid:
+                # We want all ranks to still call forward()...
+                continue
 
             predicted_label_index = estimate_best_candidate_index_from_logits(tokens, mask, logits)
             num_total += 1
@@ -928,7 +927,7 @@ class Trainer:
             dist.all_reduce(num_correct_norm, op=dist.ReduceOp.SUM)
             num_total = num_total.item()
             num_correct_norm = num_correct_norm.item()
-        acc_norm = num_correct_norm / num_total
+        acc_norm = num_correct_norm / num_total if num_total > 0 else 0.0
 
         step_metrics = StepMetrics(step_type=step_type, accuracy=acc_norm)
         self.log_step_metrics(step_metrics=step_metrics, pbar=pbar)
