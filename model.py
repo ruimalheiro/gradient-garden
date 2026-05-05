@@ -1,63 +1,10 @@
 import torch
 import torch.nn.functional as F
-import json
 
 from torch import nn
-from dataclasses import dataclass
 from kv_cache import KVCache
+from config import ModelConfig
 
-
-@dataclass
-class ModelConfig:
-    dim: int
-    n_layers: int
-    n_heads: int
-    n_kv_heads: int
-    multiple_of: int
-    ffn_dim_multiplier: float
-    norm_eps: float
-    rope_theta: float
-    max_batch_size: int
-    max_seq_len: int
-    tokenizer: object = None
-    vocab_size: int = None
-    pad_token_id: int = None
-    stop_tokens: object = None
-    ignore_index: int = None
-    is_moe: bool = False
-    moe_num_experts: int = None
-    moe_expert_dim: int = None
-    moe_top_k: int = None
-    moe_load_balancing_coef: float = None
-    moe_z_loss_coef: float = None
-    moe_compute_stats: bool = False
-
-    def to_dict(self):
-        return {
-            'dim': self.dim,
-            'n_layers': self.n_layers,
-            'n_heads': self.n_heads,
-            'n_kv_heads': self.n_kv_heads,
-            'vocab_size': self.vocab_size,
-            'multiple_of': self.multiple_of,
-            'ffn_dim_multiplier': self.ffn_dim_multiplier,
-            'norm_eps': self.norm_eps,
-            'rope_theta': self.rope_theta,
-            'max_batch_size': self.max_batch_size,
-            'max_seq_len': self.max_seq_len,
-            'pad_token_id': self.pad_token_id,
-            'stop_tokens': list(self.stop_tokens),
-            'is_moe': self.is_moe,
-            'moe_num_experts': self.moe_num_experts,
-            'moe_expert_dim': self.moe_expert_dim,
-            'moe_top_k': self.moe_top_k,
-            'moe_load_balancing_coef': self.moe_load_balancing_coef,
-            'moe_z_loss_coef': self.moe_z_loss_coef,
-            'moe_compute_stats': self.moe_compute_stats
-        }
-
-    def __repr__(self):
-        return json.dumps(self.to_dict(), indent=4)
 
 def precompute_rope_freqs(head_dim, sequence_length, theta=10000.0, device='cpu', dtype=torch.float32):
     ''' Computes the frequencies that will be used for rope (rotary positional ebedding). Without complex numbers.
@@ -342,9 +289,9 @@ class TransformerBlock(nn.Module):
         self.n_heads = config.n_heads
         self.dim = config.dim
         self.attention = Attention(config)
-        self.is_moe = config.is_moe
+        self.is_moe = config.moe.enabled
 
-        if config.is_moe:
+        if self.is_moe:
             self.feed_forward = MoEFeedForward(
                 dim=config.dim,
                 hidden_dim=4 * config.dim,
@@ -378,18 +325,22 @@ class TransformerBlock(nn.Module):
         return output, aux
 
 class Transformer(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config: ModelConfig, tokenizer, ignore_index):
         super(Transformer, self).__init__()
 
         self.config = config
+        self.tokenizer = tokenizer
+        self.vocab_size = tokenizer.vocab_size
+        self.pad_token_id = tokenizer.pad_id
+        self.stop_tokens = tokenizer.stop_tokens
+        self.ignore_index = ignore_index
 
-        self.vocab_size = config.vocab_size
         self.n_layers = config.n_layers
 
         self.tok_embeddings = nn.Embedding(
-            config.vocab_size,
+            self.vocab_size,
             config.dim,
-            padding_idx=config.pad_token_id
+            padding_idx=self.pad_token_id
         )
 
         self.layers = nn.ModuleList()
@@ -397,9 +348,7 @@ class Transformer(nn.Module):
             self.layers.append(TransformerBlock(layer_id, config))
 
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
-        self.output = nn.Linear(config.dim, config.vocab_size, bias=False)
-
-        self.ignore_index = config.ignore_index
+        self.output = nn.Linear(config.dim, self.vocab_size, bias=False)
 
         rope_freqs = precompute_rope_freqs(
             config.dim // config.n_heads,

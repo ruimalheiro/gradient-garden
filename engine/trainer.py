@@ -49,10 +49,7 @@ from config import (
     TrainingPrecision
 )
 from tokenizer import init_tokenizer
-from model import (
-    ModelConfig, 
-    Transformer
-)
+from model import (Transformer)
 from dataloaders import init_data_loaders
 from checkpoints import (
     save_checkpoint,
@@ -117,16 +114,16 @@ class Trainer:
         config = self.config
 
         # device type
-        if self.config.device_type != DeviceType.CUDA:
+        if self.config.runtime.device_type != DeviceType.CUDA:
             raise ValueError('Only cuda is supported at the moment.')
 
         # model config
-        if config.dim % config.n_heads != 0:
-            raise ValueError(f'"dim" ({config.dim}) must be divisible by "n_heads" ({config.n_heads})')
-        if config.n_kv_heads > config.n_heads:
-            raise ValueError(f'"n_kv_heads" ({config.n_kv_heads}) must be less or equal to "n_heads" ({config.n_heads})')
-        if config.n_heads % config.n_kv_heads != 0:
-            raise ValueError(f'"n_heads" ({config.n_heads}) must be divisible by n_kv_heads" ({config.n_kv_heads})')
+        if config.model.dim % config.model.n_heads != 0:
+            raise ValueError(f'"dim" ({config.model.dim}) must be divisible by "n_heads" ({config.model.n_heads})')
+        if config.model.n_kv_heads > config.model.n_heads:
+            raise ValueError(f'"n_kv_heads" ({config.model.n_kv_heads}) must be less or equal to "n_heads" ({config.model.n_heads})')
+        if config.model.n_heads % config.model.n_kv_heads != 0:
+            raise ValueError(f'"n_heads" ({config.model.n_heads}) must be divisible by n_kv_heads" ({config.model.n_kv_heads})')
 
     def setup(self):
         self.setup_global_torch_optimizations()
@@ -190,20 +187,23 @@ class Trainer:
         self.task_assets = self.task.build_assets(tokenizer=self.tokenizer, model=self.model)
 
     def build_distributed_context(self):
-        ddp, ddp_rank, ddp_local_rank, ddp_world_size, is_master_process, device = init_multi_gpu(self.config.seed, self.config.device_type.value)
+        ddp, ddp_rank, ddp_local_rank, ddp_world_size, is_master_process, device = init_multi_gpu(
+            self.config.training.seed,
+            self.config.runtime.device_type.value
+        )
         self.distributed_ctx = DistributedContext(
             ddp=ddp,
             ddp_rank=ddp_rank,
             ddp_local_rank=ddp_local_rank,
             ddp_world_size=ddp_world_size,
-            use_fsdp=self.config.use_fsdp,
+            use_fsdp=self.config.runtime.use_fsdp,
             is_master_process=is_master_process
         )
         return device
 
     def build_device_context(self, device):
         self.device_ctx = DeviceContext(
-            device_type=self.config.device_type.value,
+            device_type=self.config.runtime.device_type.value,
             device=device
         )
 
@@ -211,7 +211,7 @@ class Trainer:
         logger.set_master(self.distributed_ctx.is_master_process)
 
     def build_precision_context(self):
-        if self.config.training_precision == TrainingPrecision.BF16:
+        if self.config.runtime.training_precision == TrainingPrecision.BF16:
             self.precision_ctx = PrecisionContext(
                 use_autocast=True,
                 scaler=None,
@@ -220,7 +220,7 @@ class Trainer:
                 fsdp_mp=MixedPrecisionPolicy(
                     param_dtype=torch.bfloat16,
                     reduce_dtype=torch.float32
-                ) if self.config.use_fsdp else None
+                ) if self.config.runtime.use_fsdp else None
             )
         elif self.config.training_precision == TrainingPrecision.FP16:
             self.precision_ctx = PrecisionContext(
@@ -248,14 +248,14 @@ class Trainer:
         #### BATCH SIZE CHECKS
         # NOTE: total_batch_size is the total batch size in tokens. The model max_batch_size is the number of sequences per device during forward pass (micro batches).
         # The total batch size must be a multiple of (max_batch_size * max_seq_len * ddp_world_size). This is needed for the gradient accumulation steps to be calculated correctly.
-        if self.config.total_batch_size % (self.config.max_batch_size * self.config.max_seq_len * ddp_world_size) != 0:
+        if self.config.training.total_batch_size % (self.config.model.max_batch_size * self.config.model.max_seq_len * ddp_world_size) != 0:
             raise ValueError('total_batch_size must be divisible by (max_batch_size * max_seq_len * ddp_world_size)')
 
         # Gradient accumulation steps
-        grad_accum_steps = self.config.total_batch_size // (self.config.max_batch_size * self.config.max_seq_len * ddp_world_size)
+        grad_accum_steps = self.config.training.total_batch_size // (self.config.model.max_batch_size * self.config.model.max_seq_len * ddp_world_size)
 
         # Final check to validate previous calculations.
-        if self.config.total_batch_size != (self.config.max_batch_size * self.config.max_seq_len * ddp_world_size * grad_accum_steps):
+        if self.config.training.total_batch_size != (self.config.model.max_batch_size * self.config.model.max_seq_len * ddp_world_size * grad_accum_steps):
             raise ValueError('total batch size MUST EQUAL (max_batch_size * max_seq_len * ddp_world_size * grad_accum_steps)')
 
         return grad_accum_steps
@@ -269,88 +269,87 @@ class Trainer:
         )
 
     def load_test_generation_prompts(self):
-        if self.config.generate_every_x_steps <= 0:
+        if self.config.generation.generate_every_x_steps <= 0:
             return
-        test_prompts_data=json.loads(Path(self.config.test_prompts_path).read_text())
-        stage = self.config.training_stage.value
+        test_prompts_data=json.loads(Path(self.config.paths.test_prompts_path).read_text())
+        stage = self.config.training.stage.value
         if stage not in test_prompts_data:
             raise ValueError(f'Missing test prompts for training stage: {stage}')
         self.test_generation_prompts = test_prompts_data[stage]
 
     def load_hellaswag_eval_data(self):
-        if self.config.hellaswag_every_x_steps <= 0 or self.config.training_stage != TrainingStage.PRETRAIN:
+        if self.config.evals.hellaswag.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAIN:
             return
         self.hellaswag_data = load_multiple_choice_eval_file(
-            filepath=f'{self.config.hellaswag_path}/hellaswag_val.jsonl',
+            filepath=f'{self.config.paths.evals.hellaswag_path}/hellaswag_val.jsonl',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
-            size=self.config.hellaswag_number_of_examples
+            size=self.config.evals.hellaswag.number_of_examples
         )
 
     def load_winogrande_eval_data(self):
-        if self.config.winogrande_every_x_steps <= 0 or self.config.training_stage != TrainingStage.PRETRAIN:
+        if self.config.evals.winogrande.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAIN:
             return
         self.winogrande_data = load_multiple_choice_eval_file(
-            filepath=f'{self.config.winogrande_path}/winogrande_val.jsonl',
+            filepath=f'{self.config.paths.evals.winogrande_path}/winogrande_val.jsonl',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
-            size=self.config.winogrande_number_of_examples
+            size=self.config.evals.winogrande.number_of_examples
         )
 
     def load_arc_challenge_eval_data(self):
-        if self.config.arc_challenge_every_x_steps <= 0 or self.config.training_stage != TrainingStage.PRETRAIN:
+        if self.config.evals.arc_challenge.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAIN:
             return
         self.arc_challenge_data = load_multiple_choice_eval_file(
-            filepath=f'{self.config.arc_challenge_path}/arc_challenge_val.jsonl',
+            filepath=f'{self.config.paths.evals.arc_challenge_path}/arc_challenge_val.jsonl',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
-            size=self.config.arc_challenge_number_of_examples
+            size=self.config.evals.arc_challenge.number_of_examples
         )
     
     def build_tokenizer(self):
-        self.tokenizer = init_tokenizer(self.config.tokenizer_checkpoint_path, self.config.huggingface_tokenizer)
+        self.tokenizer = init_tokenizer(
+            self.config.tokenizer.checkpoint_path,
+            self.config.tokenizer.huggingface_tokenizer
+        )
 
     def build_model(self):
-        config = self.config
-        tokenizer = self.tokenizer
-        self.model_config = ModelConfig(
-            dim=config.dim,
-            n_layers=config.n_layers,
-            n_heads=config.n_heads,
-            n_kv_heads=config.n_kv_heads,
-            multiple_of=config.multiple_of,
-            ffn_dim_multiplier=config.ffn_dim_multiplier,
-            norm_eps=config.norm_eps,
-            rope_theta=config.rope_theta,
-            max_batch_size=config.max_batch_size,
-            max_seq_len=config.max_seq_len,
-            # tokenizer aux config
-            tokenizer=tokenizer,
-            vocab_size=tokenizer.vocab_size,
-            pad_token_id=tokenizer.pad_id,
-            stop_tokens=tokenizer.stop_tokens,
-            ignore_index=config.ignore_index,
-            # moe
-            is_moe=config.is_moe,
-            moe_num_experts=config.moe_num_experts,
-            moe_expert_dim=config.moe_expert_dim,
-            moe_top_k=config.moe_top_k,
-            moe_load_balancing_coef=config.moe_load_balancing_coef,
-            moe_z_loss_coef=config.moe_z_loss_coef,
-            moe_compute_stats=config.moe_compute_stats
+        self.model = Transformer(
+            self.config.model,
+            self.tokenizer,
+            self.config.tokenizer.ignore_index
         )
-        self.model = Transformer(self.model_config)
+
+    def is_pretraining(self):
+        return self.config.training.stage == TrainingStage.PRETRAIN
+
+    def is_instruct(self):
+        return self.config.training.stage == TrainingStage.INSTRUCT
+
+    def is_dpo(self):
+        return self.config.training.stage == TrainingStage.DPO
+
+    def get_dataloader_root_path(self):
+        dataloaders_paths = self.config.paths.dataloaders
+        if self.is_pretraining():
+            return dataloaders_paths.pretrain_root_path
+        elif is_instruct():
+            return dataloaders_paths.instruct_root_path
+        elif is_dpo():
+            return dataloaders_paths.dpo
+        else:
+            raise ValueError('No valid dataloader root path')
 
     def build_data_loaders(self):
         self.train_loader, self.val_loader = init_data_loaders(
-            batch_size=self.config.max_batch_size,
-            sequence_length=self.config.max_seq_len,
+            batch_size=self.config.model.max_batch_size,
+            sequence_length=self.config.model.max_seq_len,
             is_master_process=self.distributed_ctx.is_master_process,
             process_rank=self.distributed_ctx.ddp_rank,
             num_processes=self.distributed_ctx.ddp_world_size,
-            data_root=self.config.dataloader_root_path,
+            data_root=self.get_dataloader_root_path(),
             pad_id=self.tokenizer.pad_id,
-            training_stage=self.config.training_stage.value
+            training_stage=self.config.training.stage.value
         )
 
     def resolve_checkpoint_request(self):

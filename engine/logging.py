@@ -1,7 +1,6 @@
 import math
 
-from config import TrainingStage, TrainConfig
-from model import ModelConfig
+from config import TrainingStage, GlobalConfig
 from checkpoints import CheckpointData
 from engine.context import TrainerContext
 from engine.optim import OptimizerPlan
@@ -16,8 +15,7 @@ from logger import logger
 
 def prepare_workload_summary(
     *,
-    config: TrainConfig,
-    model_config: ModelConfig,
+    config: GlobalConfig,
     checkpoint_data: CheckpointData,
     trainer_ctx: TrainerContext,
     optimizer_plan: OptimizerPlan,
