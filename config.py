@@ -11,7 +11,7 @@ class DeviceType(str, Enum):
     CUDA = 'cuda'
 
 class TrainingStage(str, Enum):
-    PRETRAIN = 'pretrain'
+    PRETRAINING = 'pretraining'
     INSTRUCT = 'instruct'
     DPO = 'dpo'
 
@@ -26,16 +26,24 @@ class ThirdPartyConfig(BaseSettings):
     hf_token: Annotated[str | None, Field(alias='HF_TOKEN', exclude=True)] = None
     hf_home: str = Field(default='./cache', alias='HF_HOME')
 
+class DatasetPreparationConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    hf_include_source_id: bool = False
+    mp_pool_chunk_size: int = 64
+    hf_map_batch_size: int = 1000
+    hf_map_writer_batch_size: int = 1000
+
 class RuntimeConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     device_type: DeviceType = DeviceType.CUDA
     training_precision: TrainingPrecision = TrainingPrecision.BF16
     use_torch_compile: bool = False
-    use_fsdp: bool = False
+    use_fsdp: bool = True
+    number_of_cpu_processes: int = 0
 
 class MoEConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    enabled: bool = False
+    enabled: bool = True
     num_experts: int = 8
     expert_dim: int = 768
     top_k: int = 2
@@ -57,18 +65,22 @@ class ModelConfig(BaseModel):
     max_seq_len: int = 1024
     moe: MoEConfig = Field(default_factory=MoEConfig)
 
+class PromptConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    system_prompt: str = 'You are a helpful AI assistant'
+
 class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    stage: TrainingStage = TrainingStage.PRETRAIN
+    stage: TrainingStage = TrainingStage.DPO
     seed: int = 42
     total_batch_size: int = 524288
-    max_steps: int = -1
-    early_stopping_patience: int = 1_000_000
+    max_steps: int = 200
+    early_stopping_patience: int = 200
     early_stopping_patience_skip_steps: int = 0
 
 class EvalTaskConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    every_x_steps: int = 2
+    every_x_steps: int = -1
     number_of_examples: int = 200
 
 class EvalsConfig(BaseModel):
@@ -77,30 +89,44 @@ class EvalsConfig(BaseModel):
     winogrande: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
     arc_challenge: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
 
+class DatasetPreparationPathsConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    pretraining_target_path: str = './datasets/pretraining'
+    instruct_target_path: str = './datasets/instruct'
+    dpo_target_path: str = './datasets/dpo'
+
+class DataloaderPathsConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    pretraining_root_path: str = './datasets/pretraining'
+    instruct_root_path: str = './datasets/instruct'
+    dpo_root_path: str = './datasets/dpo'
+
 class EvalPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     hellaswag_path: str = './datasets/hellaswag'
     winogrande_path: str = './datasets/winogrande'
     arc_challenge_path: str = './datasets/arc_challenge'
 
-class DataloaderPathsConfig(BaseModel):
+class CheckpointPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    pretrain_root_path: str = './datasets/pretrain'
-    instruct_root_path: str = './datasets/instruct'
-    dpo_root_path: str = './datasets/dpo'
-
-class CheckpointsPathConfig(BaseModel):
-    pass
+    pretraining_save_path: str = './checkpoints/pretraining'
+    pretraining_load_path: str = './checkpoints/pretraining'
+    instruct_save_path: str = './checkpoints/instruct'
+    instruct_load_path: str = './checkpoints/instruct'
+    dpo_save_path: str = './checkpoints/dpo'
+    dpo_load_path: str = './checkpoints/dpo'
 
 class PathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    data_preparation: DatasetPreparationPathsConfig = Field(default_factory=DatasetPreparationPathsConfig)
+    dataloaders: DataloaderPathsConfig = Field(default_factory=DataloaderPathsConfig)
     evals: EvalPathsConfig = Field(default_factory=EvalPathsConfig)
     test_prompts_path: str = './test_prompts.json'
-    dataloaders: DataloaderPathsConfig = Field(default_factory=DataloaderPathsConfig)
+    checkpoints: CheckpointPathsConfig = Field(default_factory=CheckpointPathsConfig)
 
 class GenerationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    generate_every_x_steps: int = 2
+    generate_every_x_steps: int = 1
     max_test_gen_len: int = 256
 
 class TokenizerConfig(BaseModel):
@@ -111,98 +137,92 @@ class TokenizerConfig(BaseModel):
 
 class LoRAConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    enabled: bool = False
+    enabled: bool = True
+    rank: int = 16
+    alpha: int = 8
+    dropout: float = 0.05
+    target_modules: list[str] = Field(default_factory=lambda: ['wq', 'wk', 'wv', 'wo', 'w1', 'w3'])
 
-class GlobalConfig(BaseSettings):
+class DistillationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    enabled: bool = True
+    temperature: float = 2.0
+    teacher_model_checkpoint: str = 'HuggingFaceTB/SmolLM2-360M'
 
+class DPOConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    beta: float = 0.1
+
+class AdamWConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    min_lr: float = 3e-5
+    max_lr: float = 3e-4
+    weight_decay: float = 0.1
+    betas: tuple[float, float] = (0.9, 0.95)
+    use_fused: bool | None = None
+    warmup_steps: int = 2000
+
+class MuonConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    enabled: bool = True
+    min_lr: float = 3e-5
+    max_lr: float = 3e-4
+    weight_decay: float = 0.0
+    momentum: float = 0.95
+    warmup_steps: int = 2000
+
+class OptimizersConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    adamw: AdamWConfig = Field(default_factory=AdamWConfig)
+    muon: MuonConfig = Field(default_factory=MuonConfig)
+
+class WandbConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    enabled: bool = False
+    project_name: str = 'gradient-garden'
+    run_name: str = 'debug'
+
+class TorchProfilerConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    enabled: bool = False
+    schedule_skip_first: int = 0
+    schedule_wait: int = 1
+    schedule_warmup: int = 1
+    schedule_active: int = 1
+    schedule_repeat: int = 0
+
+class ValidationConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    validate_every_x_steps: int = -1
+    validation_steps: int = 100
+
+class CheckpointingConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    save_checkpoints: bool = False
+    save_best_only: bool = False
+    save_every_x_steps: int = 1
+    max_number_checkpoints: int = 5
+
+class GlobalConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     third_party: ThirdPartyConfig = Field(default_factory=ThirdPartyConfig)
+    data_preparation: DatasetPreparationConfig = Field(default_factory=DatasetPreparationConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
+    prompts: PromptConfig = Field(default_factory=PromptConfig)
     training: TrainingConfig = Field(default_factory=TrainingConfig)
     evals: EvalsConfig = Field(default_factory=EvalsConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
     tokenizer: TokenizerConfig = Field(default_factory=TokenizerConfig)
-
-    # # datasets
-    # pretrain_dataset_target_path: str = Field(alias='HF_PRETRAIN_DATASET_TARGET_PATH')
-    # instruct_dataset_target_path: str = Field(alias='HF_INSTRUCT_DATASET_TARGET_PATH')
-    # dpo_dataset_target_path: str = Field(alias='HF_DPO_DATASET_TARGET_PATH')
-
-    # hf_include_source_id: bool = Field(default=False, alias='HF_INCLUDE_SOURCE_ID')
-
-    # # processes and batch sizes
-    # number_of_cpu_processes: int = Field(default=0, alias='NUMBER_OF_CPU_PROCESSES')
-    # mp_pool_chunk_size: int = Field(default=64, alias='MP_POOL_CHUNK_SIZE')
-    # hf_map_batch_size: int = Field(default=1000, alias='HF_MAP_BATCH_SIZE')
-    # hf_map_writer_batch_size: int = Field(default=1000, alias='HF_MAP_WRITER_BATCH_SIZE')
-
-    # # torch profiler
-    # torch_profiler_enabled: bool = Field(default=False, alias='TORCH_PROFILER_ENABLED')
-    # torch_profiler_schedule_skip_first: int = Field(default=0, alias='TORCH_PROFILER_SCHEDULE_SKIP_FIRST')
-    # torch_profiler_schedule_wait: int = Field(default=1, alias='TORCH_PROFILER_SCHEDULE_WAIT')
-    # torch_profiler_schedule_warmup: int = Field(default=1, alias='TORCH_PROFILER_SCHEDULE_WARMUP')
-    # torch_profiler_schedule_active: int = Field(default=1, alias='TORCH_PROFILER_SCHEDULE_ACTIVE')
-    # torch_profiler_schedule_repeat: int = Field(default=0, alias='TORCH_PROFILER_SCHEDULE_REPEAT')
-
-
-    # # paths for eval datasets
-    # hellaswag_path: str = Field(alias='HELLASWAG_PATH')
-    # winogrande_path: str = Field(alias='WINOGRANDE_PATH')
-    # arc_challenge_path: str = Field(alias='ARC_CHALLENGE_PATH')
-
-    # # system prompt
-    # system_prompt: str = Field(default='You are a helpful AI assistant', alias='SYSTEM_PROMPT')
-
-    # # save / load path
-    # pretrain_save_checkpoints_path: str = Field(alias='PRETRAIN_SAVE_CHECKPOINTS_PATH')
-    # pretrain_load_checkpoints_path: str = Field(alias='PRETRAIN_LOAD_CHECKPOINTS_PATH')
-    # instruct_save_checkpoints_path: str = Field(alias='INSTRUCT_SAVE_CHECKPOINTS_PATH')
-    # instruct_load_checkpoints_path: str = Field(alias='INSTRUCT_LOAD_CHECKPOINTS_PATH')
-    # dpo_save_checkpoints_path: str = Field(alias='DPO_SAVE_CHECKPOINTS_PATH')
-    # dpo_load_checkpoints_path: str = Field(alias='DPO_LOAD_CHECKPOINTS_PATH')
-
-    # save_checkpoints: bool = Field(default=False, alias='SAVE_CHECKPOINTS')
-    # save_best_only: bool = Field(default=False, alias='SAVE_BEST_ONLY')
-    # save_every_x_steps: int = Field(alias='SAVE_EVERY_X_STEPS')
-    # max_number_checkpoints: int = Field(default=2, alias='MAX_NUMBER_CHECKPOINTS')
-
-    # # wandb
-    # wandb_enabled: bool = Field(default=False, alias='WANDB_ENABLED')
-    # wandb_project_name: str = Field(alias='WANDB_PROJECT_NAME')
-    # wandb_run_name: str = Field(default=None, alias='WANDB_RUN_NAME')
-
-
-    # adamw_min_lr: float = Field(alias='ADAMW_MIN_LR')
-    # adamw_max_lr: float = Field(alias='ADAMW_MAX_LR')
-    # adamw_weight_decay: float = Field(alias='ADAMW_WEIGHT_DECAY')
-    # adamw_betas: Tuple[float, float] = Field(default=(0.9, 0.95), alias='ADAMW_BETAS')
-    # adamw_use_fused: Annotated[bool | None, Field(alias='ADAMW_USE_FUSED')] = None
-    # adamw_warmup_steps: int = Field(alias='ADAMW_WARMUP_STEPS')
-
-    # use_muon: bool = Field(default=False, alias='USE_MUON')
-    # muon_min_lr: float = Field(alias='MUON_MIN_LR')
-    # muon_max_lr: float = Field(alias='MUON_MAX_LR')
-    # muon_weight_decay: float = Field(alias='MUON_WEIGHT_DECAY')
-    # muon_momentum: float = Field(alias='MUON_MOMENTUM', default=0.95)
-    # muon_warmup_steps: int = Field(alias='MUON_WARMUP_STEPS')
-
-    # dpo_beta: float = Field(default=0.1, alias='DPO_BETA')
-    # is_model_distillation: bool = Field(alias='IS_MODEL_DISTILLATION')
-    # distillation_temperature: float = Field(alias='DISTILLATION_TEMPERATURE')
-    # # The teacher model is loader via huggingface API: AutoModelForCausalLM.from_pretrained(teacher_model_checkpoint, ...) so needs to ve a valid checkpoint.
-    # teacher_model_checkpoint: str = Field(alias='TEACHER_MODEL_CHECKPOINT')
-    # lora_enabled: bool = Field(default=False, alias='LORA_ENABLED')
-    # lora_rank: int = Field(default=16, alias='LORA_RANK')
-    # lora_alpha: int = Field(default=8, alias='LORA_ALPHA')
-    # lora_dropout: float = Field(default=0.05, alias='LORA_DROPOUT')
-    # lora_target_modules: list[str] = Field(alias='LORA_TARGET_MODULES')
-
-
-    # # validation
-    # validate_every_x_steps: int = Field(alias='VALIDATE_EVERY_X_STEPS')
-    # validation_steps: int = Field(alias='VALIDATION_STEPS')
+    lora: LoRAConfig = Field(default_factory=LoRAConfig)
+    distillation: DistillationConfig = Field(default_factory=DistillationConfig)
+    dpo: DPOConfig = Field(default_factory=DPOConfig)
+    optimizers: OptimizersConfig = Field(default_factory=OptimizersConfig)
+    wandb: WandbConfig = Field(default_factory=WandbConfig)
+    torch_profiler: TorchProfilerConfig = Field(default_factory=TorchProfilerConfig)
+    validation: ValidationConfig = Field(default_factory=ValidationConfig)
+    checkpointing: CheckpointingConfig = Field(default_factory=CheckpointingConfig)
 
     def model_post_init(self, __context: any) -> None:
         # Sets default paths for huggingface

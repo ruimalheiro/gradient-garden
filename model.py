@@ -297,11 +297,11 @@ class TransformerBlock(nn.Module):
                 hidden_dim=4 * config.dim,
                 multiple_of=config.multiple_of,
                 ffn_dim_multiplier=config.ffn_dim_multiplier,
-                num_experts=config.moe_num_experts,
-                expert_dim=config.moe_expert_dim,
-                top_k=config.moe_top_k,
-                load_balancing_coef=config.moe_load_balancing_coef,
-                z_loss_coef=config.moe_z_loss_coef
+                num_experts=config.moe.num_experts,
+                expert_dim=config.moe.expert_dim,
+                top_k=config.moe.top_k,
+                load_balancing_coef=config.moe.load_balancing_coef,
+                z_loss_coef=config.moe.z_loss_coef
             )
         else:
             self.feed_forward = FeedForward(
@@ -325,14 +325,19 @@ class TransformerBlock(nn.Module):
         return output, aux
 
 class Transformer(nn.Module):
-    def __init__(self, config: ModelConfig, tokenizer, ignore_index):
+    def __init__(
+        self,
+        *,
+        config: ModelConfig,
+        pad_token_id,
+        vocab_size,
+        ignore_index
+    ):
         super(Transformer, self).__init__()
 
         self.config = config
-        self.tokenizer = tokenizer
-        self.vocab_size = tokenizer.vocab_size
-        self.pad_token_id = tokenizer.pad_id
-        self.stop_tokens = tokenizer.stop_tokens
+        self.pad_token_id = pad_token_id
+        self.vocab_size = vocab_size
         self.ignore_index = ignore_index
 
         self.n_layers = config.n_layers
@@ -379,21 +384,21 @@ class Transformer(nn.Module):
                 m.compute_stats = enabled
 
     def enable_moe_stats(self):
-        if self.config.is_moe and self.config.moe_compute_stats:
+        if self.config.moe.enabled and self.config.moe.compute_stats:
             self.set_moe_stats(True)
 
     def disable_moe_stats(self):
-        if self.config.is_moe and self.config.moe_compute_stats:
+        if self.config.moe.enabled and self.config.moe.compute_stats:
             self.set_moe_stats(False)
 
     def reset_moe_stats(self):
-        if self.config.is_moe and self.config.moe_compute_stats:
+        if self.config.moe.enabled and self.config.moe.compute_stats:
             for m in self.modules():
                 if isinstance(m, MoEFeedForward):
                     m.reset_stats()
 
     def get_moe_stats(self):
-        if not self.config.is_moe or (not self.config.moe_compute_stats):
+        if not self.config.moe.enabled or (not self.config.moe.compute_stats):
             return []
         stats = []
         for layer_id, block in enumerate(self.layers):

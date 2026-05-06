@@ -2,6 +2,7 @@ import torch
 
 from collections import defaultdict
 from kv_cache import KVCache
+from config import TokenizerConfig
 
 
 def sample_top_p(probs, p):
@@ -89,8 +90,25 @@ def build_tokens(tokens, prompt_tokens, stop_tokens, max_gen_len):
     return out_tokens
 
 @torch.no_grad()
-def generate(model, prompt_tokens, max_gen_len, temperature, top_p, repetition_penalty, no_repeat_ngram_size, device, use_kv_cache=False):
+def generate(
+    *,
+    prompt_tokens,
+    model,
+    tokenizer,
+    max_gen_len,
+    temperature,
+    top_p,
+    repetition_penalty,
+    no_repeat_ngram_size,
+    device,
+    dtype,
+    use_kv_cache=False
+):
     batch_size = len(prompt_tokens)
+
+    vocab_size = tokenizer.vocab_size
+    pad_token_id = tokenizer.pad_id
+    stop_tokens = tokenizer.stop_tokens
 
     # Finding the boundaries / limits.
     min_prompt_len = min(len(t) for t in prompt_tokens)
@@ -101,16 +119,15 @@ def generate(model, prompt_tokens, max_gen_len, temperature, top_p, repetition_p
     total_len = min(model.config.max_seq_len, max_gen_len + max_prompt_len)
 
     # Here we assume we receive a batch of multiple tokenized sequences.
-    pad_id = model.config.pad_token_id
-    tokens = torch.full((batch_size, total_len), pad_id, dtype=torch.long, device=device)
+    tokens = torch.full((batch_size, total_len), pad_token_id, dtype=torch.long, device=device)
 
     for batch, tokens_list in enumerate(prompt_tokens):
         tokens[batch, : len(tokens_list)] = torch.tensor(tokens_list, dtype=torch.long, device=device)
 
     # Define stop conditions, input mask and the stop tokens (extracted from the tokenizer)
     eos_reached = torch.tensor([False] * batch_size, device=device)
-    input_text_mask = tokens != pad_id
-    stop_tokens = torch.tensor(list(model.config.stop_tokens), device=device)
+    input_text_mask = tokens != pad_token_id
+    stop_tokens = torch.tensor(list(stop_tokens), device=device)
 
     current_position = min_prompt_len
 
@@ -124,10 +141,10 @@ def generate(model, prompt_tokens, max_gen_len, temperature, top_p, repetition_p
             n_kv_heads=model.config.n_kv_heads or model.config.n_heads,
             head_dim=model.config.dim // model.config.n_heads,
             device=device,
-            dtype=model.tok_embeddings.weight.dtype
+            dtype=dtype
         )
 
-    out = model.forward(tokens[:, :current_position], start_position=0, kv_cache=kv_cache)
+    out = model(tokens[:, :current_position], start_position=0, kv_cache=kv_cache)
 
     while current_position < total_len:
         logits = out['logits'][:, -1]
@@ -163,17 +180,18 @@ def generate(model, prompt_tokens, max_gen_len, temperature, top_p, repetition_p
         current_position += 1
 
         start_position = current_position - 1 if use_kv_cache else 0
-        out = model.forward(tokens[:, start_position : current_position], start_position=start_position, kv_cache=kv_cache)
+        out = model(tokens[:, start_position : current_position], start_position=start_position, kv_cache=kv_cache)
 
     # For all the sequences, we extract all tokens up to a stop_token if it exists.
-    out_tokens = build_tokens(tokens, prompt_tokens, model.config.stop_tokens, max_gen_len)
+    out_tokens = build_tokens(tokens, prompt_tokens, stop_tokens, max_gen_len)
 
     return out_tokens
 
 def generate_and_decode(
-        model,
-        texts,
         *,
+        texts,
+        model,
+        tokenizer,
         max_gen_len=256,
         temperature=0.6,
         top_p=0.9,
@@ -181,14 +199,16 @@ def generate_and_decode(
         no_repeat_ngram_size=1,
         full_seq=False,
         device='cpu',
+        dtype=torch.float32,
         is_instruct=False,
         skip_encoding=False,
         use_kv_cache=False
     ):
+        vocab_size = tokenizer.vocab_size
+        pad_token_id = tokenizer.pad_id
+
         if not isinstance(texts, list):
             texts = [texts]
-
-        tokenizer = model.config.tokenizer
 
         if not skip_encoding:
             if is_instruct:
@@ -199,19 +219,21 @@ def generate_and_decode(
             prompt_tokens = texts
         
         generation_tokens = generate(
-            model=model,
             prompt_tokens=prompt_tokens,
+            model=model,
+            tokenizer=tokenizer,
             max_gen_len=max_gen_len,
             temperature=temperature,
             top_p=top_p,
             repetition_penalty=repetition_penalty,
             no_repeat_ngram_size=no_repeat_ngram_size,
             device=device,
+            dtype=dtype,
             use_kv_cache=use_kv_cache
         )
 
         def validate_token(tokens):
-            return [token if token < model.config.vocab_size else model.config.pad_token_id for token in tokens]
+            return [token if token < vocab_size else pad_token_id for token in tokens]
 
         results = [tokenizer.decode(validate_token(t)) for t in generation_tokens]
 

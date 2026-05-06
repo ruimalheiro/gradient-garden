@@ -30,7 +30,7 @@ class BaseTokenizer(ABC):
         if system_msg:
             tokens.extend(self.encode('system'))
             tokens.extend([eh])
-            tokens.extend(self.encode('\n' + config.system_prompt))
+            tokens.extend(self.encode('\n' + config.prompts.system_prompt))
             tokens.extend([eot, sh])
         tokens.extend(self.encode('user'))
         tokens.extend([eh])

@@ -1,5 +1,6 @@
 import torch
 import re
+import json
 
 from torch.optim import AdamW, Muon
 from dataclasses import dataclass, field
@@ -198,10 +199,10 @@ def build_adamw_groups(config, parameter_buckets: ParameterBuckets) -> list[Para
             adamw_groups.append(group)
 
     _add(extract_group(optimizer_kind='adamw', group_name='adapter', named_params=parameter_buckets.adapter, weight_decay=0.0))
-    _add(extract_group(optimizer_kind='adamw', group_name='embedding', named_params=parameter_buckets.embedding, weight_decay=config.adamw_weight_decay))
-    _add(extract_group(optimizer_kind='adamw', group_name='output', named_params=parameter_buckets.output, weight_decay=config.adamw_weight_decay))
-    if not config.use_muon:
-        _add(extract_group(optimizer_kind='adamw', group_name='matrix', named_params=parameter_buckets.matrix, weight_decay=config.adamw_weight_decay))
+    _add(extract_group(optimizer_kind='adamw', group_name='embedding', named_params=parameter_buckets.embedding, weight_decay=config.optimizers.adamw.weight_decay))
+    _add(extract_group(optimizer_kind='adamw', group_name='output', named_params=parameter_buckets.output, weight_decay=config.optimizers.adamw.weight_decay))
+    if not config.optimizers.muon.enabled:
+        _add(extract_group(optimizer_kind='adamw', group_name='matrix', named_params=parameter_buckets.matrix, weight_decay=config.optimizers.adamw.weight_decay))
     _add(extract_group(optimizer_kind='adamw', group_name='scalar', named_params=parameter_buckets.scalar, weight_decay=0.0))
 
     return adamw_groups
@@ -213,27 +214,27 @@ def build_muon_groups(config, parameter_buckets: ParameterBuckets) -> list[Param
         if group is not None:
             muon_groups.append(group)
 
-    _add(extract_group(optimizer_kind='muon', group_name='matrix', named_params=parameter_buckets.matrix, weight_decay=config.muon_weight_decay))
+    _add(extract_group(optimizer_kind='muon', group_name='matrix', named_params=parameter_buckets.matrix, weight_decay=config.optimizers.muon.weight_decay))
 
     return muon_groups
 
 def build_optimizer_plan(config, parameter_buckets: ParameterBuckets) -> OptimizerPlan:
     adamw_groups = build_adamw_groups(config, parameter_buckets)
     adamw_plan = AdamWPlan(
-        lr=config.adamw_max_lr,
-        weight_decay=config.adamw_weight_decay,
-        betas=config.adamw_betas,
+        lr=config.optimizers.adamw.max_lr,
+        weight_decay=config.optimizers.adamw.weight_decay,
+        betas=config.optimizers.adamw.betas,
         groups=adamw_groups
     )
 
     muon_plan = None
-    if config.use_muon:
+    if config.optimizers.muon.enabled:
         muon_groups = build_muon_groups(config, parameter_buckets)
         if muon_groups:
             muon_plan = MuonPlan(
-                lr=config.muon_max_lr,
-                weight_decay=config.muon_weight_decay,
-                momentum=config.muon_momentum,
+                lr=config.optimizers.muon.max_lr,
+                weight_decay=config.optimizers.muon.weight_decay,
+                momentum=config.optimizers.muon.momentum,
                 groups=muon_groups
             )
         else:
@@ -265,7 +266,7 @@ def build_optimizers(config, optimizer_plan: OptimizerPlan) -> Optimizers:
             params=adamw_groups,
             lr=optimizer_plan.adamw.lr,
             betas=optimizer_plan.adamw.betas,
-            fused=config.adamw_use_fused
+            fused=config.optimizers.adamw.use_fused
         )
         logger.info('AdamW ready')
     if optimizer_plan.muon:

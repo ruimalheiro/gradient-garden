@@ -26,8 +26,6 @@ class DPOTask(BaseTask):
         return self
 
     def build_assets(self, tokenizer, model):
-        if not self.config.is_dpo_training:
-            return DPOTaskAssets()
         model_dtype = self.ctx.precision.model_dtype
         logger.info(f'Preparing DPO reference model...', True)
         dpo_ref_model = copy.deepcopy(model).eval()
@@ -50,7 +48,7 @@ class DPOTask(BaseTask):
         autocast_dtype = self.ctx.precision.autocast_dtype
         use_autocast = self.ctx.precision.use_autocast
         grad_accum_steps = self.ctx.grad_accum_steps
-        dpo_beta = self.config.dpo_beta
+        dpo_beta = self.config.dpo.beta
 
         # x, y, z = prompt, chosen, rejected
         x, y, z = batch
@@ -102,7 +100,7 @@ class DPOTask(BaseTask):
         device_type = self.ctx.device.device_type
         autocast_dtype = self.ctx.precision.autocast_dtype
         use_autocast = self.ctx.precision.use_autocast
-        dpo_beta = self.config.dpo_beta
+        dpo_beta = self.config.dpo.beta
 
         # x, y, z = prompt, chosen, rejected
         x, y, z = batch

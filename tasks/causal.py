@@ -24,11 +24,11 @@ class CausalTask(BaseTask):
 
     def build_assets(self, tokenizer, model):
         config = self.config
-        if not config.is_model_distillation:
+        if not config.distillation.enabled:
             return CausalTaskAssets()
         ddp_rank = self.ctx.distributed.ddp_rank
         logger.info(f'Loading teacher model on gpu: {ddp_rank}...', True)
-        teacher_model = AutoModelForCausalLM.from_pretrained(config.teacher_model_checkpoint, token=config.hf_token)
+        teacher_model = AutoModelForCausalLM.from_pretrained(config.distillation.teacher_model_checkpoint, token=config.third_party.hf_token)
         if teacher_model.vocab_size != tokenizer.vocab_size:
             logger.warn(f'The sizes of the vocabularies for the teacher model and the tokenizer do not match: {teacher_model.vocab_size} != {tokenizer.vocab_size}\nResizing the vocab of the teacher model to match the tokenizer... NOTE: This can potentially cause issues.')
             teacher_model.resize_token_embeddings(tokenizer.vocab_size)
@@ -70,7 +70,7 @@ class CausalTask(BaseTask):
             'Train Loss': loss.detach()
         }
 
-        if self.config.is_model_distillation:
+        if self.config.distillation.enabled:
             tokens_processed += x.numel()
 
             with torch.no_grad():
@@ -79,7 +79,7 @@ class CausalTask(BaseTask):
             loss_distil = distillation_loss(
                 teacher_logits,
                 result['logits'],
-                temperature=self.config.distillation_temperature
+                temperature=self.config.distillation.temperature
             )
             loss_for_backward = loss_for_backward + loss_distil
 
@@ -88,7 +88,7 @@ class CausalTask(BaseTask):
 
         loss_for_backward = loss_for_backward / grad_accum_steps
 
-        n_valid = (y != self.config.ignore_index).sum()
+        n_valid = (y != self.config.tokenizer.ignore_index).sum()
 
         return TaskStepOutput(
             tokens_processed=tokens_processed,
@@ -112,7 +112,7 @@ class CausalTask(BaseTask):
         with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
             loss = model(x, labels=y)['loss']
         
-        n_valid = (y != self.config.ignore_index).sum().float()
+        n_valid = (y != self.config.tokenizer.ignore_index).sum().float()
 
         return TaskStepOutput(
             n_valid=n_valid,

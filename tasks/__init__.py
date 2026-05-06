@@ -4,7 +4,7 @@ from tasks.dpo import DPOTask
 from config import TrainingStage
 
 def get_task(training_stage):
-    if training_stage == TrainingStage.PRETRAIN:
+    if training_stage == TrainingStage.PRETRAINING:
         return PretrainingTask()
     elif training_stage == TrainingStage.INSTRUCT:
         return InstructTask()

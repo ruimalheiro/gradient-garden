@@ -95,7 +95,6 @@ class Trainer:
         self.arc_challenge_data = None
         self.test_generation_prompts = None
         self.tokenizer = None
-        self.model_config = None
         self.model = None
         self.train_loader = None
         self.val_loader = None
@@ -182,7 +181,7 @@ class Trainer:
             self.restore_data_loaders_state()
 
     def build_task(self):
-        self.task = get_task(self.config.training_stage)
+        self.task = get_task(self.config.training.stage)
         self.task.setup(config=self.config, ctx=self.trainer_ctx)
         self.task_assets = self.task.build_assets(tokenizer=self.tokenizer, model=self.model)
 
@@ -222,7 +221,7 @@ class Trainer:
                     reduce_dtype=torch.float32
                 ) if self.config.runtime.use_fsdp else None
             )
-        elif self.config.training_precision == TrainingPrecision.FP16:
+        elif self.config.runtime.training_precision == TrainingPrecision.FP16:
             self.precision_ctx = PrecisionContext(
                 use_autocast=True,
                 scaler=torch.amp.GradScaler(self.device_ctx.device_type), # need gradscaler when fp16
@@ -231,9 +230,9 @@ class Trainer:
                 fsdp_mp=MixedPrecisionPolicy(
                     param_dtype=torch.float16,
                     reduce_dtype=torch.float32
-                ) if self.config.use_fsdp else None
+                ) if self.config.runtime.use_fsdp else None
             )
-        elif self.config.training_precision == TrainingPrecision.FP32:
+        elif self.config.runtime.training_precision == TrainingPrecision.FP32:
             self.precision_ctx = PrecisionContext(
                 use_autocast=False,
                 scaler=None,
@@ -278,7 +277,7 @@ class Trainer:
         self.test_generation_prompts = test_prompts_data[stage]
 
     def load_hellaswag_eval_data(self):
-        if self.config.evals.hellaswag.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAIN:
+        if self.config.evals.hellaswag.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAINING:
             return
         self.hellaswag_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.hellaswag_path}/hellaswag_val.jsonl',
@@ -288,7 +287,7 @@ class Trainer:
         )
 
     def load_winogrande_eval_data(self):
-        if self.config.evals.winogrande.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAIN:
+        if self.config.evals.winogrande.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAINING:
             return
         self.winogrande_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.winogrande_path}/winogrande_val.jsonl',
@@ -298,7 +297,7 @@ class Trainer:
         )
 
     def load_arc_challenge_eval_data(self):
-        if self.config.evals.arc_challenge.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAIN:
+        if self.config.evals.arc_challenge.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAINING:
             return
         self.arc_challenge_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.arc_challenge_path}/arc_challenge_val.jsonl',
@@ -315,13 +314,14 @@ class Trainer:
 
     def build_model(self):
         self.model = Transformer(
-            self.config.model,
-            self.tokenizer,
-            self.config.tokenizer.ignore_index
+            config=self.config.model,
+            pad_token_id=self.tokenizer.pad_id,
+            vocab_size=self.tokenizer.vocab_size,
+            ignore_index=self.config.tokenizer.ignore_index
         )
 
     def is_pretraining(self):
-        return self.config.training.stage == TrainingStage.PRETRAIN
+        return self.config.training.stage == TrainingStage.PRETRAINING
 
     def is_instruct(self):
         return self.config.training.stage == TrainingStage.INSTRUCT
@@ -332,11 +332,11 @@ class Trainer:
     def get_dataloader_root_path(self):
         dataloaders_paths = self.config.paths.dataloaders
         if self.is_pretraining():
-            return dataloaders_paths.pretrain_root_path
-        elif is_instruct():
+            return dataloaders_paths.pretraining_root_path
+        elif self.is_instruct():
             return dataloaders_paths.instruct_root_path
-        elif is_dpo():
-            return dataloaders_paths.dpo
+        elif self.is_dpo():
+            return dataloaders_paths.dpo_root_path
         else:
             raise ValueError('No valid dataloader root path')
 
@@ -356,7 +356,7 @@ class Trainer:
         args = self.args
 
         selected = [
-            bool(args.pretrain_checkpoint),
+            bool(args.pretraining_checkpoint),
             bool(args.instruct_checkpoint),
             bool(args.dpo_checkpoint),
         ]
@@ -368,9 +368,9 @@ class Trainer:
 
         path = None
         name = None
-        if args.pretrain_checkpoint:
-            path = self.config.pretrain_load_checkpoints_path
-            name = args.pretrain_checkpoint
+        if args.pretraining_checkpoint:
+            path = self.config.pretraining_load_checkpoints_path
+            name = args.pretraining_checkpoint
         elif args.instruct_checkpoint:
             path = self.config.instruct_load_checkpoints_path
             name = args.instruct_checkpoint
@@ -436,10 +436,10 @@ class Trainer:
         config = self.config
         apply_lora(
             self.model,
-            rank=config.lora_rank,
-            alpha=config.lora_alpha,
-            dropout=config.lora_dropout,
-            target_modules=config.lora_target_modules,
+            rank=config.lora.rank,
+            alpha=config.lora.alpha,
+            dropout=config.lora.dropout,
+            target_modules=config.lora.target_modules,
             is_master_process=self.distributed_ctx.is_master_process
         )
         # by default we freeze the other parameters
@@ -453,7 +453,7 @@ class Trainer:
 
     def resolve_apply_lora(self):
         if (
-            self.config.lora_enabled and
+            self.config.lora.enabled and
             (
                 (not self.checkpoint_data) or
                 (self.checkpoint_data and not self.checkpoint_data.is_lora_checkpoint)
@@ -474,7 +474,7 @@ class Trainer:
             self.val_loader.load_state_dict(checkpoint_data.val_loader_state)
 
     def compile_model(self):
-        if self.config.use_torch_compile:
+        if self.config.runtime.use_torch_compile:
             self.model.compile()
 
     def prepare_model_for_distributed_context(self):
@@ -483,11 +483,11 @@ class Trainer:
         fsdp_mp = self.precision_ctx.fsdp_mp
         model_dtype = self.precision_ctx.model_dtype
 
-        if self.config.use_fsdp:
+        if self.config.runtime.use_fsdp:
             if not dist.is_initialized():
-                raise ValueError('dist must be initialized if "USE_FSDP" flag is set.')
-            if self.config.use_torch_compile:
-                raise ValueError('Currently not supporting torch compile for FSDP. Please set "USE_TORCH_COMPILE" flag to False.')
+                raise ValueError('dist must be initialized if "config.runtime.use_fsdp" flag is set. Run with `torchrun` to force `dist` to initialize.')
+            if self.config.runtime.use_torch_compile:
+                raise ValueError('Currently not supporting torch compile for FSDP. Please set "config.runtime.use_torch_compile" flag to False.')
             logger.info('\nFSDP')
             logger.info('----------------------------------------')
             logger.info('Wrapping the model in preparation for FSDP')
@@ -526,9 +526,9 @@ class Trainer:
             logger.info('Muon optimizer state loaded and ready')
 
     def prepare_runtime(self):
-        self.trainer_state.max_steps = self.config.max_steps
+        self.trainer_state.max_steps = self.config.training.max_steps
         if self.trainer_state.max_steps <= 0:
-            self.trainer_state.max_steps = math.ceil(self.train_loader.calculate_max_tokens() / self.config.total_batch_size)
+            self.trainer_state.max_steps = math.ceil(self.train_loader.calculate_max_tokens() / self.config.training.total_batch_size)
         if self.checkpoint_data:
             self.trainer_state.start_step = self.checkpoint_data.resume_step if self.args.start_step is None else self.args.start_step
             self.trainer_state.current_step = self.checkpoint_data.resume_step if self.args.start_step is None else self.args.start_step
@@ -543,7 +543,6 @@ class Trainer:
         if self.distributed_ctx.is_master_process:
             self.workload_summary = prepare_workload_summary(
                 config=self.config,
-                model_config=self.model_config,
                 checkpoint_data=self.checkpoint_data,
                 trainer_ctx=self.trainer_ctx,
                 optimizer_plan=self.optimizer_plan,
@@ -555,19 +554,19 @@ class Trainer:
 
     def log_workload_summary(self):
         if self.distributed_ctx.is_master_process:
-            logger.info(f'\n{self.config.training_stage.value.upper()} WORKLOAD SUMMARY:')
+            logger.info(f'\n{self.config.training.stage.value.upper()} WORKLOAD SUMMARY:')
             logger.info('--------------------------------------------------------')
             logger.info(self.workload_summary, is_json=True)
             logger.info('--------------------------------------------------------')
 
     def setup_wandb(self):
         self.wandb = WandbWrapper(
-            enabled=self.config.wandb_enabled,
+            enabled=self.config.wandb.enabled,
             is_master_process=self.distributed_ctx.is_master_process
         )
         self.wandb.init(
-            self.config.wandb_project_name,
-            job_name=self.config.wandb_run_name,
+            self.config.wandb.project_name,
+            job_name=self.config.wandb.run_name,
             config=self.workload_summary
         )
 
@@ -625,12 +624,16 @@ class Trainer:
             logger.info(log, pbar=pbar)
         self.wandb.log(wanb_log)
 
-    def should_run(self, step, every, last_step, run_last_step=True):
+    def should_run(self, step, every, last_step, run_last_step=True, force_first_step=False):
         if every == -1:
             return run_last_step and last_step
         if every <= 0:
             return False
-        return (step > 0 and step % every == 0) or (run_last_step and last_step)
+        return (
+            (step > 0 and step % every == 0) or
+            (run_last_step and last_step) or
+            (force_first_step and every != -1 and step == 0)
+        )
 
     def clip_grad_norm(self, model, max_norm):
         norm = clip_grad_norm_(model.parameters(), max_norm)
@@ -657,10 +660,10 @@ class Trainer:
         if self.optimizers.adamw:
             adamw_lr = cosine_scheduler(
                 step=step,
-                warmup_steps=self.config.adamw_warmup_steps,
+                warmup_steps=self.config.optimizers.adamw.warmup_steps,
                 max_steps=self.trainer_state.max_steps,
-                max_lr=self.config.adamw_max_lr,
-                min_lr=self.config.adamw_min_lr,
+                max_lr=self.config.optimizers.adamw.max_lr,
+                min_lr=self.config.optimizers.adamw.min_lr,
             )
             for group in self.optimizers.adamw.param_groups:
                 lr_scale = group.get('lr_scale', 1.0)
@@ -669,10 +672,10 @@ class Trainer:
         if self.optimizers.muon:
             muon_lr = cosine_scheduler(
                 step=step,
-                warmup_steps=self.config.muon_warmup_steps,
+                warmup_steps=self.config.optimizers.muon.warmup_steps,
                 max_steps=self.trainer_state.max_steps,
-                max_lr=self.config.muon_max_lr,
-                min_lr=self.config.muon_min_lr,
+                max_lr=self.config.optimizers.muon.max_lr,
+                min_lr=self.config.optimizers.muon.min_lr,
             )
             for group in self.optimizers.muon.param_groups:
                 lr_scale = group.get('lr_scale', 1.0)
@@ -776,13 +779,13 @@ class Trainer:
         )
 
     def prepare_moe_metrics(self):
-        if self.config.is_moe and self.config.moe_compute_stats:
+        if self.config.model.moe.enabled and self.config.model.moe.compute_stats:
             get_model(self.model).enable_moe_stats()
             get_model(self.model).reset_moe_stats()
 
     def get_moe_metrics(self):
         moe_metrics = {}
-        if self.config.is_moe and self.config.moe_compute_stats:
+        if self.config.model.moe.enabled and self.config.model.moe.compute_stats:
             moe_metrics = collect_moe_metrics(
                 get_model(self.model),
                 self.trainer_ctx.distributed.ddp,
@@ -796,8 +799,8 @@ class Trainer:
         ddp = self.trainer_ctx.distributed.ddp
         device = self.trainer_ctx.device.device
         is_master_process = self.trainer_ctx.distributed.is_master_process
-        early_stopping_patience = self.config.early_stopping_patience
-        early_stopping_patience_skip_steps = self.config.early_stopping_patience_skip_steps + self.trainer_state.start_step
+        early_stopping_patience = self.config.training.early_stopping_patience
+        early_stopping_patience_skip_steps = self.config.training.early_stopping_patience_skip_steps + self.trainer_state.start_step
 
         loss_sum = torch.tensor(0.0, device=device)
         tokens_sum = torch.tensor(0.0, device=device)
@@ -808,7 +811,7 @@ class Trainer:
         self.model.eval()
         self.prepare_moe_metrics()
 
-        for _ in tqdm(range(self.config.validation_steps), 'Validating', disable=not is_master_process, leave=False):
+        for _ in tqdm(range(self.config.validation.validation_steps), 'Validating', disable=not is_master_process, leave=False):
             output = self.task.validation_step(self.model, self.val_loader.next_batch(), self.task_assets)
             loss = output.loss
             n_valid = output.n_valid
@@ -863,10 +866,21 @@ class Trainer:
             pbar=pbar
         )
 
+    def get_save_checkpoints_path(self):
+        checkpoints_paths = self.config.paths.checkpoints
+        if self.is_pretraining():
+            return checkpoints_paths.pretraining_save_path
+        elif self.is_instruct():
+            return checkpoints_paths.instruct_save_path
+        elif self.is_dpo():
+            return checkpoints_paths.dpo_save_path
+        else:
+            raise ValueError('No valid checkpointing path')
+
     def run_save_checkpoint(self, pbar=None):
         if (
-            not self.config.save_checkpoints or
-            (self.config.save_best_only and self.trainer_state.num_val_runs_no_improve > 0)
+            not self.config.checkpointing.save_checkpoints or
+            (self.config.checkpointing.save_best_only and self.trainer_state.num_val_runs_no_improve > 0)
         ):
             return
 
@@ -878,9 +892,8 @@ class Trainer:
 
         logger.info(f'{self.trainer_state.current_step:4d} | saving checkpoint...', pbar=pbar)
         save_checkpoint(
-            self.config.save_checkpoints_path,
+            self.get_save_checkpoints_path(),
             get_model(self.model),
-            self.model_config,
             self.config,
             self.trainer_state.current_step,
             self.trainer_state.last_val_loss,
@@ -889,18 +902,18 @@ class Trainer:
             self.train_loader,
             self.val_loader,
             {
-                'training_stage': self.config.training_stage.value,
-                'lora_enabled': self.config.lora_enabled,
+                'training_stage': self.config.training.stage.value,
+                'lora_enabled': self.config.lora.enabled,
                 'ddp_world_size': self.distributed_ctx.ddp_world_size
             },
-            self.config.max_number_checkpoints,
+            self.config.checkpointing.max_number_checkpoints,
             self.distributed_ctx.is_master_process,
             pbar=pbar
         )
 
     @torch.inference_mode()
     def run_multiple_choice_eval(self, *, pbar, data, tqdm_label: str, step_type: StepType):
-        if not self.config.is_pretraining:
+        if not self.is_pretraining():
             return
         ddp = self.trainer_ctx.distributed.ddp
         is_master_process = self.trainer_ctx.distributed.is_master_process
@@ -976,22 +989,33 @@ class Trainer:
 
     @torch.inference_mode()
     def run_generation(self, pbar):
+        self.model.eval()
+        outputs = None
+        with torch.autocast(
+            device_type=self.trainer_ctx.device.device_type,
+            dtype=self.trainer_ctx.precision.autocast_dtype,
+            enabled=self.trainer_ctx.precision.use_autocast
+        ):
+            outputs = generate_and_decode(
+                texts=self.test_generation_prompts,
+                model=get_model(self.model),
+                tokenizer=self.tokenizer,
+                max_gen_len=self.config.generation.max_test_gen_len,
+                full_seq=True,
+                device=self.trainer_ctx.device.device,
+                dtype=self.trainer_ctx.precision.autocast_dtype,
+                is_instruct=self.is_instruct(),
+                temperature=0.0,
+                top_p=1.0,
+                use_kv_cache=True
+            )
+
         if not self.trainer_ctx.distributed.is_master_process:
             return
-        self.model.eval()
+
         logger.info(f'{self.trainer_state.current_step:4d} | Generation testing:', pbar=pbar)
         logger.info('-----------------------------------------------', pbar=pbar)
-        for text in generate_and_decode(
-            model=get_model(self.model),
-            texts=self.test_generation_prompts,
-            max_gen_len=self.config.max_test_gen_len,
-            full_seq=True,
-            device=self.trainer_ctx.device.device,
-            is_instruct=self.config.is_instruct_training,
-            temperature=0.0,
-            top_p=1.0,
-            use_kv_cache=True
-        ):
+        for text in outputs:
             logger.info(text, pbar=pbar)
         logger.info('-----------------------------------------------', pbar=pbar)
 
@@ -1000,17 +1024,17 @@ class Trainer:
         is_last_step = self.trainer_state.is_last_step
 
         self.run_train(pbar)
-        if self.should_run(step, self.config.validate_every_x_steps, is_last_step):
+        if self.should_run(step, self.config.validation.validate_every_x_steps, is_last_step, force_first_step=True):
             self.run_validation(pbar)
-        if self.should_run(step, self.config.save_every_x_steps, is_last_step):
+        if self.should_run(step, self.config.checkpointing.save_every_x_steps, is_last_step):
             self.run_save_checkpoint(pbar)
-        if self.should_run(step, self.config.hellaswag_every_x_steps, is_last_step):
+        if self.should_run(step, self.config.evals.hellaswag.every_x_steps, is_last_step):
             self.run_hellaswag_eval(pbar)
-        if self.should_run(step, self.config.winogrande_every_x_steps, is_last_step):
+        if self.should_run(step, self.config.evals.winogrande.every_x_steps, is_last_step):
             self.run_winogrande_eval(pbar)
-        if self.should_run(step, self.config.arc_challenge_every_x_steps, is_last_step):
+        if self.should_run(step, self.config.evals.arc_challenge.every_x_steps, is_last_step):
             self.run_arc_challenge_eval(pbar)
-        if self.should_run(step, self.config.generate_every_x_steps, is_last_step):
+        if self.should_run(step, self.config.generation.generate_every_x_steps, is_last_step):
             self.run_generation(pbar)
 
     def start_training_loop(self):
@@ -1021,7 +1045,7 @@ class Trainer:
         current_step = self.trainer_state.current_step
         max_steps = self.trainer_state.max_steps
 
-        tqdm_label = f'Training ({self.config.training_stage.value})'
+        tqdm_label = f'Training ({self.config.training.stage.value})'
         abort_signal = torch.tensor([0], device=device)
 
         with self.torch_profiler_context as torch_profiler_ctx:

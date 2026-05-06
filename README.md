@@ -1,6 +1,6 @@
 # Gradient Garden
 
-Gradient Garden is a research playground for model training, evaluation, and experimentation across architectures, benchmarks, and recipes.
+Gradient Garden is a research platform for model training, evaluation, and experimentation across architectures, benchmarks, and recipes.
 
 The project began with a decoder-only transformer baseline and has evolved into a broader codebase for training, evaluation, and experimentation across modern machine learning models, distributed training workflows, and post-training methods.
 
@@ -89,7 +89,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine scheduler.
 - `model.py` Current main model implementation.
 - `prepare_datasets.py` Entry point for data downloading and preparation.
-- `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretrain", "instruct", "dpo".
+- `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretraining", "instruct", "dpo".
 - `tokenizer.py` Provides the tokenizer abstraction used by the project and supports two backends:
   - `TikTokenizer`: loads tiktoken BPE weights from a local file path and configures the special tokens used by the project.
   - `HFTokenizer`: loads a tokenizer from Hugging Face via `AutoTokenizer.from_pretrained(...)` and aligns the required special tokens (`bos`, `eos`, headers, `eot`, `pad`).
@@ -130,11 +130,11 @@ The file `config.py` defines all the environment variables required.
 `train.py` accepts some flags that are useful to load a checkpoint or override some properties:
 
 ```bash
-  --pretrain_checkpoint <file>   # Resume pre-training run
-  --instruct_checkpoint <file>   # Resume SFT run
-  --dpo_checkpoint <file>        # Resume DPO run
-  --reset-optimizers             # Ignore stored optimizer(s) state
-  --start-step <N>               # Override internal step counter
+  --pretraining_checkpoint <file>   # Resume pretraining run
+  --instruct_checkpoint <file>      # Resume SFT run
+  --dpo_checkpoint <file>           # Resume DPO run
+  --reset-optimizers                # Ignore stored optimizer(s) state
+  --start-step <N>                  # Override internal step counter
 ```
 **NOTE:** The checkpoint paths need to be set in the `.env` file. See `config.py` for details.
 
@@ -161,7 +161,7 @@ The file `config.py` defines all the environment variables required.
     torchrun \
       --standalone \
       --nproc_per_node <NUMBER_OF_GPUs> \
-      train.py --pretrain_checkpoint <CHECKPOINT_FILE_NAME>
+      train.py --pretraining_checkpoint <CHECKPOINT_FILE_NAME>
     ```
     - NOTE: When loading an instruct checkpoint, use `--instruct_checkpoint` instead. This will also load the optimizer(s) state and resume from the stored step. You can reset the optimizer(s) with the flag `--reset-optimizers` and set the start step with the flag `--start-step`. E.g.: `--start-step 10`
 
