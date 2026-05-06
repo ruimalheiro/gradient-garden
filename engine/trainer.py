@@ -330,13 +330,13 @@ class Trainer:
         return self.config.training.stage == TrainingStage.DPO
 
     def get_dataloader_root_path(self):
-        dataloaders_paths = self.config.paths.dataloaders
+        datasets_paths = self.config.paths.datasets
         if self.is_pretraining():
-            return dataloaders_paths.pretraining_root_path
+            return datasets_paths.pretraining_path
         elif self.is_instruct():
-            return dataloaders_paths.instruct_root_path
+            return datasets_paths.instruct_path
         elif self.is_dpo():
-            return dataloaders_paths.dpo_root_path
+            return datasets_paths.dpo_path
         else:
             raise ValueError('No valid dataloader root path')
 

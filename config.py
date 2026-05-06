@@ -39,7 +39,7 @@ class RuntimeConfig(BaseModel):
     training_precision: TrainingPrecision = TrainingPrecision.BF16
     use_torch_compile: bool = False
     use_fsdp: bool = True
-    number_of_cpu_processes: int = 0
+    number_of_cpu_processes: int = 32
 
 class MoEConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -89,17 +89,11 @@ class EvalsConfig(BaseModel):
     winogrande: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
     arc_challenge: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
 
-class DatasetPreparationPathsConfig(BaseModel):
+class DatasetPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    pretraining_target_path: str = './datasets/pretraining'
-    instruct_target_path: str = './datasets/instruct'
-    dpo_target_path: str = './datasets/dpo'
-
-class DataloaderPathsConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    pretraining_root_path: str = './datasets/pretraining'
-    instruct_root_path: str = './datasets/instruct'
-    dpo_root_path: str = './datasets/dpo'
+    pretraining_path: str = './datasets/pretraining'
+    instruct_path: str = './datasets/instruct'
+    dpo_path: str = './datasets/dpo'
 
 class EvalPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -118,8 +112,7 @@ class CheckpointPathsConfig(BaseModel):
 
 class PathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    data_preparation: DatasetPreparationPathsConfig = Field(default_factory=DatasetPreparationPathsConfig)
-    dataloaders: DataloaderPathsConfig = Field(default_factory=DataloaderPathsConfig)
+    datasets: DatasetPathsConfig = Field(default_factory=DatasetPathsConfig)
     evals: EvalPathsConfig = Field(default_factory=EvalPathsConfig)
     test_prompts_path: str = './test_prompts.json'
     checkpoints: CheckpointPathsConfig = Field(default_factory=CheckpointPathsConfig)

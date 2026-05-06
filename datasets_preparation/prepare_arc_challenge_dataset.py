@@ -15,11 +15,11 @@ def prepare_arc_challenge_dataset():
 
     current_dir = Path(__file__).resolve().parent.parent
 
-    data_cache_dir = current_dir / config.arc_challenge_path
+    data_cache_dir = current_dir / config.paths.evals.arc_challenge_path
     data_cache_dir.mkdir(parents=True, exist_ok=True)
     data_filename = data_cache_dir / 'arc_challenge_val.jsonl'
 
-    tokenizer = init_tokenizer(config.tokenizer_checkpoint_path, config.huggingface_tokenizer)
+    tokenizer = init_tokenizer(config.tokenizer.checkpoint_path, config.tokenizer.huggingface_tokenizer)
 
     def prepare_example(example):
         """
@@ -84,7 +84,7 @@ def prepare_arc_challenge_dataset():
             name='ARC-Challenge',
             split='validation',
             num_proc=number_of_processes,
-            token=config.hf_token
+            token=config.third_party.hf_token
         )
 
         with open(data_filename, 'w', encoding='utf-8') as file:
