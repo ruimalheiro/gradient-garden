@@ -99,9 +99,9 @@ NL = None
 def tokenize(doc):
     global tokenizer, SYS, SYS_PROMPT, NL
     if tokenizer is None:
-        tokenizer = init_tokenizer(config.tokenizer_checkpoint_path, config.huggingface_tokenizer)
+        tokenizer = init_tokenizer(config.tokenizer.checkpoint_path, config.tokenizer.huggingface_tokenizer)
         SYS = tokenizer.encode('system')
-        SYS_PROMPT = tokenizer.encode('\n' + config.system_prompt)
+        SYS_PROMPT = tokenizer.encode('\n' + config.prompts.system_prompt)
         NL = tokenizer.encode('\n')
 
     bot = tokenizer.bos_id
@@ -115,7 +115,7 @@ def tokenize(doc):
         if is_assistant:
             labels.extend(tok_ids)
         else:
-            labels.extend([config.ignore_index] * len(tok_ids))
+            labels.extend([config.tokenizer.ignore_index] * len(tok_ids))
 
     push([bot], False)
     push([sh], False)
@@ -136,7 +136,7 @@ def tokenize(doc):
         push([eot], role == 'assistant')
 
     input_ids = np.array(tokens, dtype=np.uint32)
-    labels = np.array(labels[1:] + [config.ignore_index], dtype=np.int32)
+    labels = np.array(labels[1:] + [config.tokenizer.ignore_index], dtype=np.int32)
 
     return { 'input_ids': input_ids, 'labels': labels }
 
@@ -168,7 +168,7 @@ def download_and_prepare_data(
             name=hf_name,
             split=split,
             num_proc=number_of_processes,
-            token=config.hf_token
+            token=config.third_party.hf_token
         )
 
         if max_datapoints:
@@ -181,7 +181,7 @@ def download_and_prepare_data(
             conversation = conversation[:max_turns]
 
             result = {'conversation': []}
-            if config.hf_include_source_id:
+            if config.data_preparation.hf_include_source_id:
                 result['source'] = ds_id
 
             if not has_assistant_content(conversation):
@@ -220,8 +220,8 @@ def download_and_prepare_data(
 
     print('- Train len:', len(splits['train']), ' Val len:', len(splits['test']), '\n')
 
-    splits['train'].save_to_disk(os.path.join(config.instruct_dataset_target_path, 'train'))
-    splits['test'] .save_to_disk(os.path.join(config.instruct_dataset_target_path, 'val'))
+    splits['train'].save_to_disk(os.path.join(config.paths.datasets.instruct_path, 'train'))
+    splits['test'] .save_to_disk(os.path.join(config.paths.datasets.instruct_path, 'val'))
 
 def prepare_instruct_dataset(
     *,

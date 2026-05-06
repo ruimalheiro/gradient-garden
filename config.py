@@ -71,7 +71,7 @@ class PromptConfig(BaseModel):
 
 class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    stage: TrainingStage = TrainingStage.DPO
+    stage: TrainingStage = TrainingStage.PRETRAINING
     seed: int = 42
     total_batch_size: int = 524288
     max_steps: int = 200
@@ -80,7 +80,7 @@ class TrainingConfig(BaseModel):
 
 class EvalTaskConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    every_x_steps: int = -1
+    every_x_steps: int = 1
     number_of_examples: int = 200
 
 class EvalsConfig(BaseModel):
