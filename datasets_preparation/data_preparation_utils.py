@@ -20,8 +20,8 @@ def stable_hash(text, *, seed=None, hash_bytes=8):
 
 def get_max_number_of_cpu_processes():
     NUMBER_OF_PROCESSES = max(1, os.cpu_count() // 2)
-    if config.number_of_cpu_processes != 0:
-        NUMBER_OF_PROCESSES = max(1, min(config.number_of_cpu_processes, os.cpu_count()))
+    if config.runtime.number_of_cpu_processes != 0:
+        NUMBER_OF_PROCESSES = max(1, min(config.runtime.number_of_cpu_processes, os.cpu_count()))
     print(f'Number of CPU processes: {NUMBER_OF_PROCESSES}\n')
     return NUMBER_OF_PROCESSES
 

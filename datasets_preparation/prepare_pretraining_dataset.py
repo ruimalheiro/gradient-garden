@@ -74,7 +74,7 @@ def download_and_prepare_data(
             name=hf_name,
             split=split,
             streaming=True,
-            token=config.hf_token
+            token=config.third_party.hf_token
         )
 
         columns_to_remove = ds.column_names
@@ -95,7 +95,7 @@ def download_and_prepare_data(
             batch = adapter(batch, transforms)
             texts = batch['text']
 
-            if config.hf_include_source_id:
+            if config.data_preparation.hf_include_source_id:
                 return {
                     'text': texts,
                     'source': [ds_id] * len(texts),
@@ -106,7 +106,7 @@ def download_and_prepare_data(
         ds = ds.map(
             normalize,
             batched=True,
-            batch_size=config.hf_map_batch_size,
+            batch_size=config.data_preparation.hf_map_batch_size,
             remove_columns=columns_to_remove
         )
 
@@ -148,7 +148,7 @@ tokenizer = None
 def tokenize(doc):
     global tokenizer
     if tokenizer is None:
-        tokenizer = init_tokenizer(config.tokenizer_checkpoint_path, config.huggingface_tokenizer)
+        tokenizer = init_tokenizer(config.tokenizer.checkpoint_path, config.tokenizer.huggingface_tokenizer)
     input_ids = tokenizer.encode(doc['text'])
     tokens_np = np.empty(len(input_ids) + 1, dtype=np.uint32)
     tokens_np[0] = tokenizer.eos_id
@@ -166,22 +166,22 @@ def shard_and_tokenize(
     prepare_dataset(
         dataset=train_ds,
         tokenize_function=tokenize,
-        target_folder=os.path.join(config.pretrain_dataset_target_path, 'train'),
+        target_folder=os.path.join(config.paths.datasets.pretraining_path, 'train'),
         shard_file_prefix='data',
         shard_size=shard_size,
         number_of_processes=number_of_processes,
-        chunksize=config.mp_pool_chunk_size
+        chunksize=config.data_preparation.mp_pool_chunk_size
     )
 
     print('Preparing val dataset...')
     prepare_dataset(
         dataset=val_ds,
         tokenize_function=tokenize,
-        target_folder=os.path.join(config.pretrain_dataset_target_path, 'val'),
+        target_folder=os.path.join(config.paths.datasets.pretraining_path, 'val'),
         shard_file_prefix='data',
         shard_size=shard_size,
         number_of_processes=number_of_processes,
-        chunksize=config.mp_pool_chunk_size
+        chunksize=config.data_preparation.mp_pool_chunk_size
     )
 
 def prepare_pretraining_dataset(

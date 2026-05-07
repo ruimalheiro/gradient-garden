@@ -22,7 +22,7 @@ def load_tokens(filename):
     ptt = torch.from_numpy(npt)
     return ptt
 
-class PretrainDataLoader:
+class PretrainingDataLoader:
     def __init__(self, batch_size, sequence_length, is_master_process, process_rank, num_processes, data_root, split, use_shuffle=False):
         self.B = batch_size
         self.S = sequence_length
@@ -175,7 +175,7 @@ class InstructDataLoader:
             labels = pad_sequence(
                 labels,
                 batch_first=True,
-                padding_value=config.ignore_index
+                padding_value=config.tokenizer.ignore_index
             )
             if ids.size(1) > sequence_length:
                 ids  = ids[:, -sequence_length:]
@@ -218,7 +218,7 @@ class InstructDataLoader:
         def _calculate():
             return sum(self._dataloader.dataset.map(
                 lambda ex: {'len': len(ex['input_ids'])},
-                num_proc=config.number_of_cpu_processes,
+                num_proc=config.runtime.number_of_cpu_processes,
                 remove_columns=[],
                 desc='Calculating number of tokens'
             )['len'])
@@ -338,7 +338,7 @@ class DirectPreferenceOptimizationDataLoader:
         def _calculate():
             return sum(self._dataloader.dataset.map(
                 lambda ex: {'len': len(ex['prompt_input_ids']) + len(ex['chosen_input_ids']) + len(ex['rejected_input_ids'])},
-                num_proc=config.number_of_cpu_processes,
+                num_proc=config.runtime.number_of_cpu_processes,
                 remove_columns=[],
                 desc='Calculating number of tokens'
             )['len'])
@@ -378,12 +378,12 @@ def init_data_loaders(
     training_stage,
     pad_id=None
 ):
-    if training_stage == TrainingStage.PRETRAIN:
+    if training_stage == TrainingStage.PRETRAINING:
         if is_master_process:
-            print('\nPretrain Data Loaders:')
+            print('\nPretraining Data Loaders:')
             print('----------------------------------------')
 
-        train_loader = PretrainDataLoader(
+        train_loader = PretrainingDataLoader(
             batch_size=batch_size,
             sequence_length=sequence_length,
             is_master_process=is_master_process,
@@ -393,7 +393,7 @@ def init_data_loaders(
             split='train',
             use_shuffle=True
         )
-        val_loader = PretrainDataLoader(
+        val_loader = PretrainingDataLoader(
             batch_size=batch_size,
             sequence_length=sequence_length,
             is_master_process=is_master_process,

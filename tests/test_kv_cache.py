@@ -4,7 +4,7 @@ from kv_cache import KVCache
 
 
 @torch.no_grad()
-def test_kv_cache_matches_no_cache(model, device, dummy_prompt_tokens, steps=8):
+def test_kv_cache_matches_no_cache(model, tokenizer, device, dummy_prompt_tokens, steps=8):
     model.eval()
     torch.manual_seed(0)
 
@@ -14,7 +14,7 @@ def test_kv_cache_matches_no_cache(model, device, dummy_prompt_tokens, steps=8):
 
     batch_size = len(prompt_tokens)
 
-    pad_id = model.config.pad_token_id
+    pad_id = tokenizer.pad_id
     total_len = min(model.config.max_seq_len, max(len(t) for t in prompt_tokens) + steps)
 
     tokensA = torch.full((batch_size, total_len), pad_id, dtype=torch.long, device=device)

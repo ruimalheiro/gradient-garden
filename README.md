@@ -1,13 +1,13 @@
 # Gradient Garden
 
-Gradient Garden is a research playground for model training, evaluation, and experimentation across architectures, benchmarks, and recipes.
+Gradient Garden is a research platform for model training, evaluation, and experimentation across architectures, benchmarks, and multi stage training workflows.
 
 The project began with a decoder-only transformer baseline and has evolved into a broader codebase for training, evaluation, and experimentation across modern machine learning models, distributed training workflows, and post-training methods.
 
 ## Current focus
 - Distributed training
 - Multi-stage model training and post-training workflows
-- Research and experimentation across architectures, benchmarks, and training recipes
+- Research and experimentation across architectures, benchmarks, and training configurations
 
 ## Current capabilities
 
@@ -71,12 +71,14 @@ The project began with a decoder-only transformer baseline and has evolved into 
     - HellaSwag
     - WinoGrande
     - ARC-Challenge
-- `examples/` Templates for the `.env` config and dataset mix.
+- `examples/` Templates for the `.env` secrets file and dataset mix. This will be replaced by recipe directories in a future PR.
 - `metrics/` Utilities for metric aggregation.
 - `tasks/` Groups the training tasks.
 - `tests/` Groups tests for different components.
 - `checkpoints.py` Logic to handle checkpointing.
-- `config.py` Defines the main config and environment variables that are to be extracted from `.env`.
+- `config.py` Defines the nested `GlobalConfig` used by the trainer, dataset preparation, evaluation, checkpointing, and runtime setup.
+  - Most experiment settings currently live as defaults in `config.py`.
+  - `.env` is only used for third party secrets and local cache settings: `WANDB_API_KEY`, `HF_TOKEN`, and `HF_HOME`.
 - `dataloaders.py` Dataloader logic for sampling and distributing data.
 - `ddp_utils.py` Contains the main logic to set up the PyTorch DDP (Distributed Data Parallel) and FSDP2 (Fully Sharded Data Parallel).
   - PyTorch DDP [here](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)
@@ -85,15 +87,15 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - `generate.py` Logic for sampling and text generation.
 - `kv_cache.py` KV cache implementation.
 - `logger.py` Simple reusable logger.
-- `lora.py` LoRA module that handles the model modification. Rank, alpha, dropout and target modules can be configured in the `.env` file.
+- `lora.py` LoRA module that handles the model modification. Rank, alpha, dropout and target modules can be configured accordingly.
 - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine scheduler.
 - `model.py` Current main model implementation.
 - `prepare_datasets.py` Entry point for data downloading and preparation.
-- `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretrain", "instruct", "dpo".
+- `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretraining", "instruct", "dpo".
 - `tokenizer.py` Provides the tokenizer abstraction used by the project and supports two backends:
   - `TikTokenizer`: loads tiktoken BPE weights from a local file path and configures the special tokens used by the project.
   - `HFTokenizer`: loads a tokenizer from Hugging Face via `AutoTokenizer.from_pretrained(...)` and aligns the required special tokens (`bos`, `eos`, headers, `eot`, `pad`).
-  - `init_tokenizer(...)` selects the backend based on configuration (`HUGGINGFACE_TOKENIZER`).
+  - `init_tokenizer(...)` selects the backend based on `config.tokenizer.huggingface_tokenizer`.
 - `train.py` Entry point for training runs.
 - `wandb_utils.py` A wrapper for Weights & Biases.
   - Weights & Biases [here](https://wandb.ai/site/)
@@ -110,7 +112,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
     - Pretraining: `python prepare_datasets.py --pretraining`
     - Instruct: `python prepare_datasets.py --instruct`
     - DPO: `python prepare_datasets.py --dpo`
-  - **NOTE**: All the target paths can be modified in the `.env` file. (Check config.py for more details.)
+  - **NOTE**: Dataset paths are configured in `config.py` under `GlobalConfig.paths.datasets` and `GlobalConfig.paths.evals`.
   - The training dataset preparation commands also support a custom mix file by passing `--mix-file <file_path>`. Check `examples/pretraining_data_mix.example.json` for an example. Local custom mix files should use the `.local.json` suffix, for example `pretraining_debug.local.json`, so they are ignored by Git. If no `--mix-file` is provided, the built-in default mix for that stage is used.
     - The default mix can be found in `datasets_preparation/default_mixes.py`
   
@@ -119,24 +121,47 @@ The project began with a decoder-only transformer baseline and has evolved into 
 
 - **NOTE:** For some scenarios you might need to also pass your Hugging Face API token `HF_TOKEN`. E.g.: If performing knowledge distillation and the teacher model requires access permissions.
 
-## Configuring and training:
-The project expects a `.env` file at the repository root. Check `examples/.env.example` and use it as a template.
-The file `config.py` defines all the environment variables required.
-- Modify it according to your experiment needs (e.g., model architecture, hyperparameters, Weights & Biases settings, checkpointing, etc.).
+## Configuring and training
 
-**NOTE:** Values in `.env` override the corresponding defaults defined in `config.py`.
+Configuration is currently defined through the nested `GlobalConfig` object in `config.py`.
+
+The main sections are:
+- `runtime`: device, precision, FSDP, torch compile, CPU workers
+- `model`: transformer architecture and optional MoE settings
+- `training`: stage, seed, total batch size, max steps, early stopping
+- `optimizers`: AdamW and optional Muon configuration
+- `paths`: dataset, evaluation, checkpoint, and prompt paths
+- `validation`: validation frequency and number of validation steps
+- `evals`: HellaSwag, WinoGrande, and ARC-Challenge settings
+- `generation`: text generation frequency and max generation length
+- `checkpointing`: checkpoint save frequency and retention
+- `tokenizer`: tokenizer backend and checkpoint path
+- `lora`: optional LoRA configs
+- `distillation`: optional teacher model distillation settings
+- `dpo`: DPO configuration
+- `wandb`: W&B logging settings
+- `torch_profiler`: profiler settings
+
+`.env` is no longer used as the experiment configuration file. It is only used for secrets and local cache settings:
+```
+WANDB_API_KEY=''
+HF_TOKEN=''
+HF_HOME='./cache'
+```
+
+**NOTE:** Experiment recipe directories will be introduced in a future update.
 
 ### Common flags
 `train.py` accepts some flags that are useful to load a checkpoint or override some properties:
 
 ```bash
-  --pretrain_checkpoint <file>   # Resume pre-training run
-  --instruct_checkpoint <file>   # Resume SFT run
-  --dpo_checkpoint <file>        # Resume DPO run
-  --reset-optimizers             # Ignore stored optimizer(s) state
-  --start-step <N>               # Override internal step counter
+  --pretraining-checkpoint <file>   # Resume pretraining run
+  --instruct-checkpoint <file>      # Resume SFT run
+  --dpo-checkpoint <file>           # Resume DPO run
+  --reset-optimizers                # Ignore stored optimizer(s) state
+  --start-step <N>                  # Override internal step counter
 ```
-**NOTE:** The checkpoint paths need to be set in the `.env` file. See `config.py` for details.
+**NOTE:** The checkpoint paths are configured in `config.py` under `GlobalConfig.paths.checkpoints`.
 
 ### Running the Training
 - To train on **single-GPU**, run:
@@ -161,9 +186,9 @@ The file `config.py` defines all the environment variables required.
     torchrun \
       --standalone \
       --nproc_per_node <NUMBER_OF_GPUs> \
-      train.py --pretrain_checkpoint <CHECKPOINT_FILE_NAME>
+      train.py --pretraining-checkpoint <CHECKPOINT_FILE_NAME>
     ```
-    - NOTE: When loading an instruct checkpoint, use `--instruct_checkpoint` instead. This will also load the optimizer(s) state and resume from the stored step. You can reset the optimizer(s) with the flag `--reset-optimizers` and set the start step with the flag `--start-step`. E.g.: `--start-step 10`
+    - NOTE: When loading an instruct checkpoint, use `--instruct-checkpoint` or for DPO, `--dpo-checkpoint` instead. This will also load the optimizer(s) state and resume from the stored step. You can reset the optimizer(s) with the flag `--reset-optimizers` and set the start step with the flag `--start-step`. E.g.: `--start-step 10`
 
 - To train on multiple nodes with **1 or more GPUs per node**, configure each node as follows:
   - Static
@@ -237,7 +262,8 @@ The file `config.py` defines all the environment variables required.
 - More details on NCCL [here](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#environment-variables)
 
 ## Using Torch Profiler
-Details on the environment variables suggested in `examples/.env.example` can be found [here](https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html).
+Torch profiler settings are configured in `config.py` under `GlobalConfig.torch_profiler`.
+More details on the profiler API can be found [here](https://docs.pytorch.org/tutorials/recipes/recipes/profiler_recipe.html).
 
 ## Running tests
 From the root folder:

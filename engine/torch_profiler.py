@@ -17,7 +17,7 @@ class NoOpProfiler:
         pass
 
 def init_torch_profiler_context(config, distributed_ctx):
-    if not config.torch_profiler_enabled or not distributed_ctx.is_master_process:
+    if not config.torch_profiler.enabled or not distributed_ctx.is_master_process:
         return NoOpProfiler()
 
     def trace_handler(prof):
@@ -40,11 +40,11 @@ def init_torch_profiler_context(config, distributed_ctx):
             profile_memory=True,
             acc_events=True,
             schedule=schedule(
-                skip_first=config.torch_profiler_schedule_skip_first,
-                wait=config.torch_profiler_schedule_wait,
-                warmup=config.torch_profiler_schedule_warmup,
-                active=config.torch_profiler_schedule_active,
-                repeat=config.torch_profiler_schedule_repeat
+                skip_first=config.torch_profiler.schedule_skip_first,
+                wait=config.torch_profiler.schedule_wait,
+                warmup=config.torch_profiler.schedule_warmup,
+                active=config.torch_profiler.schedule_active,
+                repeat=config.torch_profiler.schedule_repeat
             ),
             on_trace_ready=trace_handler
         )

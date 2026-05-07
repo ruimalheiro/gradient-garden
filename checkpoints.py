@@ -50,7 +50,6 @@ def manage_checkpoints(directory, max_files, step, pbar=None):
 def save_checkpoint(
     checkpoint_dir,
     model,
-    model_config,
     config,
     step,
     last_val_loss,
@@ -98,8 +97,7 @@ def save_checkpoint(
         checkpoint = {
             'model': model_state_dict,
             'step': step,
-            'model_config': model_config.to_dict(),
-            'config': config.to_summary_dict(include_model_config=False),
+            'config': config.model_dump(mode='json'),
             'optimizers': optimizer_state,
             'last_val_loss': float(last_val_loss),
             'best_val_loss': float(best_val_loss),
@@ -150,8 +148,8 @@ def load_checkpoint(
     state = torch.load(checkpoint_path, map_location='cpu', weights_only=True)
 
     step = state['step'] + 1
-    last_val_loss = state['last_val_loss']
-    best_val_loss = state['best_val_loss']
+    last_val_loss = state['last_val_loss'] if state['last_val_loss'] is not None else float('inf')
+    best_val_loss = state['best_val_loss'] if state['best_val_loss'] is not None else float('inf')
 
     model_state = state['model']
     assert type(model_state) in {OrderedDict, dict}

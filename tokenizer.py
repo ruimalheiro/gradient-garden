@@ -30,7 +30,7 @@ class BaseTokenizer(ABC):
         if system_msg:
             tokens.extend(self.encode('system'))
             tokens.extend([eh])
-            tokens.extend(self.encode('\n' + config.system_prompt))
+            tokens.extend(self.encode('\n' + config.prompts.system_prompt))
             tokens.extend([eot, sh])
         tokens.extend(self.encode('user'))
         tokens.extend([eh])
@@ -114,7 +114,7 @@ class TikTokenizer(BaseTokenizer):
 class HFTokenizer(BaseTokenizer):
     def __init__(self, path):
         self.num_reserved_special_tokens = 256
-        self.model = AutoTokenizer.from_pretrained(path, token=config.hf_token)
+        self.model = AutoTokenizer.from_pretrained(path, token=config.third_party.hf_token)
         self.model.model_max_length = int(1e30)
 
         update_tokens = []

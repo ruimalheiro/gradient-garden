@@ -1,7 +1,6 @@
 import math
 
-from config import TrainingStage, TrainConfig
-from model import ModelConfig
+from config import TrainingStage, GlobalConfig
 from checkpoints import CheckpointData
 from engine.context import TrainerContext
 from engine.optim import OptimizerPlan
@@ -16,8 +15,7 @@ from logger import logger
 
 def prepare_workload_summary(
     *,
-    config: TrainConfig,
-    model_config: ModelConfig,
+    config: GlobalConfig,
     checkpoint_data: CheckpointData,
     trainer_ctx: TrainerContext,
     optimizer_plan: OptimizerPlan,
@@ -26,12 +24,12 @@ def prepare_workload_summary(
     model_trainable_params_count: int,
     total_tokens: int
 ):
-    if config.training_stage == TrainingStage.PRETRAIN or config.training_stage == TrainingStage.INSTRUCT:
+    if config.training.stage == TrainingStage.PRETRAINING or config.training.stage == TrainingStage.INSTRUCT:
         # For pretraining according to the Chinchilla paper ~20.0 is reasonable. For instruct: ~0.2 to ~0.5 is reasonable
-        m_factor = 20.0 if config.training_stage == TrainingStage.PRETRAIN else 0.3
+        m_factor = 20.0 if config.training.stage == TrainingStage.PRETRAINING else 0.3
         tokens_required_for_model_size = int(model_params_count * m_factor)
-        steps_needed = math.ceil(tokens_required_for_model_size / config.total_batch_size)
-        tokens_per_step = config.total_batch_size
+        steps_needed = math.ceil(tokens_required_for_model_size / config.training.total_batch_size)
+        tokens_per_step = config.training.total_batch_size
         tokens_coverage = trainer_state.max_steps * tokens_per_step
         dataset_fraction = tokens_coverage / total_tokens if total_tokens > 0 else None
 
@@ -56,12 +54,12 @@ def prepare_workload_summary(
         }
 
     summary = {
-        'config': config.to_summary_dict(include_model_config=False),
-        'model_config': model_config.to_dict(),
+        'config': config.model_dump(),
         'checkpoint_data': checkpoint_data.to_dict() if checkpoint_data else None,
         'trainer_ctx': trainer_ctx.to_dict(),
         'optimizer_plan': optimizer_plan.to_dict(),
-        'derived_properties': derived
+        'derived_properties': derived,
+        'trainer_state': trainer_state.to_dict()
     }
 
     return summary

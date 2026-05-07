@@ -10,7 +10,7 @@ class WandbWrapper():
         self.is_master_process = is_master_process
 
         if enabled and self.is_master_process:
-            WANDB_API_KEY = config.wandb_api_key
+            WANDB_API_KEY = config.third_party.wandb_api_key
             if WANDB_API_KEY is not None:
                 wandb.login(key=WANDB_API_KEY)
                 self.WANDB = True
