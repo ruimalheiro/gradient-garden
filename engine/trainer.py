@@ -268,8 +268,6 @@ class Trainer:
         )
 
     def load_test_generation_prompts(self):
-        if self.config.generation.generate_every_x_steps <= 0:
-            return
         test_prompts_data=json.loads(Path(self.config.paths.test_prompts_path).read_text())
         stage = self.config.training.stage.value
         if stage not in test_prompts_data:
@@ -277,7 +275,7 @@ class Trainer:
         self.test_generation_prompts = test_prompts_data[stage]
 
     def load_hellaswag_eval_data(self):
-        if self.config.evals.hellaswag.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAINING:
+        if self.config.training.stage != TrainingStage.PRETRAINING:
             return
         self.hellaswag_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.hellaswag_path}/hellaswag_val.jsonl',
@@ -287,7 +285,7 @@ class Trainer:
         )
 
     def load_winogrande_eval_data(self):
-        if self.config.evals.winogrande.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAINING:
+        if self.config.training.stage != TrainingStage.PRETRAINING:
             return
         self.winogrande_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.winogrande_path}/winogrande_val.jsonl',
@@ -297,7 +295,7 @@ class Trainer:
         )
 
     def load_arc_challenge_eval_data(self):
-        if self.config.evals.arc_challenge.every_x_steps <= 0 or self.config.training.stage != TrainingStage.PRETRAINING:
+        if self.config.training.stage != TrainingStage.PRETRAINING:
             return
         self.arc_challenge_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.arc_challenge_path}/arc_challenge_val.jsonl',
@@ -369,13 +367,13 @@ class Trainer:
         path = None
         name = None
         if args.pretraining_checkpoint:
-            path = self.config.pretraining_load_checkpoints_path
+            path = self.config.paths.checkpoints.pretraining_load_path
             name = args.pretraining_checkpoint
         elif args.instruct_checkpoint:
-            path = self.config.instruct_load_checkpoints_path
+            path = self.config.paths.checkpoints.instruct_load_path
             name = args.instruct_checkpoint
         elif args.dpo_checkpoint:
-            path = self.config.dpo_load_checkpoints_path
+            path = self.config.paths.checkpoints.dpo_load_path
             name = args.dpo_checkpoint
         return (path, name)
 
@@ -390,7 +388,7 @@ class Trainer:
         )
 
         training_stage_changed = (
-            checkpoint_data.metadata.get('training_stage', None) != self.config.training_stage.value
+            checkpoint_data.metadata.get('training_stage', None) != self.config.training.stage.value
         )
         if training_stage_changed:
             logger.warn('Training stage has changed')
@@ -405,7 +403,7 @@ class Trainer:
             logger.warn('DDP world size has changed')
 
         lora_mode_changed = (
-            self.config.lora_enabled and
+            self.config.lora.enabled and
             checkpoint_data is not None and
             not checkpoint_data.is_lora_checkpoint
         )
@@ -447,7 +445,7 @@ class Trainer:
 
     def apply_lora_for_checkpoint(self):
         if self.checkpoint_data.is_lora_checkpoint:
-            if not self.config.lora_enabled:
+            if not self.config.lora.enabled:
                 raise ValueError('"lora_enabled" must be set to True when loading checkpoint that includes LoRA')
             self.apply_lora_modification()
 
@@ -624,16 +622,29 @@ class Trainer:
             logger.info(log, pbar=pbar)
         self.wandb.log(wanb_log)
 
-    def should_run(self, step, every, last_step, run_last_step=True, force_first_step=False):
-        if every == -1:
-            return run_last_step and last_step
+    def should_run(
+        self,
+        *,
+        run_config
+    ):
+        ''' Relies in the config properties: every_x_steps, run_on_first_step, run_on_last_step
+        '''
+        step = self.trainer_state.current_step
+        is_first_step = (step == 0)
+        is_last_step = self.trainer_state.is_last_step
+
+        every = run_config.every_x_steps
+        run_on_first_step = run_config.run_on_first_step
+        run_on_last_step = run_config.run_on_last_step
+
+        if (
+            (is_first_step and run_on_first_step) or
+            (is_last_step and run_on_last_step)
+        ):
+            return True
         if every <= 0:
             return False
-        return (
-            (step > 0 and step % every == 0) or
-            (run_last_step and last_step) or
-            (force_first_step and every != -1 and step == 0)
-        )
+        return step > 0 and step % every == 0
 
     def clip_grad_norm(self, model, max_norm):
         norm = clip_grad_norm_(model.parameters(), max_norm)
@@ -884,12 +895,6 @@ class Trainer:
         ):
             return
 
-        if math.isinf(self.trainer_state.best_val_loss):
-            # Do not save until we have at least one validation result.
-            msg = logger.warning_wrapper('skipping checkpointing as validation step was not performed yet.')
-            logger.info(f'{self.trainer_state.current_step:4d} | {msg}', pbar=pbar)
-            return
-
         logger.info(f'{self.trainer_state.current_step:4d} | saving checkpoint...', pbar=pbar)
         save_checkpoint(
             self.get_save_checkpoints_path(),
@@ -1020,21 +1025,18 @@ class Trainer:
         logger.info('-----------------------------------------------', pbar=pbar)
 
     def process_step(self, pbar):
-        step = self.trainer_state.current_step
-        is_last_step = self.trainer_state.is_last_step
-
         self.run_train(pbar)
-        if self.should_run(step, self.config.validation.validate_every_x_steps, is_last_step, force_first_step=True):
+        if self.should_run(run_config=self.config.validation):
             self.run_validation(pbar)
-        if self.should_run(step, self.config.checkpointing.save_every_x_steps, is_last_step):
+        if self.should_run(run_config=self.config.checkpointing):
             self.run_save_checkpoint(pbar)
-        if self.should_run(step, self.config.evals.hellaswag.every_x_steps, is_last_step):
+        if self.should_run(run_config=self.config.evals.hellaswag):
             self.run_hellaswag_eval(pbar)
-        if self.should_run(step, self.config.evals.winogrande.every_x_steps, is_last_step):
+        if self.should_run(run_config=self.config.evals.winogrande):
             self.run_winogrande_eval(pbar)
-        if self.should_run(step, self.config.evals.arc_challenge.every_x_steps, is_last_step):
+        if self.should_run(run_config=self.config.evals.arc_challenge):
             self.run_arc_challenge_eval(pbar)
-        if self.should_run(step, self.config.generation.generate_every_x_steps, is_last_step):
+        if self.should_run(run_config=self.config.generation):
             self.run_generation(pbar)
 
     def start_training_loop(self):

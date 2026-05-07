@@ -130,9 +130,9 @@ The file `config.py` defines all the environment variables required.
 `train.py` accepts some flags that are useful to load a checkpoint or override some properties:
 
 ```bash
-  --pretraining_checkpoint <file>   # Resume pretraining run
-  --instruct_checkpoint <file>      # Resume SFT run
-  --dpo_checkpoint <file>           # Resume DPO run
+  --pretraining-checkpoint <file>   # Resume pretraining run
+  --instruct-checkpoint <file>      # Resume SFT run
+  --dpo-checkpoint <file>           # Resume DPO run
   --reset-optimizers                # Ignore stored optimizer(s) state
   --start-step <N>                  # Override internal step counter
 ```
@@ -161,7 +161,7 @@ The file `config.py` defines all the environment variables required.
     torchrun \
       --standalone \
       --nproc_per_node <NUMBER_OF_GPUs> \
-      train.py --pretraining_checkpoint <CHECKPOINT_FILE_NAME>
+      train.py --pretraining-checkpoint <CHECKPOINT_FILE_NAME>
     ```
     - NOTE: When loading an instruct checkpoint, use `--instruct_checkpoint` instead. This will also load the optimizer(s) state and resume from the stored step. You can reset the optimizer(s) with the flag `--reset-optimizers` and set the start step with the flag `--start-step`. E.g.: `--start-step 10`
 

@@ -1,10 +1,9 @@
 import os
-import yaml
 
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic_settings import BaseSettings
 from enum import Enum
-from typing import Tuple, Annotated
+from typing import Any, Annotated
 
 
 class DeviceType(str, Enum):
@@ -38,12 +37,12 @@ class RuntimeConfig(BaseModel):
     device_type: DeviceType = DeviceType.CUDA
     training_precision: TrainingPrecision = TrainingPrecision.BF16
     use_torch_compile: bool = False
-    use_fsdp: bool = True
-    number_of_cpu_processes: int = 32
+    use_fsdp: bool = False
+    number_of_cpu_processes: int = 16
 
 class MoEConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    enabled: bool = True
+    enabled: bool = False
     num_experts: int = 8
     expert_dim: int = 768
     top_k: int = 2
@@ -75,13 +74,15 @@ class TrainingConfig(BaseModel):
     seed: int = 42
     total_batch_size: int = 524288
     max_steps: int = 200
-    early_stopping_patience: int = 200
+    early_stopping_patience: int = 100
     early_stopping_patience_skip_steps: int = 0
 
 class EvalTaskConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    every_x_steps: int = 1
+    every_x_steps: int = -1
     number_of_examples: int = 200
+    run_on_first_step: bool = False
+    run_on_last_step: bool = False
 
 class EvalsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -119,8 +120,10 @@ class PathsConfig(BaseModel):
 
 class GenerationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    generate_every_x_steps: int = 1
+    every_x_steps: int = -1
     max_test_gen_len: int = 256
+    run_on_first_step: bool = False
+    run_on_last_step: bool = False
 
 class TokenizerConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -130,7 +133,7 @@ class TokenizerConfig(BaseModel):
 
 class LoRAConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    enabled: bool = True
+    enabled: bool = False
     rank: int = 16
     alpha: int = 8
     dropout: float = 0.05
@@ -138,7 +141,7 @@ class LoRAConfig(BaseModel):
 
 class DistillationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    enabled: bool = True
+    enabled: bool = False
     temperature: float = 2.0
     teacher_model_checkpoint: str = 'HuggingFaceTB/SmolLM2-360M'
 
@@ -153,16 +156,16 @@ class AdamWConfig(BaseModel):
     weight_decay: float = 0.1
     betas: tuple[float, float] = (0.9, 0.95)
     use_fused: bool | None = None
-    warmup_steps: int = 2000
+    warmup_steps: int = 20
 
 class MuonConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    enabled: bool = True
+    enabled: bool = False
     min_lr: float = 3e-5
     max_lr: float = 3e-4
     weight_decay: float = 0.0
     momentum: float = 0.95
-    warmup_steps: int = 2000
+    warmup_steps: int = 20
 
 class OptimizersConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -186,15 +189,19 @@ class TorchProfilerConfig(BaseModel):
 
 class ValidationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    validate_every_x_steps: int = -1
+    every_x_steps: int = -1
     validation_steps: int = 100
+    run_on_first_step: bool = False
+    run_on_last_step: bool = False
 
 class CheckpointingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     save_checkpoints: bool = False
     save_best_only: bool = False
-    save_every_x_steps: int = 1
+    every_x_steps: int = 50
     max_number_checkpoints: int = 5
+    run_on_first_step: bool = False
+    run_on_last_step: bool = False
 
 class GlobalConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -217,7 +224,7 @@ class GlobalConfig(BaseModel):
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     checkpointing: CheckpointingConfig = Field(default_factory=CheckpointingConfig)
 
-    def model_post_init(self, __context: any) -> None:
+    def model_post_init(self, __context: Any) -> None:
         # Sets default paths for huggingface
         os.environ['HF_HOME'] = self.third_party.hf_home
         os.environ['HF_DATASETS_CACHE'] = f'{self.third_party.hf_home}/datasets'
