@@ -101,7 +101,7 @@ def generate(
     repetition_penalty,
     no_repeat_ngram_size,
     device,
-    dtype,
+    dtype=torch.float32,
     use_kv_cache=False
 ):
     batch_size = len(prompt_tokens)

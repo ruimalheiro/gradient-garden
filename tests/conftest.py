@@ -10,7 +10,8 @@ import pytest
 import torch
 
 from tokenizer import init_tokenizer
-from model import Transformer, ModelConfig
+from model import Transformer
+from config import ModelConfig
 
 
 @pytest.fixture(scope='session')
@@ -37,14 +38,15 @@ def model(device, tokenizer):
         norm_eps=1e-05,
         rope_theta=500000.0,
         max_batch_size=2,
-        max_seq_len=32,
-        tokenizer = tokenizer,
-        vocab_size = tokenizer.vocab_size,
-        pad_token_id = tokenizer.pad_id,
-        stop_tokens = tokenizer.stop_tokens
+        max_seq_len=32
     )
 
-    model = Transformer(model_config)
+    model = Transformer(
+        config=model_config,
+        pad_token_id=tokenizer.pad_id,
+        vocab_size=tokenizer.vocab_size,
+        ignore_index=-100
+    )
     model.to(device)
     model.eval()
     return model

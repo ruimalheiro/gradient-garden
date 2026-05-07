@@ -3,7 +3,7 @@ import torch
 from generate import generate
 
 
-def test_generate_kv_cache_matches_no_cache_greedy(model, device):
+def test_generate_kv_cache_matches_no_cache_greedy(model, tokenizer, device):
     model.eval()
     torch.manual_seed(0)
 
@@ -16,13 +16,14 @@ def test_generate_kv_cache_matches_no_cache_greedy(model, device):
 
     kwargs = dict(
         model=model,
+        tokenizer=tokenizer,
         prompt_tokens=prompts,
         max_gen_len=16,
         temperature=0.0,
         top_p=0.9, # ignored when temperature=0
         repetition_penalty=1.0,
         no_repeat_ngram_size=1,
-        device=device,
+        device=device
     )
 
     out_no_cache = generate(**kwargs, use_kv_cache=False)
@@ -30,7 +31,7 @@ def test_generate_kv_cache_matches_no_cache_greedy(model, device):
 
     assert out_no_cache == out_cache
 
-def test_generate_batched_variable_lengths_smoke(model, device):
+def test_generate_batched_variable_lengths_smoke(model, tokenizer, device):
     model.eval()
     torch.manual_seed(0)
 
@@ -44,6 +45,7 @@ def test_generate_batched_variable_lengths_smoke(model, device):
 
     out = generate(
         model=model,
+        tokenizer=tokenizer,
         prompt_tokens=prompts,
         max_gen_len=max_gen_len,
         temperature=0.0,
@@ -61,11 +63,12 @@ def test_generate_batched_variable_lengths_smoke(model, device):
         assert isinstance(gen_tokens, list)
         assert len(gen_tokens) <= max_gen_len
 
-def test_generate_empty_prompt_raises(model, device):
+def test_generate_empty_prompt_raises(model, tokenizer, device):
     with torch.no_grad():
         try:
             generate(
                 model=model,
+                tokenizer=tokenizer,
                 prompt_tokens=[[1, 2, 3], []], # one empty prompt
                 max_gen_len=8,
                 temperature=0.0,

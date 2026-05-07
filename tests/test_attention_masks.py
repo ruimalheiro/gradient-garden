@@ -2,11 +2,11 @@ import torch
 
 
 @torch.no_grad()
-def test_padded_batch_matches_individual(model, device):
+def test_padded_batch_matches_individual(model, tokenizer, device):
     model.eval()
     torch.manual_seed(0)
 
-    pad_id = model.config.pad_token_id
+    pad_id = tokenizer.pad_id
 
     # Two sequences with different lengths
     seq1 = [10, 20, 30, 40, 50]      # len 5
