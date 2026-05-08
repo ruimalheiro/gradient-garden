@@ -268,14 +268,26 @@ class Trainer:
         )
 
     def load_test_generation_prompts(self):
+        if not self.can_run_scheduled_action(self.config.generation):
+            return
         test_prompts_data=json.loads(Path(self.config.paths.test_prompts_path).read_text())
         stage = self.config.training.stage.value
         if stage not in test_prompts_data:
             raise ValueError(f'Missing test prompts for training stage: {stage}')
         self.test_generation_prompts = test_prompts_data[stage]
 
+    def can_run_scheduled_action(self, schedule):
+        return (
+            schedule.every_x_steps > 0 or
+            schedule.run_on_first_step or
+            schedule.run_on_last_step
+        )
+
     def load_hellaswag_eval_data(self):
-        if self.config.training.stage != TrainingStage.PRETRAINING:
+        if (
+            self.config.training.stage != TrainingStage.PRETRAINING or
+            not self.can_run_scheduled_action(self.config.evals.hellaswag)
+        ):
             return
         self.hellaswag_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.hellaswag_path}/hellaswag_val.jsonl',
@@ -285,7 +297,10 @@ class Trainer:
         )
 
     def load_winogrande_eval_data(self):
-        if self.config.training.stage != TrainingStage.PRETRAINING:
+        if (
+            self.config.training.stage != TrainingStage.PRETRAINING or
+            not self.can_run_scheduled_action(self.config.evals.winogrande)
+        ):
             return
         self.winogrande_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.winogrande_path}/winogrande_val.jsonl',
@@ -295,7 +310,10 @@ class Trainer:
         )
 
     def load_arc_challenge_eval_data(self):
-        if self.config.training.stage != TrainingStage.PRETRAINING:
+        if (
+            self.config.training.stage != TrainingStage.PRETRAINING or
+            not self.can_run_scheduled_action(self.config.evals.arc_challenge)
+        ):
             return
         self.arc_challenge_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.arc_challenge_path}/arc_challenge_val.jsonl',

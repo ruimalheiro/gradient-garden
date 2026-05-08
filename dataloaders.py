@@ -460,6 +460,8 @@ def init_data_loaders(
             use_shuffle=True,
             pad_id=pad_id,
             drop_last=True,
+            number_of_cpu_processes=number_of_cpu_processes,
+            ignore_index=ignore_index
         )
         val_loader = InstructDataLoader(
             batch_size=batch_size,
@@ -472,6 +474,8 @@ def init_data_loaders(
             use_shuffle=False,
             pad_id=pad_id,
             drop_last=False,
+            number_of_cpu_processes=number_of_cpu_processes,
+            ignore_index=ignore_index
         )
     elif training_stage == TrainingStage.DPO:
         assert pad_id is not None
@@ -491,6 +495,7 @@ def init_data_loaders(
             use_shuffle=True,
             pad_id=pad_id,
             drop_last=False,
+            number_of_cpu_processes=number_of_cpu_processes
         )
         val_loader = DirectPreferenceOptimizationDataLoader(
             batch_size=batch_size,
@@ -503,6 +508,7 @@ def init_data_loaders(
             use_shuffle=False,
             pad_id=pad_id,
             drop_last=False,
+            number_of_cpu_processes=number_of_cpu_processes
         )
     else:
         raise ValueError('Invalid training stage for dataloader')
