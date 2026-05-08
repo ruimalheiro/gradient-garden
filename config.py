@@ -1,6 +1,7 @@
 import os
 import yaml
 
+from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic_settings import BaseSettings
 from enum import Enum
@@ -236,11 +237,25 @@ def load_config(config_path) -> GlobalConfig:
         print('Configuration not provided... using defaults.')
         return GlobalConfig()
 
-    with open(config_path, 'r') as file:
+    config_path = Path(config_path)
+
+    if not config_path.exists():
+        raise FileNotFoundError(f'Provided config path does not exist: {config_path}')
+
+    if not config_path.is_file():
+        raise FileNotFoundError(f'Provided config path is not a file: {config_path}')
+
+    if config_path.suffix not in {'.yaml', '.yml'}:
+        raise ValueError(f'Config file must be a .yaml or .yml file: {config_path}')
+
+    with config_path.open('r') as file:
         config_data = yaml.safe_load(file) or {}
 
     if not isinstance(config_data, dict):
         raise ValueError(f'The provided yaml file or structure is invalid: {config_path}')
+
+    if not config_data:
+        raise ValueError(f'Config file cannot be empty: {config_path}')
 
     loaded_config = GlobalConfig.model_validate(config_data)
     print(f'Configuration loaded from: {config_path}')

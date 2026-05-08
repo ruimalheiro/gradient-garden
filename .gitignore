@@ -24,6 +24,12 @@ wandb/
 *.local.ipynb
 *.private.ipynb
 
+# Local recipes
+*.local.yaml
+*.private.yaml
+*.local.yml
+*.private.yml
+
 # Optional extra ignores for local tokenizer assets
 tokenizer.model
 *.tiktoken
