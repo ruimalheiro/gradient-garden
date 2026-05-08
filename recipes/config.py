@@ -4,6 +4,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Any
 from config import GlobalConfig
+from logger import logger
 
 
 class DatasetEntryConfig(BaseModel):
@@ -24,7 +25,7 @@ class RecipeEvalsDataConfig(BaseModel):
 class RecipeDataConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     seed: int
-    shard_size: int
+    shard_size: int | None = None
     datasets: dict[str, dict[str, DatasetEntryConfig]]
     evals: RecipeEvalsDataConfig = Field(default_factory=RecipeEvalsDataConfig)
 
@@ -57,5 +58,5 @@ def load_recipe(recipe_path) -> RecipeConfig:
         raise ValueError(f'Recipe file cannot be empty: {recipe_path}')
 
     loaded_recipe = RecipeConfig.model_validate(recipe_data)
-    print(f'Recipe loaded from: {recipe_path}')
+    logger.info(f'Recipe loaded from: {recipe_path}')
     return loaded_recipe

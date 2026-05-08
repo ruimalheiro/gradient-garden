@@ -9,6 +9,7 @@ import math
 
 from tqdm import tqdm
 from functools import partial
+from logger import logger
 
 
 def stable_hash(text, *, seed=None, hash_bytes=8):
@@ -22,7 +23,7 @@ def get_max_number_of_cpu_processes(config):
     NUMBER_OF_PROCESSES = max(1, os.cpu_count() // 2)
     if config.runtime.number_of_cpu_processes != 0:
         NUMBER_OF_PROCESSES = max(1, min(config.runtime.number_of_cpu_processes, os.cpu_count()))
-    print(f'Number of CPU processes: {NUMBER_OF_PROCESSES}\n')
+    logger.info(f'Number of CPU processes: {NUMBER_OF_PROCESSES}\n')
     return NUMBER_OF_PROCESSES
 
 def assert_common_structure_and_extract(datasets_mix, supported_datasets):
@@ -68,7 +69,7 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
             return f'{_id}_{name}'
         return _id
 
-    print('Mixture probabilities:', [{ds_with_name(ds): round(p, 3)} for ds, p in zip(valid_datasets, probabilities)], '\n')
+    logger.info(f'Mixture probabilities: {[{ds_with_name(ds): round(p, 3)} for ds, p in zip(valid_datasets, probabilities)]}\n')
 
     return seed, valid_datasets, probabilities
 
@@ -87,8 +88,8 @@ def save_filename(all_tokens_np, shard_index, data_cache_dir, shard_file_prefix)
         np.save(temp_filepath, all_tokens_np)
         os.replace(temp_filepath, final_filepath) # Small protection in case of file corruption..
     except Exception as e:
-        print(f'\nError saving shard {shard_index} to {final_filepath}: {e}')
-        print('Stopping processing. Rerun the script to resume.')
+        logger.error(f'\nError saving shard {shard_index} to {final_filepath}: {e}')
+        logger.error('Stopping processing. Rerun the script to resume.')
         if os.path.exists(temp_filepath):
             try: os.remove(temp_filepath)
             except OSError: pass
@@ -105,7 +106,7 @@ def find_last_shard_info(data_cache_dir, shard_file_prefix):
             files.append((int(match.group(1)), file_path))
 
     if not files:
-        print('No previous shards found.')
+        logger.info('No previous shards found.')
         return -1, 0
 
     files.sort(key=lambda x: x[0])
@@ -122,7 +123,7 @@ def find_last_shard_info(data_cache_dir, shard_file_prefix):
         del shard
 
     last_shard_index = files[-1][0]
-    print(f'Resuming after shard {last_shard_index}. Total tokens in existing shards: {total_tokens_saved}')
+    logger.info(f'Resuming after shard {last_shard_index}. Total tokens in existing shards: {total_tokens_saved}')
     return last_shard_index, total_tokens_saved
 
 def prepare_dataset(
@@ -146,7 +147,7 @@ def prepare_dataset(
 
     skipping_progress_bar = None
     if skipping_phase:
-        print('Starting skipping phase...')
+        logger.info('Starting skipping phase...')
         skipping_progress_bar = tqdm(total=tokens_to_skip, desc='Skipping tokens', unit='tokens', smoothing=0.1)
 
     with mp.Pool(number_of_processes) as pool:
@@ -179,7 +180,7 @@ def prepare_dataset(
                     offset = tokens_to_skip - processed_token_count_in_loop
                     tokens_to_process = tokens[offset:]
                     tokens_len = tokens_to_process.size
-                    print(f'Skipping phase complete. Starting to process from token {offset+1} of the current batch.')
+                    logger.info(f'Skipping phase complete. Starting to process from token {offset+1} of the current batch.')
                     skipping_phase = False
             else:
                 tokens_to_process = tokens

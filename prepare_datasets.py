@@ -12,6 +12,7 @@ from datasets_preparation import (
     prepare_recipe_data
 )
 from recipes.config import load_recipe
+from logger import logger
 
 
 def load_custom_dataset_mix(mix_file_path):
@@ -21,6 +22,8 @@ def load_custom_dataset_mix(mix_file_path):
         return json.load(file)
 
 if __name__ == '__main__':
+    logger.set_master(True)
+
     parser = argparse.ArgumentParser(description='Datasets Preparation Script Options')
 
     config_group = parser.add_mutually_exclusive_group()
