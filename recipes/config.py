@@ -11,11 +11,22 @@ class DatasetEntryConfig(BaseModel):
     weight: float
     transforms: dict[str, Any] = Field(default_factory=dict)
 
+class RecipeEvalDatasetConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    enabled: bool = False
+
+class RecipeEvalsDataConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    hellaswag: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
+    winogrande: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
+    arc_challenge: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
+
 class RecipeDataConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     seed: int
     shard_size: int
     datasets: dict[str, dict[str, DatasetEntryConfig]]
+    evals: RecipeEvalsDataConfig = Field(default_factory=RecipeEvalsDataConfig)
 
 class RecipeConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
