@@ -345,11 +345,13 @@ class Trainer:
             batch_size=self.config.model.max_batch_size,
             sequence_length=self.config.model.max_seq_len,
             is_master_process=self.distributed_ctx.is_master_process,
-            process_rank=self.distributed_ctx.ddp_rank,
-            num_processes=self.distributed_ctx.ddp_world_size,
+            ddp_rank=self.distributed_ctx.ddp_rank,
+            ddp_world_size=self.distributed_ctx.ddp_world_size,
             data_root=self.get_dataloader_root_path(),
             pad_id=self.tokenizer.pad_id,
-            training_stage=self.config.training.stage.value
+            training_stage=self.config.training.stage.value,
+            number_of_cpu_processes=self.config.runtime.number_of_cpu_processes,
+            ignore_index=self.config.tokenizer.ignore_index
         )
 
     def resolve_checkpoint_request(self):
@@ -562,7 +564,8 @@ class Trainer:
     def setup_wandb(self):
         self.wandb = WandbWrapper(
             enabled=self.config.wandb.enabled,
-            is_master_process=self.distributed_ctx.is_master_process
+            is_master_process=self.distributed_ctx.is_master_process,
+            wandb_api_key=self.config.third_party.wandb_api_key
         )
         self.wandb.init(
             self.config.wandb.project_name,

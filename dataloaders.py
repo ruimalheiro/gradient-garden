@@ -9,10 +9,7 @@ import re
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.utils.rnn import pad_sequence
-from config import (
-    TrainingStage,
-    config
-)
+from config import TrainingStage
 
 
 def load_tokens(filename):
@@ -23,12 +20,22 @@ def load_tokens(filename):
     return ptt
 
 class PretrainingDataLoader:
-    def __init__(self, batch_size, sequence_length, is_master_process, process_rank, num_processes, data_root, split, use_shuffle=False):
+    def __init__(
+        self,
+        batch_size,
+        sequence_length,
+        is_master_process,
+        ddp_rank,
+        ddp_world_size,
+        data_root,
+        split,
+        use_shuffle=False
+    ):
         self.B = batch_size
         self.S = sequence_length
         self.is_master_process = is_master_process
-        self.process_rank = process_rank
-        self.num_processes = num_processes
+        self.ddp_rank = ddp_rank
+        self.ddp_world_size = ddp_world_size
         self.data_root = data_root
         assert split in {'train', 'val'}
         self.split = split
@@ -69,7 +76,7 @@ class PretrainingDataLoader:
                 del shard
             return total
 
-        if self.num_processes <= 1 or not dist.is_available() or not dist.is_initialized():
+        if self.ddp_world_size <= 1 or not dist.is_available() or not dist.is_initialized():
             return _calculate()
 
         total_tokens = None
@@ -85,7 +92,7 @@ class PretrainingDataLoader:
         if not self.use_shuffle:
             return
 
-        if self.num_processes <= 1 or not dist.is_available() or not dist.is_initialized():
+        if self.ddp_world_size <= 1 or not dist.is_available() or not dist.is_initialized():
             random.shuffle(self.shards)
             return
 
@@ -106,7 +113,7 @@ class PretrainingDataLoader:
         self.tokens = load_tokens(self.shards[self.current_shard])
         if torch.cuda.is_available():
             self.tokens = self.tokens.pin_memory()
-        self.current_position = self.B * self.S * self.process_rank
+        self.current_position = self.B * self.S * self.ddp_rank
 
     def state_dict(self):
         return {
@@ -128,25 +135,41 @@ class PretrainingDataLoader:
         buf = self.tokens[self.current_position : self.current_position+B*S+1]
         x = (buf[:-1]).view(B, S)
         y = (buf[1:]).view(B, S)
-        self.current_position += B * S * self.num_processes
-        if self.current_position + (B * S * self.num_processes + 1) > len(self.tokens):
+        self.current_position += B * S * self.ddp_world_size
+        if self.current_position + (B * S * self.ddp_world_size + 1) > len(self.tokens):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
             if self.current_shard == 0:
                 self.sync_shuffle_shards()
             self.tokens = load_tokens(self.shards[self.current_shard])
             if torch.cuda.is_available():
                 self.tokens = self.tokens.pin_memory()
-            self.current_position = self.B * self.S * self.process_rank
+            self.current_position = self.B * self.S * self.ddp_rank
         return x, y
 
 class InstructDataLoader:
-    def __init__(self, batch_size, sequence_length, is_master_process, process_rank, num_processes, data_root, split, use_shuffle, pad_id, drop_last):
+    def __init__(
+        self,
+        batch_size,
+        sequence_length,
+        is_master_process,
+        ddp_rank,
+        ddp_world_size,
+        data_root,
+        split,
+        use_shuffle,
+        pad_id,
+        drop_last,
+        number_of_cpu_processes,
+        ignore_index
+    ):
         self.B = batch_size
         self.S = sequence_length
         self.is_master_process = is_master_process
-        self.process_rank = process_rank
-        self.num_processes = num_processes
+        self.ddp_rank = ddp_rank
+        self.ddp_world_size = ddp_world_size
         self.total_tokens = None
+        self.number_of_cpu_processes = number_of_cpu_processes
+        self.ignore_index = ignore_index
 
         dataset = datasets.load_from_disk(os.path.join(data_root, split))
         if is_master_process:
@@ -158,8 +181,8 @@ class InstructDataLoader:
 
         self.sampler = DistributedSampler(
             dataset,
-            num_replicas=num_processes,
-            rank=process_rank,
+            num_replicas=ddp_world_size,
+            rank=ddp_rank,
             shuffle=use_shuffle
         )
 
@@ -175,7 +198,7 @@ class InstructDataLoader:
             labels = pad_sequence(
                 labels,
                 batch_first=True,
-                padding_value=config.tokenizer.ignore_index
+                padding_value=self.ignore_index
             )
             if ids.size(1) > sequence_length:
                 ids  = ids[:, -sequence_length:]
@@ -218,12 +241,12 @@ class InstructDataLoader:
         def _calculate():
             return sum(self._dataloader.dataset.map(
                 lambda ex: {'len': len(ex['input_ids'])},
-                num_proc=config.runtime.number_of_cpu_processes,
+                num_proc=self.number_of_cpu_processes,
                 remove_columns=[],
                 desc='Calculating number of tokens'
             )['len'])
 
-        if self.num_processes <= 1 or not dist.is_available() or not dist.is_initialized():
+        if self.ddp_world_size <= 1 or not dist.is_available() or not dist.is_initialized():
             return _calculate()
 
         total_tokens = None
@@ -249,13 +272,27 @@ class InstructDataLoader:
         self._iterator = iter(self._dataloader)
 
 class DirectPreferenceOptimizationDataLoader:
-    def __init__(self, batch_size, sequence_length, is_master_process, process_rank, num_processes, data_root, split, use_shuffle, pad_id, drop_last):
+    def __init__(
+        self,
+        batch_size,
+        sequence_length,
+        is_master_process,
+        ddp_rank,
+        ddp_world_size,
+        data_root,
+        split,
+        use_shuffle,
+        pad_id,
+        drop_last,
+        number_of_cpu_processes
+    ):
         self.B = batch_size
         self.S = sequence_length
         self.is_master_process = is_master_process
-        self.process_rank = process_rank
-        self.num_processes = num_processes
+        self.ddp_rank = ddp_rank
+        self.ddp_world_size = ddp_world_size
         self.total_tokens = None
+        self.number_of_cpu_processes = number_of_cpu_processes
 
         dataset = datasets.load_from_disk(os.path.join(data_root, split))
         if is_master_process:
@@ -267,8 +304,8 @@ class DirectPreferenceOptimizationDataLoader:
 
         self.sampler = DistributedSampler(
             dataset,
-            num_replicas=num_processes,
-            rank=process_rank,
+            num_replicas=ddp_world_size,
+            rank=ddp_rank,
             shuffle=use_shuffle
         )
 
@@ -338,12 +375,12 @@ class DirectPreferenceOptimizationDataLoader:
         def _calculate():
             return sum(self._dataloader.dataset.map(
                 lambda ex: {'len': len(ex['prompt_input_ids']) + len(ex['chosen_input_ids']) + len(ex['rejected_input_ids'])},
-                num_proc=config.runtime.number_of_cpu_processes,
+                num_proc=self.number_of_cpu_processes,
                 remove_columns=[],
                 desc='Calculating number of tokens'
             )['len'])
 
-        if self.num_processes <= 1 or not dist.is_available() or not dist.is_initialized():
+        if self.ddp_world_size <= 1 or not dist.is_available() or not dist.is_initialized():
             return _calculate()
 
         total_tokens = None
@@ -372,10 +409,12 @@ def init_data_loaders(
     batch_size,
     sequence_length,
     is_master_process,
-    process_rank,
-    num_processes,
+    ddp_rank,
+    ddp_world_size,
     data_root,
     training_stage,
+    number_of_cpu_processes,
+    ignore_index,
     pad_id=None
 ):
     if training_stage == TrainingStage.PRETRAINING:
@@ -387,8 +426,8 @@ def init_data_loaders(
             batch_size=batch_size,
             sequence_length=sequence_length,
             is_master_process=is_master_process,
-            process_rank=process_rank,
-            num_processes=num_processes,
+            ddp_rank=ddp_rank,
+            ddp_world_size=ddp_world_size,
             data_root=data_root,
             split='train',
             use_shuffle=True
@@ -397,8 +436,8 @@ def init_data_loaders(
             batch_size=batch_size,
             sequence_length=sequence_length,
             is_master_process=is_master_process,
-            process_rank=process_rank,
-            num_processes=num_processes,
+            ddp_rank=ddp_rank,
+            ddp_world_size=ddp_world_size,
             data_root=data_root,
             split='val',
             use_shuffle=False
@@ -414,8 +453,8 @@ def init_data_loaders(
             batch_size=batch_size,
             sequence_length=sequence_length,
             is_master_process=is_master_process,
-            process_rank=process_rank,
-            num_processes=num_processes,
+            ddp_rank=ddp_rank,
+            ddp_world_size=ddp_world_size,
             data_root=data_root,
             split='train',
             use_shuffle=True,
@@ -426,8 +465,8 @@ def init_data_loaders(
             batch_size=batch_size,
             sequence_length=sequence_length,
             is_master_process=is_master_process,
-            process_rank=process_rank,
-            num_processes=num_processes,
+            ddp_rank=ddp_rank,
+            ddp_world_size=ddp_world_size,
             data_root=data_root,
             split='val',
             use_shuffle=False,
@@ -445,8 +484,8 @@ def init_data_loaders(
             batch_size=batch_size,
             sequence_length=sequence_length,
             is_master_process=is_master_process,
-            process_rank=process_rank,
-            num_processes=num_processes,
+            ddp_rank=ddp_rank,
+            ddp_world_size=ddp_world_size,
             data_root=data_root,
             split='train',
             use_shuffle=True,
@@ -457,8 +496,8 @@ def init_data_loaders(
             batch_size=batch_size,
             sequence_length=sequence_length,
             is_master_process=is_master_process,
-            process_rank=process_rank,
-            num_processes=num_processes,
+            ddp_rank=ddp_rank,
+            ddp_world_size=ddp_world_size,
             data_root=data_root,
             split='val',
             use_shuffle=False,
