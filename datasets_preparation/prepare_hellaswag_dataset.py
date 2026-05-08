@@ -4,14 +4,13 @@ import torch
 
 from pathlib import Path
 from tqdm import tqdm
-from config import config
 from tokenizer import init_tokenizer
 from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
 from datasets import load_dataset
 
 
-def prepare_hellaswag_dataset():
-    number_of_processes = get_max_number_of_cpu_processes()
+def prepare_hellaswag_dataset(*, config):
+    number_of_processes = get_max_number_of_cpu_processes(config)
 
     current_dir = Path(__file__).resolve().parent.parent
 
@@ -19,7 +18,12 @@ def prepare_hellaswag_dataset():
     data_cache_dir.mkdir(parents=True, exist_ok=True)
     data_filename = data_cache_dir / 'hellaswag_val.jsonl'
 
-    tokenizer = init_tokenizer(config.tokenizer.checkpoint_path, config.tokenizer.huggingface_tokenizer)
+    tokenizer = init_tokenizer(
+        path=config.tokenizer.checkpoint_path,
+        system_prompt=config.prompts.system_prompt,
+        is_huggingface_tokenizer=config.tokenizer.huggingface_tokenizer,
+        hf_token=config.third_party.hf_token if config.tokenizer.huggingface_tokenizer else None
+    )
 
     def prepare_example(example):
         """

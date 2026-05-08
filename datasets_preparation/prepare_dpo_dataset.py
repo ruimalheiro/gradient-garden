@@ -4,7 +4,6 @@ import re
 import copy
 import time
 
-from config import config
 from tokenizer import init_tokenizer
 from datasets import (
     load_dataset,

@@ -306,8 +306,10 @@ class Trainer:
     
     def build_tokenizer(self):
         self.tokenizer = init_tokenizer(
-            self.config.tokenizer.checkpoint_path,
-            self.config.tokenizer.huggingface_tokenizer
+            path=self.config.tokenizer.checkpoint_path,
+            system_prompt=self.config.prompts.system_prompt,
+            is_huggingface_tokenizer=self.config.tokenizer.huggingface_tokenizer,
+            hf_token=self.config.third_party.hf_token if self.config.tokenizer.huggingface_tokenizer else None
         )
 
     def build_model(self):

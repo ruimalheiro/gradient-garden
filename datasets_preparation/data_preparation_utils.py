@@ -8,7 +8,6 @@ import hashlib
 import math
 
 from tqdm import tqdm
-from config import config
 
 
 def stable_hash(text, *, seed=None, hash_bytes=8):
@@ -18,7 +17,7 @@ def stable_hash(text, *, seed=None, hash_bytes=8):
         return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=8, key=salt).digest(), 'big')
     return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=8).digest(), 'big')
 
-def get_max_number_of_cpu_processes():
+def get_max_number_of_cpu_processes(config):
     NUMBER_OF_PROCESSES = max(1, os.cpu_count() // 2)
     if config.runtime.number_of_cpu_processes != 0:
         NUMBER_OF_PROCESSES = max(1, min(config.runtime.number_of_cpu_processes, os.cpu_count()))
