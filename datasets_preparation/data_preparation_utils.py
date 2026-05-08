@@ -8,7 +8,7 @@ import hashlib
 import math
 
 from tqdm import tqdm
-from config import config
+from functools import partial
 
 
 def stable_hash(text, *, seed=None, hash_bytes=8):
@@ -18,7 +18,7 @@ def stable_hash(text, *, seed=None, hash_bytes=8):
         return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=8, key=salt).digest(), 'big')
     return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=8).digest(), 'big')
 
-def get_max_number_of_cpu_processes():
+def get_max_number_of_cpu_processes(config):
     NUMBER_OF_PROCESSES = max(1, os.cpu_count() // 2)
     if config.runtime.number_of_cpu_processes != 0:
         NUMBER_OF_PROCESSES = max(1, min(config.runtime.number_of_cpu_processes, os.cpu_count()))
@@ -129,6 +129,7 @@ def prepare_dataset(
     *,
     dataset,
     tokenize_function,
+    tokenizer_kwargs,
     target_folder,
     shard_file_prefix,
     shard_size,
@@ -154,7 +155,7 @@ def prepare_dataset(
         progress_bar = None
         all_tokens_np = np.empty((shard_size,), dtype=np.uint32)
 
-        for tokens in pool.imap(tokenize_function, dataset, chunksize=chunksize):
+        for tokens in pool.imap(partial(tokenize_function, tokenizer_kwargs), dataset, chunksize=chunksize):
             if tokens.size == 0:
                 continue
 

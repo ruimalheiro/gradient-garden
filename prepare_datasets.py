@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from config import config
+from config import load_config
 from datasets_preparation import (
     prepare_hellaswag_dataset,
     prepare_winogrande_dataset,
@@ -21,6 +21,8 @@ def load_custom_dataset_mix(mix_file_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Datasets Preparation Script Options')
 
+    parser.add_argument('--config', type=str, default=None, help='Path to the configuration definition (.yaml). If not provided, default values are used.')
+
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--hellaswag', action='store_true', help='Prepare HellaSwag eval dataset')
     group.add_argument('--winogrande', action='store_true', help='Prepare WinoGrande eval dataset')
@@ -33,20 +35,22 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    cfg = load_config(args.config)
+
     if (args.hellaswag or args.winogrande or args.arc_challenge) and args.mix_file:
         parser.error('"--mix-file" is only supported for training datasets.')
 
     datasets_mix = load_custom_dataset_mix(args.mix_file)
 
     if args.hellaswag:
-        prepare_hellaswag_dataset()
+        prepare_hellaswag_dataset(config=cfg)
     elif args.winogrande:
-        prepare_winogrande_dataset()
+        prepare_winogrande_dataset(config=cfg)
     elif args.arc_challenge:
-        prepare_arc_challenge_dataset()
+        prepare_arc_challenge_dataset(config=cfg)
     elif args.pretraining:
-        prepare_pretraining_dataset(datasets_mix=datasets_mix)
+        prepare_pretraining_dataset(config=cfg, datasets_mix=datasets_mix)
     elif args.instruct:
-        prepare_instruct_dataset(datasets_mix=datasets_mix)
+        prepare_instruct_dataset(config=cfg, datasets_mix=datasets_mix)
     elif args.dpo:
-        prepare_dpo_dataset(datasets_mix=datasets_mix)
+        prepare_dpo_dataset(config=cfg, datasets_mix=datasets_mix)

@@ -3,7 +3,6 @@ import numpy as np
 import time
 import copy
 
-from config import config
 from tokenizer import init_tokenizer
 from datasets import (
     load_dataset,
@@ -17,6 +16,8 @@ from datasets_preparation.data_preparation_utils import (
 )
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
 
+
+os.environ.setdefault('TOKENIZERS_PARALLELISM', 'false') # HF to not use parallelism in tokenizer
 
 #### ADAPTERS
 def adapt_fineweb_edu(batch, transforms):
@@ -50,6 +51,7 @@ SUPPORTED_HF_DATASETS = {
 
 def download_and_prepare_data(
     *,
+    config,
     seed,
     valid_datasets,
     probabilities
@@ -144,11 +146,10 @@ def download_and_prepare_data(
     return train_ds, val_ds
 
 tokenizer = None
-
-def tokenize(doc):
+def tokenize(tokenizer_kwargs, doc):
     global tokenizer
     if tokenizer is None:
-        tokenizer = init_tokenizer(config.tokenizer.checkpoint_path, config.tokenizer.huggingface_tokenizer)
+        tokenizer = init_tokenizer(**tokenizer_kwargs)
     input_ids = tokenizer.encode(doc['text'])
     tokens_np = np.empty(len(input_ids) + 1, dtype=np.uint32)
     tokens_np[0] = tokenizer.eos_id
@@ -157,15 +158,24 @@ def tokenize(doc):
 
 def shard_and_tokenize(
     *,
+    config,
     shard_size,
     train_ds,
     val_ds,
     number_of_processes
 ):
+    tokenizer_kwargs = {
+        'path': config.tokenizer.checkpoint_path,
+        'system_prompt': config.prompts.system_prompt,
+        'is_huggingface_tokenizer': config.tokenizer.huggingface_tokenizer,
+        'hf_token': config.third_party.hf_token if config.tokenizer.huggingface_tokenizer else None
+    }
+
     print('Preparing train dataset...')
     prepare_dataset(
         dataset=train_ds,
         tokenize_function=tokenize,
+        tokenizer_kwargs=tokenizer_kwargs,
         target_folder=os.path.join(config.paths.datasets.pretraining_path, 'train'),
         shard_file_prefix='data',
         shard_size=shard_size,
@@ -177,6 +187,7 @@ def shard_and_tokenize(
     prepare_dataset(
         dataset=val_ds,
         tokenize_function=tokenize,
+        tokenizer_kwargs=tokenizer_kwargs,
         target_folder=os.path.join(config.paths.datasets.pretraining_path, 'val'),
         shard_file_prefix='data',
         shard_size=shard_size,
@@ -186,9 +197,10 @@ def shard_and_tokenize(
 
 def prepare_pretraining_dataset(
     *,
+    config,
     datasets_mix
 ):
-    number_of_processes = get_max_number_of_cpu_processes()
+    number_of_processes = get_max_number_of_cpu_processes(config)
 
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_PRETRAINING_MIX)
 
@@ -200,12 +212,14 @@ def prepare_pretraining_dataset(
     seed, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
 
     train_ds, val_ds = download_and_prepare_data(
+        config=config,
         seed=seed,
         valid_datasets=valid_datasets,
         probabilities=probabilities
     )
 
     shard_and_tokenize(
+        config=config,
         shard_size=shard_size,
         train_ds=train_ds,
         val_ds=val_ds,

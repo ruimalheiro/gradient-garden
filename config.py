@@ -1,4 +1,5 @@
 import os
+import yaml
 
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic_settings import BaseSettings
@@ -230,4 +231,17 @@ class GlobalConfig(BaseModel):
         os.environ['HF_DATASETS_CACHE'] = f'{self.third_party.hf_home}/datasets'
         os.environ['HF_HUB_CACHE'] = f'{self.third_party.hf_home}/hub'
 
-config = GlobalConfig()
+def load_config(config_path) -> GlobalConfig:
+    if config_path is None:
+        print('Configuration not provided... using defaults.')
+        return GlobalConfig()
+
+    with open(config_path, 'r') as file:
+        config_data = yaml.safe_load(file) or {}
+
+    if not isinstance(config_data, dict):
+        raise ValueError(f'The provided yaml file or structure is invalid: {config_path}')
+
+    loaded_config = GlobalConfig.model_validate(config_data)
+    print(f'Configuration loaded from: {config_path}')
+    return loaded_config

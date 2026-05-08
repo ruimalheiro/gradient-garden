@@ -268,14 +268,26 @@ class Trainer:
         )
 
     def load_test_generation_prompts(self):
+        if not self.can_run_scheduled_action(self.config.generation):
+            return
         test_prompts_data=json.loads(Path(self.config.paths.test_prompts_path).read_text())
         stage = self.config.training.stage.value
         if stage not in test_prompts_data:
             raise ValueError(f'Missing test prompts for training stage: {stage}')
         self.test_generation_prompts = test_prompts_data[stage]
 
+    def can_run_scheduled_action(self, schedule):
+        return (
+            schedule.every_x_steps > 0 or
+            schedule.run_on_first_step or
+            schedule.run_on_last_step
+        )
+
     def load_hellaswag_eval_data(self):
-        if self.config.training.stage != TrainingStage.PRETRAINING:
+        if (
+            self.config.training.stage != TrainingStage.PRETRAINING or
+            not self.can_run_scheduled_action(self.config.evals.hellaswag)
+        ):
             return
         self.hellaswag_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.hellaswag_path}/hellaswag_val.jsonl',
@@ -285,7 +297,10 @@ class Trainer:
         )
 
     def load_winogrande_eval_data(self):
-        if self.config.training.stage != TrainingStage.PRETRAINING:
+        if (
+            self.config.training.stage != TrainingStage.PRETRAINING or
+            not self.can_run_scheduled_action(self.config.evals.winogrande)
+        ):
             return
         self.winogrande_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.winogrande_path}/winogrande_val.jsonl',
@@ -295,7 +310,10 @@ class Trainer:
         )
 
     def load_arc_challenge_eval_data(self):
-        if self.config.training.stage != TrainingStage.PRETRAINING:
+        if (
+            self.config.training.stage != TrainingStage.PRETRAINING or
+            not self.can_run_scheduled_action(self.config.evals.arc_challenge)
+        ):
             return
         self.arc_challenge_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.arc_challenge_path}/arc_challenge_val.jsonl',
@@ -306,8 +324,10 @@ class Trainer:
     
     def build_tokenizer(self):
         self.tokenizer = init_tokenizer(
-            self.config.tokenizer.checkpoint_path,
-            self.config.tokenizer.huggingface_tokenizer
+            path=self.config.tokenizer.checkpoint_path,
+            system_prompt=self.config.prompts.system_prompt,
+            is_huggingface_tokenizer=self.config.tokenizer.huggingface_tokenizer,
+            hf_token=self.config.third_party.hf_token if self.config.tokenizer.huggingface_tokenizer else None
         )
 
     def build_model(self):
@@ -343,11 +363,13 @@ class Trainer:
             batch_size=self.config.model.max_batch_size,
             sequence_length=self.config.model.max_seq_len,
             is_master_process=self.distributed_ctx.is_master_process,
-            process_rank=self.distributed_ctx.ddp_rank,
-            num_processes=self.distributed_ctx.ddp_world_size,
+            ddp_rank=self.distributed_ctx.ddp_rank,
+            ddp_world_size=self.distributed_ctx.ddp_world_size,
             data_root=self.get_dataloader_root_path(),
             pad_id=self.tokenizer.pad_id,
-            training_stage=self.config.training.stage.value
+            training_stage=self.config.training.stage,
+            number_of_cpu_processes=self.config.runtime.number_of_cpu_processes,
+            ignore_index=self.config.tokenizer.ignore_index
         )
 
     def resolve_checkpoint_request(self):
@@ -560,7 +582,8 @@ class Trainer:
     def setup_wandb(self):
         self.wandb = WandbWrapper(
             enabled=self.config.wandb.enabled,
-            is_master_process=self.distributed_ctx.is_master_process
+            is_master_process=self.distributed_ctx.is_master_process,
+            wandb_api_key=self.config.third_party.wandb_api_key
         )
         self.wandb.init(
             self.config.wandb.project_name,

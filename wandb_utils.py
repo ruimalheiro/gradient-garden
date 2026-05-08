@@ -1,20 +1,19 @@
 import wandb
 
 from datetime import datetime
-from config import config
+from logger import logger
 
 
 class WandbWrapper():
-    def __init__(self, enabled=True, is_master_process=True):
+    def __init__(self, enabled=True, is_master_process=True, wandb_api_key=None):
         self.WANDB = False
         self.is_master_process = is_master_process
 
         if enabled and self.is_master_process:
-            WANDB_API_KEY = config.third_party.wandb_api_key
-            if WANDB_API_KEY is not None:
-                wandb.login(key=WANDB_API_KEY)
+            if wandb_api_key is not None:
+                wandb.login(key=wandb_api_key)
                 self.WANDB = True
-                print('Wandb enabled.')
+                logger.info('Wandb enabled.')
 
     def init(self, project_name, *, job_name=None, config=None):
         if not self.WANDB:

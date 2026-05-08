@@ -1,9 +1,6 @@
 import tiktoken
-import os
 
-from config import config
 from abc import ABC, abstractmethod
-from typing import Iterable, List
 from pathlib import Path
 from collections import defaultdict
 from tiktoken.load import load_tiktoken_bpe
@@ -30,7 +27,7 @@ class BaseTokenizer(ABC):
         if system_msg:
             tokens.extend(self.encode('system'))
             tokens.extend([eh])
-            tokens.extend(self.encode('\n' + config.prompts.system_prompt))
+            tokens.extend(self.encode('\n' + self.system_prompt))
             tokens.extend([eot, sh])
         tokens.extend(self.encode('user'))
         tokens.extend([eh])
@@ -43,13 +40,14 @@ class BaseTokenizer(ABC):
         return tokens
 
 class TikTokenizer(BaseTokenizer):
-    def __init__(self, path):
+    def __init__(self, path, system_prompt):
         self.special_tokens = defaultdict(int)
         self.num_reserved_special_tokens = 256
         self.pat_str = r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+"
 
         self.vocab = load_tiktoken_bpe(path)
         self.num_base_tokens = len(self.vocab)
+        self.system_prompt = system_prompt
 
         special_tokens = [
             '<|begin_of_text|>',
@@ -112,10 +110,14 @@ class TikTokenizer(BaseTokenizer):
         return self.model.decode(tokens)
 
 class HFTokenizer(BaseTokenizer):
-    def __init__(self, path):
+    def __init__(self, path, system_prompt, hf_token):
         self.num_reserved_special_tokens = 256
-        self.model = AutoTokenizer.from_pretrained(path, token=config.third_party.hf_token)
+        self.model = AutoTokenizer.from_pretrained(
+            path,
+            token=hf_token
+        )
         self.model.model_max_length = int(1e30)
+        self.system_prompt = system_prompt
 
         update_tokens = []
         for token in [
@@ -169,7 +171,7 @@ class HFTokenizer(BaseTokenizer):
     def decode(self, tokens):
         return self.model.decode(tokens, skip_special_tokens=False)
 
-def init_tokenizer(checkpoint_path, huggingface_tokenizer=False):
-    if huggingface_tokenizer:
-        return HFTokenizer(checkpoint_path)
-    return TikTokenizer(checkpoint_path)
+def init_tokenizer(*, path, system_prompt, is_huggingface_tokenizer=True, hf_token=None):
+    if is_huggingface_tokenizer:
+        return HFTokenizer(path, system_prompt, hf_token)
+    return TikTokenizer(path, system_prompt)

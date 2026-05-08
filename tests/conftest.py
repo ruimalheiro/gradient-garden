@@ -20,7 +20,11 @@ def device():
 
 @pytest.fixture(scope='session')
 def tokenizer():
-    return init_tokenizer('HuggingFaceTB/SmolLM2-360M', True)
+    return init_tokenizer(
+        path='HuggingFaceTB/SmolLM2-360M',
+        system_prompt='You are a helpful AI assistant',
+        is_huggingface_tokenizer=True
+    )
 
 @pytest.fixture(scope='session')
 def dummy_prompt_tokens(tokenizer):
