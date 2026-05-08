@@ -367,7 +367,7 @@ class Trainer:
             ddp_world_size=self.distributed_ctx.ddp_world_size,
             data_root=self.get_dataloader_root_path(),
             pad_id=self.tokenizer.pad_id,
-            training_stage=self.config.training.stage.value,
+            training_stage=self.config.training.stage,
             number_of_cpu_processes=self.config.runtime.number_of_cpu_processes,
             ignore_index=self.config.tokenizer.ignore_index
         )
