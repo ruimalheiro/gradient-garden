@@ -17,6 +17,8 @@ from datasets_preparation.data_preparation_utils import (
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
 
 
+os.environ.setdefault('TOKENIZERS_PARALLELISM', 'false') # HF to not use parallelism in tokenizer
+
 #### ADAPTERS
 def adapt_fineweb_edu(batch, transforms):
     return {'text': batch['text']}
@@ -144,8 +146,10 @@ def download_and_prepare_data(
     return train_ds, val_ds
 
 tokenizer = None
-def tokenize(doc):
+def tokenize(tokenizer_kwargs, doc):
     global tokenizer
+    if tokenizer is None:
+        tokenizer = init_tokenizer(**tokenizer_kwargs)
     input_ids = tokenizer.encode(doc['text'])
     tokens_np = np.empty(len(input_ids) + 1, dtype=np.uint32)
     tokens_np[0] = tokenizer.eos_id
@@ -160,19 +164,18 @@ def shard_and_tokenize(
     val_ds,
     number_of_processes
 ):
-    global tokenizer
-    if tokenizer is None:
-        tokenizer = init_tokenizer(
-            path=config.tokenizer.checkpoint_path,
-            system_prompt=config.prompts.system_prompt,
-            is_huggingface_tokenizer=config.tokenizer.huggingface_tokenizer,
-            hf_token=config.third_party.hf_token if config.tokenizer.huggingface_tokenizer else None
-        )
+    tokenizer_kwargs = {
+        'path': config.tokenizer.checkpoint_path,
+        'system_prompt': config.prompts.system_prompt,
+        'is_huggingface_tokenizer': config.tokenizer.huggingface_tokenizer,
+        'hf_token': config.third_party.hf_token if config.tokenizer.huggingface_tokenizer else None
+    }
 
     print('Preparing train dataset...')
     prepare_dataset(
         dataset=train_ds,
         tokenize_function=tokenize,
+        tokenizer_kwargs=tokenizer_kwargs,
         target_folder=os.path.join(config.paths.datasets.pretraining_path, 'train'),
         shard_file_prefix='data',
         shard_size=shard_size,
@@ -184,6 +187,7 @@ def shard_and_tokenize(
     prepare_dataset(
         dataset=val_ds,
         tokenize_function=tokenize,
+        tokenizer_kwargs=tokenizer_kwargs,
         target_folder=os.path.join(config.paths.datasets.pretraining_path, 'val'),
         shard_file_prefix='data',
         shard_size=shard_size,

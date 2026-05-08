@@ -8,6 +8,7 @@ import hashlib
 import math
 
 from tqdm import tqdm
+from functools import partial
 
 
 def stable_hash(text, *, seed=None, hash_bytes=8):
@@ -128,6 +129,7 @@ def prepare_dataset(
     *,
     dataset,
     tokenize_function,
+    tokenizer_kwargs,
     target_folder,
     shard_file_prefix,
     shard_size,
@@ -153,7 +155,7 @@ def prepare_dataset(
         progress_bar = None
         all_tokens_np = np.empty((shard_size,), dtype=np.uint32)
 
-        for tokens in pool.imap(tokenize_function, dataset, chunksize=chunksize):
+        for tokens in pool.imap(partial(tokenize_function, tokenizer_kwargs), dataset, chunksize=chunksize):
             if tokens.size == 0:
                 continue
 
