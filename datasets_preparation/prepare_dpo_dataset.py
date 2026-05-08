@@ -4,6 +4,7 @@ import re
 import copy
 import time
 
+from functools import partial
 from tokenizer import init_tokenizer
 from datasets import (
     load_dataset,
@@ -75,12 +76,12 @@ SYS_PROMPT = None
 NL = None
 ASSIST = None
 
-def tokenize(doc):
+def tokenize(tokenizer_kwargs, system_prompt, doc):
     global tokenizer, SYS, SYS_PROMPT, NL, ASSIST
     if tokenizer is None:
-        tokenizer = init_tokenizer(config.tokenizer.checkpoint_path, config.tokenizer.huggingface_tokenizer)
+        tokenizer = init_tokenizer(**tokenizer_kwargs)
         SYS = tokenizer.encode('system')
-        SYS_PROMPT = tokenizer.encode('\n' + config.prompts.system_prompt)
+        SYS_PROMPT = tokenizer.encode('\n' + system_prompt)
         NL = tokenizer.encode('\n')
         ASSIST = tokenizer.encode('assistant')
 
@@ -135,11 +136,19 @@ def tokenize(doc):
 
 def download_and_prepare_data(
     *,
+    config,
     seed,
     valid_datasets,
     probabilities,
     number_of_processes
 ):
+    tokenizer_kwargs = {
+        'path': config.tokenizer.checkpoint_path,
+        'system_prompt': config.prompts.system_prompt,
+        'is_huggingface_tokenizer': config.tokenizer.huggingface_tokenizer,
+        'hf_token': config.third_party.hf_token if config.tokenizer.huggingface_tokenizer else None
+    }
+
     prepared_datasets = []
     for dataset in valid_datasets:
         ds_id = dataset['id']
@@ -179,7 +188,15 @@ def download_and_prepare_data(
         ds = ds.filter(lambda x: len(x['prompt']) > 0, num_proc=number_of_processes)
 
         columns_to_remove = [c for c in ds.column_names if c not in ['source']]
-        tokenized_ds = ds.map(tokenize, num_proc=number_of_processes, remove_columns=columns_to_remove)
+        tokenized_ds = ds.map(
+            partial(
+                tokenize,
+                tokenizer_kwargs,
+                config.prompts.system_prompt
+            ),
+            num_proc=number_of_processes,
+            remove_columns=columns_to_remove
+        )
 
         prepared_datasets.append(tokenized_ds)
 
@@ -211,9 +228,10 @@ def download_and_prepare_data(
 
 def prepare_dpo_dataset(
     *,
+    config,
     datasets_mix
 ):
-    number_of_processes = get_max_number_of_cpu_processes()
+    number_of_processes = get_max_number_of_cpu_processes(config)
 
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_DPO_MIX)
 
@@ -221,6 +239,7 @@ def prepare_dpo_dataset(
     seed, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
 
     download_and_prepare_data(
+        config=config,
         seed=seed,
         valid_datasets=valid_datasets,
         probabilities=probabilities,
