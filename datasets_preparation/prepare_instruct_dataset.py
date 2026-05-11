@@ -260,5 +260,3 @@ def prepare_instruct_dataset(
         probabilities=probabilities,
         number_of_processes=number_of_processes
     )
-
-    logger.info('\nData preparation completed.')

@@ -226,5 +226,3 @@ def prepare_pretraining_dataset(
         val_ds=val_ds,
         number_of_processes=number_of_processes
     )
-
-    logger.info('\nData preparation completed.')

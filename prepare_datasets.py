@@ -80,3 +80,5 @@ if __name__ == '__main__':
             prepare_instruct_dataset(config=cfg, datasets_mix=datasets_mix)
         elif args.dpo:
             prepare_dpo_dataset(config=cfg, datasets_mix=datasets_mix)
+
+    logger.info('Data preparation completed.')
