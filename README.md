@@ -1,13 +1,13 @@
 # Gradient Garden
 
-Gradient Garden is a research platform for model training, evaluation, and experimentation across architectures, benchmarks, and multi stage training workflows.
+Gradient Garden is a research platform for model training, evaluation, and experimentation across architectures, benchmarks, and multi stage training recipes.
 
 The project began with a decoder-only transformer baseline and has evolved into a broader codebase for training, evaluation, and experimentation across modern machine learning models, distributed training workflows, and post-training methods.
 
 ## Current focus
-- Distributed training
+- Research and experimentation across architectures, benchmarks, and training recipes
 - Multi-stage model training and post-training workflows
-- Research and experimentation across architectures, benchmarks, and training configurations
+- Distributed training
 
 ## Current capabilities
 
