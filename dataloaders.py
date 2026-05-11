@@ -71,7 +71,6 @@ class PretrainingDataLoader:
         for shard_path in self.shards:
             shard = np.load(shard_path, mmap_mode='r', allow_pickle=False)
             shard_len = int(shard.shape[0])
-            del shard
 
             if shard_len < required_tokens:
                 raise ValueError(
