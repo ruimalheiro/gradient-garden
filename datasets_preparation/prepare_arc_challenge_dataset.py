@@ -5,14 +5,11 @@ import torch
 from pathlib import Path
 from tqdm import tqdm
 from tokenizer import init_tokenizer
-from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
 from datasets import load_dataset
 from logger import logger
 
 
-def prepare_arc_challenge_dataset(config):
-    number_of_processes = get_max_number_of_cpu_processes(config)
-
+def prepare_arc_challenge_dataset(*, config, num_proc):
     current_dir = Path(__file__).resolve().parent.parent
 
     data_cache_dir = current_dir / config.paths.evals.arc_challenge_path
@@ -88,7 +85,7 @@ def prepare_arc_challenge_dataset(config):
             'allenai/ai2_arc',
             name='ARC-Challenge',
             split='validation',
-            num_proc=number_of_processes,
+            num_proc=num_proc,
             token=config.third_party.hf_token
         )
 

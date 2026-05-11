@@ -10,7 +10,7 @@ from datasets_preparation import (
 from logger import logger
 
 
-def prepare_recipe_data(recipe):
+def prepare_recipe_data(recipe, num_proc):
     config = recipe.config
 
     if recipe.data is None:
@@ -25,19 +25,19 @@ def prepare_recipe_data(recipe):
     if config.training.stage == TrainingStage.PRETRAINING:
         if data_config.shard_size is None:
             raise ValueError('Pretraining recipes require data.shard_size.')
-        prepare_pretraining_dataset(config=config, datasets_mix=datasets_mix)
+        prepare_pretraining_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
     elif config.training.stage == TrainingStage.INSTRUCT:
-        prepare_instruct_dataset(config=config, datasets_mix=datasets_mix)
+        prepare_instruct_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
     elif config.training.stage == TrainingStage.DPO:
-        prepare_dpo_dataset(config=config, datasets_mix=datasets_mix)
+        prepare_dpo_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
     else:
         raise ValueError(f'Invalid training stage: {config.training.stage}')
 
     if data_evals.hellaswag.enabled:
-        prepare_hellaswag_dataset(config=config)
+        prepare_hellaswag_dataset(config=config, num_proc=num_proc)
 
     if data_evals.winogrande.enabled:
-        prepare_winogrande_dataset(config=config)
+        prepare_winogrande_dataset(config=config, num_proc=num_proc)
 
     if data_evals.arc_challenge.enabled:
-        prepare_arc_challenge_dataset(config=config)
+        prepare_arc_challenge_dataset(config=config, num_proc=num_proc)

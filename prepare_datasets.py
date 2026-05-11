@@ -2,6 +2,7 @@ import argparse
 import json
 
 from config import load_config
+from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
 from datasets_preparation import (
     prepare_hellaswag_dataset,
     prepare_winogrande_dataset,
@@ -56,12 +57,16 @@ if __name__ == '__main__':
 
     if args.recipe:
         recipe = load_recipe(args.recipe)
-        prepare_recipe_data(recipe)
+        prepare_recipe_data(
+            recipe=recipe,
+            num_proc=get_max_number_of_cpu_processes(recipe.config)
+        )
     else:
         if not dataset_group_flags_set:
             parser.error('Please specify one dataset flag, or use --recipe.')
 
         cfg = load_config(args.config)
+        num_proc = get_max_number_of_cpu_processes(cfg)
 
         if (args.hellaswag or args.winogrande or args.arc_challenge) and args.mix_file:
             parser.error('"--mix-file" is only supported for training datasets.')
@@ -69,16 +74,16 @@ if __name__ == '__main__':
         datasets_mix = load_custom_dataset_mix(args.mix_file)
 
         if args.hellaswag:
-            prepare_hellaswag_dataset(config=cfg)
+            prepare_hellaswag_dataset(config=cfg, num_proc=num_proc)
         elif args.winogrande:
-            prepare_winogrande_dataset(config=cfg)
+            prepare_winogrande_dataset(config=cfg, num_proc=num_proc)
         elif args.arc_challenge:
-            prepare_arc_challenge_dataset(config=cfg)
+            prepare_arc_challenge_dataset(config=cfg, num_proc=num_proc)
         elif args.pretraining:
-            prepare_pretraining_dataset(config=cfg, datasets_mix=datasets_mix)
+            prepare_pretraining_dataset(config=cfg, datasets_mix=datasets_mix, num_proc=num_proc)
         elif args.instruct:
-            prepare_instruct_dataset(config=cfg, datasets_mix=datasets_mix)
+            prepare_instruct_dataset(config=cfg, datasets_mix=datasets_mix, num_proc=num_proc)
         elif args.dpo:
-            prepare_dpo_dataset(config=cfg, datasets_mix=datasets_mix)
+            prepare_dpo_dataset(config=cfg, datasets_mix=datasets_mix, num_proc=num_proc)
 
     logger.info('Data preparation completed.')
