@@ -71,13 +71,22 @@ The project began with a decoder-only transformer baseline and has evolved into 
     - HellaSwag
     - WinoGrande
     - ARC-Challenge
-- `examples/` Templates for the `.env` secrets file and dataset mix. This will be replaced by recipe directories in a future PR.
+- `examples/` Templates for local setup files like the `.env` secrets file and dataset mix.
 - `metrics/` Utilities for metric aggregation.
+- `recipes/` Recipe definitions for training and dataset preparation. More will be added here.
+  - `recipes/config.py` Defines the recipe schema and recipe loading logic.
+  - `recipes/pretraining/`
+    - `debug.yaml`
+  - `recipes/instruct/`
+    - `debug.yaml`
+  - `recipes/dpo/`
+    - `debug.yaml`
 - `tasks/` Groups the training tasks.
 - `tests/` Groups tests for different components.
 - `checkpoints.py` Logic to handle checkpointing.
 - `config.py` Defines the nested `GlobalConfig` used by the trainer, dataset preparation, evaluation, checkpointing, and runtime setup.
   - Most experiment settings currently live as defaults in `config.py`.
+  - Recipes define experiment settings under the `config` section.
   - `.env` is only used for third party secrets and local cache settings: `WANDB_API_KEY`, `HF_TOKEN`, and `HF_HOME`.
 - `dataloaders.py` Dataloader logic for sampling and distributing data.
 - `ddp_utils.py` Contains the main logic to set up the PyTorch DDP (Distributed Data Parallel) and FSDP2 (Fully Sharded Data Parallel).
@@ -104,17 +113,20 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - Create a python environment. Example with conda: `conda create -n my_env python=3.11`;
 - Activate the environment and run: `pip install -r requirements.txt`;
 - Download and prepare the data:
-  - Evals:
-    - HellaSwag: `python prepare_datasets.py --hellaswag`
-    - WinoGrande: `python prepare_datasets.py --winogrande`
-    - ARC-Challenge: `python prepare_datasets.py --arc-challenge`
-  - Training and validation:
-    - Pretraining: `python prepare_datasets.py --pretraining`
-    - Instruct: `python prepare_datasets.py --instruct`
-    - DPO: `python prepare_datasets.py --dpo`
-  - **NOTE**: Dataset paths are configured in `config.py` under `GlobalConfig.paths.datasets` and `GlobalConfig.paths.evals`.
-  - The training dataset preparation commands also support a custom mix file by passing `--mix-file <file_path>`. Check `examples/pretraining_data_mix.example.json` for an example. Local custom mix files should use the `.local.json` suffix, for example `pretraining_debug.local.json`, so they are ignored by Git. If no `--mix-file` is provided, the built-in default mix for that stage is used.
-    - The default mix can be found in `datasets_preparation/default_mixes.py`
+  - Recipes:
+    - Example with recipe: `python prepare_datasets.py --recipe recipes/pretraining/debug.yaml`
+  - Or manually:
+    - Evals:
+      - HellaSwag: `python prepare_datasets.py --hellaswag`
+      - WinoGrande: `python prepare_datasets.py --winogrande`
+      - ARC-Challenge: `python prepare_datasets.py --arc-challenge`
+    - Training and validation:
+      - Pretraining: `python prepare_datasets.py --pretraining`
+      - Instruct: `python prepare_datasets.py --instruct`
+      - DPO: `python prepare_datasets.py --dpo`
+    - **NOTE**: Dataset paths are configured in `config.py` under `GlobalConfig.paths.datasets` and `GlobalConfig.paths.evals`.
+    - In manual mode, the training dataset preparation commands also support a custom mix file by passing `--mix-file <file_path>`. Check `examples/pretraining_data_mix.example.json` for an example. Local custom mix files should use the `.local.json` suffix, for example `pretraining_debug.local.json`, so they are ignored by Git. If no `--mix-file` is provided, the built-in default mix for that stage is used.
+      - The default mix can be found in `datasets_preparation/default_mixes.py`
   
 - (OPTIONAL) Setup your Weights & Biases API key:
   - Set `WANDB_API_KEY` environment variable if you want to log the progress there.
@@ -123,7 +135,11 @@ The project began with a decoder-only transformer baseline and has evolved into 
 
 ## Configuring and training
 
-Configuration is currently defined through the nested `GlobalConfig` object in `config.py`.
+Configuration can be provided directly through a config YAML file or through a recipe YAML file.
+
+A recipe is the preferred way to define an experiment. It contains:
+- `config`: the nested `GlobalConfig` used for training and runtime setup
+- `data`: dataset preparation settings, including the dataset mix and optional eval dataset preparation
 
 The main sections are:
 - `runtime`: device, precision, FSDP, torch compile, CPU workers
@@ -149,24 +165,35 @@ HF_TOKEN=''
 HF_HOME='./cache'
 ```
 
-**NOTE:** Experiment recipe directories will be introduced in a future update.
-
 ### Common flags
 `train.py` accepts some flags that are useful to load a checkpoint or override some properties:
 
 ```bash
+  --config <file>                   # Load config directly from a config YAML file
+  --recipe <file>                   # Load config from a recipe YAML file
+  --pretraining                     # Automatically sets pretraining stage.
+  --instruct                        # Automatically sets instruct stage.
+  --dpo                             # Automatically sets DPO stage.
   --pretraining-checkpoint <file>   # Resume pretraining run
   --instruct-checkpoint <file>      # Resume SFT run
   --dpo-checkpoint <file>           # Resume DPO run
   --reset-optimizers                # Ignore stored optimizer(s) state
   --start-step <N>                  # Override internal step counter
 ```
-**NOTE:** The checkpoint paths are configured in `config.py` under `GlobalConfig.paths.checkpoints`.
+**NOTES:**
+  - The checkpoint paths are configured in `config.py` under `GlobalConfig.paths.checkpoints`.
+  - When using `--recipe`, the recipe defines the training stage. The flags `--pretraining`, `--instruct`, and `--dpo` cannot be combined with `--recipe`.
+
+Example recipe commands:
+```bash
+python prepare_datasets.py --recipe recipes/pretraining/debug.yaml
+python train.py --recipe recipes/pretraining/debug.yaml
+```
 
 ### Running the Training
 - To train on **single-GPU**, run:
     ```bash
-    python train.py
+    python train.py --recipe recipes/pretraining/debug.yaml
     ```
 
 - To train on **multi-GPU** run:
@@ -176,7 +203,7 @@ HF_HOME='./cache'
     torchrun \
       --standalone \
       --nproc_per_node <NUMBER_OF_GPUs> \
-      train.py
+      train.py --recipe recipes/pretraining/debug.yaml
     ```
 
 - To load a checkpoint and continue training, pass the flag to any of the above commands. E.g.:
@@ -186,9 +213,8 @@ HF_HOME='./cache'
     torchrun \
       --standalone \
       --nproc_per_node <NUMBER_OF_GPUs> \
-      train.py --pretraining-checkpoint <CHECKPOINT_FILE_NAME>
+      train.py --recipe recipes/pretraining/debug.yaml --pretraining-checkpoint <CHECKPOINT_FILE_NAME>
     ```
-    - NOTE: When loading an instruct checkpoint, use `--instruct-checkpoint` or for DPO, `--dpo-checkpoint` instead. This will also load the optimizer(s) state and resume from the stored step. You can reset the optimizer(s) with the flag `--reset-optimizers` and set the start step with the flag `--start-step`. E.g.: `--start-step 10`
 
 - To train on multiple nodes with **1 or more GPUs per node**, configure each node as follows:
   - Static
@@ -226,7 +252,7 @@ HF_HOME='./cache'
       --node-rank ${NODE_RANK} \
       --master_addr ${MASTER_ADDR} \
       --master_port ${MASTER_PORT} \
-      train.py
+      train.py --recipe recipes/pretraining/debug.yaml
     ```  
   - Elastic 
     ```bash
@@ -254,7 +280,7 @@ HF_HOME='./cache'
       --rdzv-backend c10d \
       --rdzv-endpoint ${RDZV_EP} \
       --rdzv-id ${RDZV_ID} \
-      train.py
+      train.py --recipe recipes/pretraining/debug.yaml
     ```
   - **NOTE:** The same command needs to be run on all nodes
 
@@ -269,6 +295,19 @@ More details on the profiler API can be found [here](https://docs.pytorch.org/tu
 From the root folder:
 ```bash
 pytest
+```
+
+## Local files
+For convenience local configurations, recipes or other files should use the naming convention as defined in `.gitignore`:
+```
+*.local.json
+*.private.json
+*.local.ipynb
+*.private.ipynb
+*.local.yaml
+*.private.yaml
+*.local.yml
+*.private.yml
 ```
 
 ## Contributions
