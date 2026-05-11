@@ -63,7 +63,21 @@ class PretrainingDataLoader:
         if is_master_process:
             logger.info(f'found {len(self.shards)} shards for split {split}')
 
+        self.validate_shards_size()
         self.reset()
+
+    def validate_shards_size(self):
+        required_tokens = self.B * self.S * self.ddp_world_size + 1
+        for shard_path in self.shards:
+            shard = np.load(shard_path, mmap_mode='r', allow_pickle=False)
+            shard_len = int(shard.shape[0])
+
+            if shard_len < required_tokens:
+                raise ValueError(
+                    f'Shard is too small for distributed training: {shard_path}. '
+                    f'Need a minimum of {required_tokens} tokens, got {shard_len}. '
+                    f'B={self.B}, S={self.S}, world_size={self.ddp_world_size}.'
+                )
 
     def calculate_max_tokens(self):
         if self.total_tokens:
