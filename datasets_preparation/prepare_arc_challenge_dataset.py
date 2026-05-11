@@ -7,6 +7,7 @@ from tqdm import tqdm
 from tokenizer import init_tokenizer
 from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
 from datasets import load_dataset
+from logger import logger
 
 
 def prepare_arc_challenge_dataset(config):
@@ -96,6 +97,6 @@ def prepare_arc_challenge_dataset(config):
                 processed_example = prepare_example(example)
                 json.dump(processed_example, file, ensure_ascii=False)
                 file.write('\n')
-        print(f'ARC-Challenge preprocessing completed and stored at: {data_filename}')
+        logger.info(f'ARC-Challenge preprocessing completed and stored at: {data_filename}')
     else:
-        print(f'ARC-Challenge preprocessed file already exists: {data_filename}')
+        logger.info(f'ARC-Challenge preprocessed file already exists: {data_filename}')

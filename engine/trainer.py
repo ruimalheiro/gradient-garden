@@ -1107,5 +1107,6 @@ class Trainer:
         try:
             self.setup()
             self.start_training_loop()
+            logger.info('Training completed.')
         finally:
             self.cleanup()

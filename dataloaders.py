@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.utils.rnn import pad_sequence
 from config import TrainingStage
+from logger import logger
 
 
 def load_tokens(filename):
@@ -60,7 +61,7 @@ class PretrainingDataLoader:
         assert self.shards, f'no shards found in split {split}'
 
         if is_master_process:
-            print(f'found {len(self.shards)} shards for split {split}')
+            logger.info(f'found {len(self.shards)} shards for split {split}')
 
         self.reset()
 
@@ -173,7 +174,7 @@ class InstructDataLoader:
 
         dataset = datasets.load_from_disk(os.path.join(data_root, split))
         if is_master_process:
-            print(f'found {len(dataset)} examples for {split}')
+            logger.info(f'found {len(dataset)} examples for {split}')
 
         self.is_master_process = is_master_process
 
@@ -264,7 +265,7 @@ class InstructDataLoader:
     def load_state_dict(self, state):
         if 'epoch' not in state:
             if self.is_master_process:
-                print('Warning - "epoch" not present, starting fresh dataloader (most likely transition from pretraining to SFT).')
+                logger.warn('"epoch" not present, starting fresh dataloader (most likely transition from pretraining to SFT).')
             return
         epoch = state['epoch']
         self.sampler.set_epoch(epoch)
@@ -296,7 +297,7 @@ class DirectPreferenceOptimizationDataLoader:
 
         dataset = datasets.load_from_disk(os.path.join(data_root, split))
         if is_master_process:
-            print(f'found {len(dataset)} examples for {split}')
+            logger.info(f'found {len(dataset)} examples for {split}')
 
         self.is_master_process = is_master_process
 
@@ -398,7 +399,7 @@ class DirectPreferenceOptimizationDataLoader:
     def load_state_dict(self, state):
         if 'epoch' not in state:
             if self.is_master_process:
-                print('Warning - "epoch" not present, starting fresh dataloader (most likely transition from pretraining to DPO).')
+                logger.warn('"epoch" not present, starting fresh dataloader (most likely transition from pretraining to DPO).')
             return
         epoch = state['epoch']
         self.sampler.set_epoch(epoch)
@@ -419,8 +420,8 @@ def init_data_loaders(
 ):
     if training_stage == TrainingStage.PRETRAINING:
         if is_master_process:
-            print('\nPretraining Data Loaders:')
-            print('----------------------------------------')
+            logger.info('\nPretraining Data Loaders:')
+            logger.info('----------------------------------------')
 
         train_loader = PretrainingDataLoader(
             batch_size=batch_size,
@@ -446,8 +447,8 @@ def init_data_loaders(
         assert pad_id is not None
 
         if is_master_process:
-            print('\nInstruct Finetuning Data Loaders:')
-            print('----------------------------------------')
+            logger.info('\nInstruct Finetuning Data Loaders:')
+            logger.info('----------------------------------------')
 
         train_loader = InstructDataLoader(
             batch_size=batch_size,
@@ -481,8 +482,8 @@ def init_data_loaders(
         assert pad_id is not None
 
         if is_master_process:
-            print('\nDirect Preference Optimization Data Loaders:')
-            print('----------------------------------------')
+            logger.info('\nDirect Preference Optimization Data Loaders:')
+            logger.info('----------------------------------------')
 
         train_loader = DirectPreferenceOptimizationDataLoader(
             batch_size=batch_size,

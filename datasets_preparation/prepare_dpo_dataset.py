@@ -15,6 +15,7 @@ from datasets_preparation.data_preparation_utils import (
     assert_common_structure_and_extract
 )
 from datasets_preparation.default_mixes import DEFAULT_DPO_MIX
+from logger import logger
 
 
 #### ADAPTERS
@@ -201,26 +202,26 @@ def download_and_prepare_data(
         prepared_datasets.append(tokenized_ds)
 
     if len(prepared_datasets) > 1:
-        print('Preparing Interleaving iterator... This operation can take a few minutes...')
+        logger.info('Preparing Interleaving iterator... This operation can take a few minutes...')
         prepared_dataset = interleave_datasets(
             prepared_datasets,
             probabilities=probabilities,
             seed=seed
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
-        print('Interleaving datasets complete')
+        logger.info('Interleaving datasets complete')
     else:
         prepared_dataset = prepared_datasets[0]
 
-    print('Summary:')
+    logger.info('Summary:')
     for d, ds in zip(valid_datasets, prepared_datasets):
-        print(f'- Total for: {d["id"]} : {len(ds)}')
+        logger.info(f'- Total for: {d["id"]} : {len(ds)}')
 
-    print('- Mix total len:', len(prepared_dataset))
+    logger.info('- Mix total len:', len(prepared_dataset))
 
     splits = prepared_dataset.train_test_split(test_size=0.01, seed=seed)
 
-    print('- Train len:', len(splits['train']), ' Val len:', len(splits['test']), '\n')
+    logger.info(f'- Train len: {len(splits["train"])} Val len: {len(splits["test"])}\n')
 
     splits['train'].save_to_disk(os.path.join(config.paths.datasets.dpo_path, 'train'))
     splits['test'] .save_to_disk(os.path.join(config.paths.datasets.dpo_path, 'val'))
@@ -245,5 +246,3 @@ def prepare_dpo_dataset(
         probabilities=probabilities,
         number_of_processes=number_of_processes
     )
-
-    print('\nData preparation completed.')

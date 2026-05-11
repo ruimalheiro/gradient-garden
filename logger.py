@@ -1,7 +1,7 @@
 import json
 
 
-class DistributedLogger:
+class ConsoleLogger:
     def __init__(self):
         self.is_master_process = False
     
@@ -25,4 +25,12 @@ class DistributedLogger:
     def warn(self, content, force=False, pbar=None, is_json=False):
         self.info(self.warning_wrapper(content), force=force, pbar=pbar, is_json=is_json)
 
-logger = DistributedLogger()
+    def error_wrapper(self, content):
+        red = '\033[91m'
+        reset = '\033[0m'
+        return f'{red}ERROR: {content}{reset}'
+
+    def error(self, content, force=True, pbar=None, is_json=False):
+        self.info(self.error_wrapper(content), force=force, pbar=pbar, is_json=is_json)
+
+logger = ConsoleLogger()

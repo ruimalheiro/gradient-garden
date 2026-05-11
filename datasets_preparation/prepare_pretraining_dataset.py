@@ -15,6 +15,7 @@ from datasets_preparation.data_preparation_utils import (
     assert_common_structure_and_extract
 )
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
+from logger import logger
 
 
 os.environ.setdefault('TOKENIZERS_PARALLELISM', 'false') # HF to not use parallelism in tokenizer
@@ -115,14 +116,14 @@ def download_and_prepare_data(
         prepared_datasets.append(ds)
 
     if len(prepared_datasets) > 1:
-        print('Preparing Interleaving iterator... This operation can take a few minutes...')
+        logger.info('Preparing Interleaving iterator... This operation can take a few minutes...')
         prepared_dataset = interleave_datasets(
             prepared_datasets,
             probabilities=probabilities,
             seed=seed
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
-        print('Interleaving datasets complete')
+        logger.info('Interleaving datasets complete')
     else:
         prepared_dataset = prepared_datasets[0]
 
@@ -171,7 +172,7 @@ def shard_and_tokenize(
         'hf_token': config.third_party.hf_token if config.tokenizer.huggingface_tokenizer else None
     }
 
-    print('Preparing train dataset...')
+    logger.info('Preparing train dataset...')
     prepare_dataset(
         dataset=train_ds,
         tokenize_function=tokenize,
@@ -183,7 +184,7 @@ def shard_and_tokenize(
         chunksize=config.data_preparation.mp_pool_chunk_size
     )
 
-    print('Preparing val dataset...')
+    logger.info('Preparing val dataset...')
     prepare_dataset(
         dataset=val_ds,
         tokenize_function=tokenize,
@@ -225,5 +226,3 @@ def prepare_pretraining_dataset(
         val_ds=val_ds,
         number_of_processes=number_of_processes
     )
-
-    print('\nData preparation completed.')
