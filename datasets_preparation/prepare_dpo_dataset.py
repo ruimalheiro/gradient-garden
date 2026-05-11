@@ -10,10 +10,7 @@ from datasets import (
     load_dataset,
     interleave_datasets
 )
-from datasets_preparation.data_preparation_utils import (
-    get_max_number_of_cpu_processes,
-    assert_common_structure_and_extract
-)
+from datasets_preparation.data_preparation_utils import assert_common_structure_and_extract
 from datasets_preparation.default_mixes import DEFAULT_DPO_MIX
 from logger import logger
 
@@ -141,7 +138,7 @@ def download_and_prepare_data(
     seed,
     valid_datasets,
     probabilities,
-    number_of_processes
+    num_proc
 ):
     tokenizer_kwargs = {
         'path': config.tokenizer.checkpoint_path,
@@ -169,7 +166,7 @@ def download_and_prepare_data(
             ds_id,
             name=hf_name,
             split=split,
-            num_proc=number_of_processes,
+            num_proc=num_proc,
             token=config.third_party.hf_token
         )
 
@@ -185,8 +182,8 @@ def download_and_prepare_data(
 
             return data
 
-        ds = ds.map(normalize, num_proc=number_of_processes)
-        ds = ds.filter(lambda x: len(x['prompt']) > 0, num_proc=number_of_processes)
+        ds = ds.map(normalize, num_proc=num_proc)
+        ds = ds.filter(lambda x: len(x['prompt']) > 0, num_proc=num_proc)
 
         columns_to_remove = [c for c in ds.column_names if c not in ['source']]
         tokenized_ds = ds.map(
@@ -195,7 +192,7 @@ def download_and_prepare_data(
                 tokenizer_kwargs,
                 config.prompts.system_prompt
             ),
-            num_proc=number_of_processes,
+            num_proc=num_proc,
             remove_columns=columns_to_remove
         )
 
@@ -230,10 +227,9 @@ def download_and_prepare_data(
 def prepare_dpo_dataset(
     *,
     config,
-    datasets_mix
+    datasets_mix,
+    num_proc
 ):
-    number_of_processes = get_max_number_of_cpu_processes(config)
-
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_DPO_MIX)
 
     #### VERIFY MIX FILE STRUCTURE
@@ -244,5 +240,5 @@ def prepare_dpo_dataset(
         seed=seed,
         valid_datasets=valid_datasets,
         probabilities=probabilities,
-        number_of_processes=number_of_processes
+        num_proc=num_proc
     )

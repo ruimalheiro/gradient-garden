@@ -11,7 +11,6 @@ from datasets import (
 from datasets_preparation.data_preparation_utils import (
     stable_hash,
     prepare_dataset,
-    get_max_number_of_cpu_processes,
     assert_common_structure_and_extract
 )
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
@@ -163,7 +162,7 @@ def shard_and_tokenize(
     shard_size,
     train_ds,
     val_ds,
-    number_of_processes
+    num_proc
 ):
     tokenizer_kwargs = {
         'path': config.tokenizer.checkpoint_path,
@@ -180,7 +179,7 @@ def shard_and_tokenize(
         target_folder=os.path.join(config.paths.datasets.pretraining_path, 'train'),
         shard_file_prefix='data',
         shard_size=shard_size,
-        number_of_processes=number_of_processes,
+        num_proc=num_proc,
         chunksize=config.data_preparation.mp_pool_chunk_size
     )
 
@@ -192,17 +191,16 @@ def shard_and_tokenize(
         target_folder=os.path.join(config.paths.datasets.pretraining_path, 'val'),
         shard_file_prefix='data',
         shard_size=shard_size,
-        number_of_processes=number_of_processes,
+        num_proc=num_proc,
         chunksize=config.data_preparation.mp_pool_chunk_size
     )
 
 def prepare_pretraining_dataset(
     *,
     config,
-    datasets_mix
+    datasets_mix,
+    num_proc
 ):
-    number_of_processes = get_max_number_of_cpu_processes(config)
-
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_PRETRAINING_MIX)
 
     assert 'shard_size' in datasets_mix
@@ -224,5 +222,5 @@ def prepare_pretraining_dataset(
         shard_size=shard_size,
         train_ds=train_ds,
         val_ds=val_ds,
-        number_of_processes=number_of_processes
+        num_proc=num_proc
     )

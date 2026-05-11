@@ -20,11 +20,11 @@ def stable_hash(text, *, seed=None, hash_bytes=8):
     return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=8).digest(), 'big')
 
 def get_max_number_of_cpu_processes(config):
-    NUMBER_OF_PROCESSES = max(1, os.cpu_count() // 2)
+    num_processes = max(1, os.cpu_count() // 2)
     if config.runtime.number_of_cpu_processes != 0:
-        NUMBER_OF_PROCESSES = max(1, min(config.runtime.number_of_cpu_processes, os.cpu_count()))
-    logger.info(f'Number of CPU processes: {NUMBER_OF_PROCESSES}\n')
-    return NUMBER_OF_PROCESSES
+        num_processes = max(1, min(config.runtime.number_of_cpu_processes, os.cpu_count()))
+    logger.info(f'Number of CPU processes: {num_processes}\n')
+    return num_processes
 
 def assert_common_structure_and_extract(datasets_mix, supported_datasets):
     ''' Validates common file structure and extracts seed, valid datasets and probabilities (normalized weight distribution)
@@ -134,7 +134,7 @@ def prepare_dataset(
     target_folder,
     shard_file_prefix,
     shard_size,
-    number_of_processes,
+    num_proc,
     chunksize
 ):
     data_cache_dir = os.path.join(os.getcwd(), target_folder)
@@ -150,7 +150,7 @@ def prepare_dataset(
         logger.info('Starting skipping phase...')
         skipping_progress_bar = tqdm(total=tokens_to_skip, desc='Skipping tokens', unit='tokens', smoothing=0.1)
 
-    with mp.Pool(number_of_processes) as pool:
+    with mp.Pool(num_proc) as pool:
         shard_index = start_shard_index
         token_count = 0
         progress_bar = None
