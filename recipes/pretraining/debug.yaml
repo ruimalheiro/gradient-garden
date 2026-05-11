@@ -12,9 +12,9 @@ config:
   training:
     stage: pretraining
     seed: 42
-    total_batch_size: 524288
-    max_steps: 200
-    early_stopping_patience: 100
+    total_batch_size: 32768
+    max_steps: 10
+    early_stopping_patience: 5
     early_stopping_patience_skip_steps: 0
 
   model:
@@ -38,20 +38,14 @@ config:
 
   paths:
     datasets:
-      pretraining_path: ./datasets/pretraining/debug
-      instruct_path: ./datasets/instruct/debug
-      dpo_path: ./datasets/dpo/debug
+      pretraining_path: ./datasets/debug/pretraining
     evals:
-      hellaswag_path: ./datasets/hellaswag
-      winogrande_path: ./datasets/winogrande
-      arc_challenge_path: ./datasets/arc_challenge
+      hellaswag_path: ./datasets/debug/hellaswag
+      winogrande_path: ./datasets/debug/winogrande
+      arc_challenge_path: ./datasets/debug/arc_challenge
     checkpoints:
-      pretraining_save_path: ./checkpoints/pretraining/debug
-      pretraining_load_path: ./checkpoints/pretraining/debug
-      instruct_save_path: ./checkpoints/instruct/debug
-      instruct_load_path: ./checkpoints/instruct/debug
-      dpo_save_path: ./checkpoints/dpo/debug
-      dpo_load_path: ./checkpoints/dpo/debug
+      pretraining_save_path: ./checkpoints/debug/pretraining
+      pretraining_load_path: ./checkpoints/debug/pretraining
     test_prompts_path: ./test_prompts.json
 
   optimizers:
@@ -61,29 +55,46 @@ config:
       weight_decay: 0.1
       betas: [0.9, 0.95]
       use_fused: null
-      warmup_steps: 20
+      warmup_steps: 2
     muon:
       enabled: false
 
   validation:
     every_x_steps: -1
-    validation_steps: 100
-    run_on_first_step: false
-    run_on_last_step: false
+    validation_steps: 5
+    run_on_first_step: true
+    run_on_last_step: true
 
   generation:
     every_x_steps: -1
-    max_test_gen_len: 256
-    run_on_first_step: false
-    run_on_last_step: false
+    max_test_gen_len: 64
+    run_on_first_step: true
+    run_on_last_step: true
+
+  evals:
+    hellaswag:
+      every_x_steps: -1
+      number_of_examples: 20
+      run_on_first_step: true
+      run_on_last_step: true
+    winogrande:
+      every_x_steps: -1
+      number_of_examples: 20
+      run_on_first_step: true
+      run_on_last_step: true
+    arc_challenge:
+      every_x_steps: -1
+      number_of_examples: 20
+      run_on_first_step: true
+      run_on_last_step: true
 
   checkpointing:
-    save_checkpoints: false
+    save_checkpoints: true
     save_best_only: false
-    every_x_steps: 50
+    every_x_steps: -1
     max_number_checkpoints: 5
-    run_on_first_step: false
-    run_on_last_step: false
+    run_on_first_step: true
+    run_on_last_step: true
 
 data:
   seed: 42
