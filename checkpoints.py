@@ -113,8 +113,7 @@ def save_checkpoint(
 
 @dataclass
 class CheckpointData:
-    path: str | None = None
-    checkpoint_name: str | None = None
+    file_path: str | None = None
     model_state: dict[str, Any] | None = None
     optimizers_state: dict[str, Any] | None = None
     resume_step: int = 0
@@ -127,8 +126,7 @@ class CheckpointData:
 
     def to_dict(self):
         return {
-            'path': self.path,
-            'checkpoint_name': self.checkpoint_name,
+            'file_path': self.file_path,
             'resume_step': self.resume_step,
             'last_val_loss': self.last_val_loss if not math.isinf(self.last_val_loss) else None,
             'best_val_loss': self.best_val_loss if not math.isinf(self.best_val_loss) else None,
@@ -140,12 +138,10 @@ class CheckpointData:
         return json.dumps(self.to_dict(), indent=4)
 
 def load_checkpoint(
-    checkpoint_dir,
-    checkpoint,
+    file_path,
     is_master_process=True
 ):
-    checkpoint_path = os.path.join(checkpoint_dir, checkpoint)
-    state = torch.load(checkpoint_path, map_location='cpu', weights_only=True)
+    state = torch.load(file_path, map_location='cpu', weights_only=True)
 
     step = state['step'] + 1
     last_val_loss = state['last_val_loss'] if state['last_val_loss'] is not None else float('inf')
@@ -168,7 +164,7 @@ def load_checkpoint(
     if is_master_process:
         logger.info('\nModel checkpoint loading')
         logger.info('----------------------------------------')
-        logger.info(f'model state loaded from checkpoint: "{checkpoint}"')
+        logger.info(f'model state loaded from checkpoint file: "{file_path}"')
         if optimizers_state is not None:
             logger.info(f'optimizers state loaded from checkpoint')
             if optimizers_state['adamw']:
@@ -186,16 +182,14 @@ def load_checkpoint(
             logger.info('--Val Loader state:')
             logger.info({key: val_dl_state[key] for key in _valid_keys if key in val_dl_state})
 
-        try:
-            logger.info('\nLoaded config')
-            logger.info('----------------------------------------')
-            logger.info(state['config'], is_json=True)
+        logger.info('\nLoaded config')
+        logger.info('----------------------------------------')
+        logger.info(state['config'], is_json=True)
 
-            logger.info('\nLoaded model config')
-            logger.info('----------------------------------------')
-            logger.info(state['model_config'], is_json=True)
-        except:
-            logger.info('Error printing the config. Potential serialization problem. Should be resolved in the next save attempt.')
+        logger.info('\nLoaded model config')
+        logger.info('----------------------------------------')
+        logger.info(state['config'], is_json=True)
+
         if step > 0:
             logger.info(f'\nResuming from step: {step}')
         else:
@@ -214,8 +208,7 @@ def load_checkpoint(
         torch.cuda.empty_cache()
 
     return CheckpointData(
-        path=checkpoint_dir,
-        checkpoint_name=checkpoint,
+        file_path=file_path,
         model_state=model_state,
         optimizers_state=optimizers_state,
         resume_step=step,

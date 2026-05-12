@@ -18,9 +18,7 @@ if __name__ == '__main__':
     stage_group.add_argument('--dpo', action='store_true', help='Forces DPO stage.')
 
     checkpoint_group = parser.add_mutually_exclusive_group()
-    checkpoint_group.add_argument('--pretraining-checkpoint', type=str, default=None, help='Pretraining checkpoint to load.')
-    checkpoint_group.add_argument('--instruct-checkpoint', type=str, default=None, help='Instruct checkpoint to load.')
-    checkpoint_group.add_argument('--dpo-checkpoint', type=str, default=None, help='DPO checkpoint to load.')
+    checkpoint_group.add_argument('--checkpoint', type=str, default=None, help='Checkpoint file path to load.')
 
     parser.add_argument('--reset-optimizers', action='store_true', help='Reset the optimizers state when loading a checkpoint.')
     parser.add_argument('--start-step', type=int, default=None, help='Starting step number for training.')

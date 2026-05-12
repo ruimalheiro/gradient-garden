@@ -43,8 +43,7 @@ config:
     datasets:
       instruct_path: ./datasets/debug/instruct
     checkpoints:
-      instruct_save_path: ./checkpoints/debug/instruct
-      instruct_load_path: ./checkpoints/debug/instruct
+      save_dir_path: ./checkpoints/debug/instruct
     test_prompts_path: ./test_prompts.json
 
   optimizers:
