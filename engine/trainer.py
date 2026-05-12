@@ -373,39 +373,25 @@ class Trainer:
         )
 
     def resolve_checkpoint_request(self):
-        args = self.args
+        checkpoint_file_path = self.args.checkpoint or self.config.paths.checkpoints.load_file_path
 
-        selected = [
-            bool(args.pretraining_checkpoint),
-            bool(args.instruct_checkpoint),
-            bool(args.dpo_checkpoint),
-        ]
-        selected_sum = sum(selected)
-        if selected_sum == 0:
+        if checkpoint_file_path is None:
             return None
-        elif selected_sum > 1:
-            raise ValueError('Only one checkpoint argument can be provided.')
 
-        path = None
-        name = None
-        if args.pretraining_checkpoint:
-            path = self.config.paths.checkpoints.pretraining_load_path
-            name = args.pretraining_checkpoint
-        elif args.instruct_checkpoint:
-            path = self.config.paths.checkpoints.instruct_load_path
-            name = args.instruct_checkpoint
-        elif args.dpo_checkpoint:
-            path = self.config.paths.checkpoints.dpo_load_path
-            name = args.dpo_checkpoint
-        return (path, name)
+        checkpoint_file_path = Path(checkpoint_file_path)
 
-    def load_checkpoint_data(self, checkpoint_request):
+        if not checkpoint_file_path.exists():
+            raise FileNotFoundError(f'Checkpoint file does not exist: {checkpoint_file_path}')
+        if not checkpoint_file_path.is_file():
+            raise FileNotFoundError(f'Checkpoint path is not a file: {checkpoint_file_path}')
+
+        return str(checkpoint_file_path)
+
+    def load_checkpoint_data(self, checkpoint_file_path):
         args = self.args
-        path, name = checkpoint_request
 
         checkpoint_data = load_checkpoint(
-            path,
-            name,
+            file_path=checkpoint_file_path,
             is_master_process=self.distributed_ctx.is_master_process
         )
 
@@ -901,15 +887,12 @@ class Trainer:
         )
 
     def get_save_checkpoints_path(self):
-        checkpoints_paths = self.config.paths.checkpoints
-        if self.is_pretraining():
-            return checkpoints_paths.pretraining_save_path
-        elif self.is_instruct():
-            return checkpoints_paths.instruct_save_path
-        elif self.is_dpo():
-            return checkpoints_paths.dpo_save_path
-        else:
-            raise ValueError('No valid checkpointing path')
+        checkpoint_save_path = self.config.paths.checkpoints.save_dir_path
+
+        if checkpoint_save_path is None:
+            raise ValueError('Checkpoint save dir path must be set in the configuration: "config.paths.checkpoints.save_dir_path"')
+
+        return checkpoint_save_path
 
     def run_save_checkpoint(self, pbar=None):
         if (

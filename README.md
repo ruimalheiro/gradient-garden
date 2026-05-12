@@ -174,9 +174,7 @@ HF_HOME='./cache'
   --pretraining                     # Automatically sets pretraining stage.
   --instruct                        # Automatically sets instruct stage.
   --dpo                             # Automatically sets DPO stage.
-  --pretraining-checkpoint <file>   # Resume pretraining run
-  --instruct-checkpoint <file>      # Resume SFT run
-  --dpo-checkpoint <file>           # Resume DPO run
+  --checkpoint <file>               # Resume training from a specific checkpoint
   --reset-optimizers                # Ignore stored optimizer(s) state
   --start-step <N>                  # Override internal step counter
 ```
@@ -213,7 +211,7 @@ python train.py --recipe recipes/pretraining/debug.yaml
     torchrun \
       --standalone \
       --nproc_per_node <NUMBER_OF_GPUs> \
-      train.py --recipe recipes/pretraining/debug.yaml --pretraining-checkpoint <CHECKPOINT_FILE_NAME>
+      train.py --recipe recipes/pretraining/debug.yaml --checkpoint <CHECKPOINT_FILE_PATH>
     ```
 
 - To train on multiple nodes with **1 or more GPUs per node**, configure each node as follows:

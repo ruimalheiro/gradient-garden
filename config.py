@@ -107,12 +107,8 @@ class EvalPathsConfig(BaseModel):
 
 class CheckpointPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    pretraining_save_path: str = './checkpoints/pretraining'
-    pretraining_load_path: str = './checkpoints/pretraining'
-    instruct_save_path: str = './checkpoints/instruct'
-    instruct_load_path: str = './checkpoints/instruct'
-    dpo_save_path: str = './checkpoints/dpo'
-    dpo_load_path: str = './checkpoints/dpo'
+    load_file_path: str | None = None
+    save_dir_path: str = './checkpoints'
 
 class PathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

@@ -43,8 +43,7 @@ config:
     datasets:
       dpo_path: ./datasets/debug/dpo
     checkpoints:
-      dpo_save_path: ./checkpoints/debug/dpo
-      dpo_load_path: ./checkpoints/debug/dpo
+      save_dir_path: ./checkpoints/debug/dpo
     test_prompts_path: ./test_prompts.json
 
   optimizers:

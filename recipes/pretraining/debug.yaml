@@ -44,8 +44,7 @@ config:
       winogrande_path: ./datasets/debug/winogrande
       arc_challenge_path: ./datasets/debug/arc_challenge
     checkpoints:
-      pretraining_save_path: ./checkpoints/debug/pretraining
-      pretraining_load_path: ./checkpoints/debug/pretraining
+      save_dir_path: ./checkpoints/debug/pretraining
     test_prompts_path: ./test_prompts.json
 
   optimizers:
