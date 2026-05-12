@@ -211,7 +211,7 @@ python train.py --recipe recipes/pretraining/debug.yaml
     torchrun \
       --standalone \
       --nproc_per_node <NUMBER_OF_GPUs> \
-      train.py --recipe recipes/pretraining/debug.yaml --checkpoint <CHECKPOINT_FILE_NAME>
+      train.py --recipe recipes/pretraining/debug.yaml --checkpoint <CHECKPOINT_FILE_PATH>
     ```
 
 - To train on multiple nodes with **1 or more GPUs per node**, configure each node as follows:
