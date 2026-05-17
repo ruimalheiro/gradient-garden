@@ -18,6 +18,7 @@ config:
     early_stopping_patience_skip_steps: 0
 
   model:
+    architecture: tendril
     dim: 768
     n_layers: 16
     n_heads: 16

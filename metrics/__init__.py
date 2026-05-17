@@ -1,4 +1,3 @@
-from metrics.moe import collect_moe_metrics
 from metrics.aggregation import (
     accumulate_weighted_metrics,
     combine_weighted_metrics
@@ -14,5 +13,6 @@ from metrics.step import (
 )
 from metrics.model_specific import (
     MoeLayerMetrics,
-    ModelMetrics
+    ModelMetrics,
+    collect_model_specific_metrics
 )

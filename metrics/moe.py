@@ -1,11 +1,19 @@
 import torch
 import torch.distributed as dist
 
-from metrics.model_specific import MoeLayerMetrics
+from dataclasses import dataclass
 
+
+@dataclass
+class MoeLayerMetrics:
+    layer_id: int
+    acc_top1_counts: torch.Tensor
+    acc_topk_counts: torch.Tensor
+    acc_p_sum: torch.Tensor
+    acc_tokens: torch.Tensor
 
 def collect_moe_metrics(moe_layer_metrics: MoeLayerMetrics, ddp, is_master_process):
-    if moe_layer_metrics is None:
+    if not moe_layer_metrics:
         return {}
 
     for layer_metric in moe_layer_metrics:

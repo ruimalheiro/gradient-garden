@@ -1,16 +1,24 @@
 import torch
 
 from dataclasses import dataclass
+from metrics.moe import (
+    MoeLayerMetrics,
+    collect_moe_metrics
+)
 
-
-@dataclass
-class MoeLayerMetrics:
-    layer_id: int
-    acc_top1_counts: torch.Tensor
-    acc_topk_counts: torch.Tensor
-    acc_p_sum: torch.Tensor
-    acc_tokens: torch.Tensor
 
 @dataclass
 class ModelMetrics:
     moe: list[MoeLayerMetrics] | None = None
+
+def collect_model_specific_metrics(
+    *,
+    model_metrics: ModelMetrics,
+    ddp,
+    is_master_process
+):
+    metrics = {}
+
+    metrics.update(collect_moe_metrics(model_metrics.moe, ddp, is_master_process))
+
+    return metrics

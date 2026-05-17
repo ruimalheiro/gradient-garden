@@ -66,13 +66,13 @@ from wandb_utils import WandbWrapper
 from lr_schedulers import cosine_scheduler
 from tqdm.auto import tqdm
 from metrics import (
-    collect_moe_metrics,
     reset_memory_usage_metrics,
     compute_memory_usage_metrics,
     accumulate_weighted_metrics,
     combine_weighted_metrics,
     StepType,
-    StepMetrics
+    StepMetrics,
+    collect_model_specific_metrics
 )
 from generate import generate_and_decode
 from evals import (
@@ -802,15 +802,11 @@ class Trainer:
         get_model(self.model).prepare_metrics()
 
     def collect_model_specific_metrics(self):
-        ddp = self.trainer_ctx.distributed.ddp
-        is_master_process = self.trainer_ctx.distributed.is_master_process
-
-        metrics = {}
-        model_metrics = get_model(self.model).collect_metrics()
-
-        metrics.update(collect_moe_metrics(model_metrics.moe, ddp, is_master_process))
-
-        return metrics
+        return collect_model_specific_metrics(
+            model_metrics=get_model(self.model).collect_metrics(),
+            ddp=self.trainer_ctx.distributed.ddp,
+            is_master_process=self.trainer_ctx.distributed.is_master_process
+        )
 
     @torch.inference_mode()
     def run_validation(self, pbar):
