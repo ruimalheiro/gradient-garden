@@ -16,13 +16,13 @@ class BaseModel(nn.Module, ABC):
 
     @abstractmethod
     def forward(self, *args, **kwargs) -> dict:
-        ...
+        raise NotImplementedError
 
     def get_input_embeddings(self):
-        ...
+        raise NotImplementedError
 
     def get_output_embeddings(self):
-        ...
+        raise NotImplementedError
 
     def get_total_parameters_count(self) -> int:
         return sum(p.numel() for p in self.parameters())
