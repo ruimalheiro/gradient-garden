@@ -73,6 +73,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
     - ARC-Challenge
 - `examples/` Templates for local setup files like the `.env` secrets file and dataset mix.
 - `metrics/` Utilities for metric aggregation.
+- `models` Contains the model registry, the builder and the implementation of the models. 
 - `recipes/` Recipe definitions for training and dataset preparation. More will be added here.
   - `recipes/config.py` Defines the recipe schema and recipe loading logic.
   - `recipes/pretraining/`
@@ -98,7 +99,6 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - `logger.py` Simple reusable logger.
 - `lora.py` LoRA module that handles the model modification. Rank, alpha, dropout and target modules can be configured accordingly.
 - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine scheduler.
-- `model.py` Current main model implementation.
 - `prepare_datasets.py` Entry point for data downloading and preparation.
 - `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretraining", "instruct", "dpo".
 - `tokenizer.py` Provides the tokenizer abstraction used by the project and supports two backends:

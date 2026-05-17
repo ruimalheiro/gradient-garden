@@ -10,7 +10,7 @@ import pytest
 import torch
 
 from tokenizer import init_tokenizer
-from model import Transformer
+from models import build_model
 from config import ModelConfig
 
 
@@ -45,7 +45,7 @@ def model(device, tokenizer):
         max_seq_len=32
     )
 
-    model = Transformer(
+    model = build_model(
         config=model_config,
         pad_token_id=tokenizer.pad_id,
         vocab_size=tokenizer.vocab_size,

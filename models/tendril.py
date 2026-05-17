@@ -2,8 +2,13 @@ import torch
 import torch.nn.functional as F
 
 from torch import nn
+from models.base import BaseModel
 from kv_cache import KVCache
 from config import ModelConfig
+from metrics import (
+    MoeLayerMetrics,
+    ModelMetrics
+)
 
 
 def precompute_rope_freqs(head_dim, sequence_length, theta=10000.0, device='cpu', dtype=torch.float32):
@@ -63,7 +68,7 @@ def repeat_kv(x, n_rep):
 
 class Attention(nn.Module):
     def __init__(self, config):
-        super(Attention, self).__init__()
+        super().__init__()
         self.n_heads = config.n_heads
         self.n_kv_heads = config.n_heads if config.n_kv_heads is None else config.n_kv_heads
         self.head_dim = config.dim // config.n_heads
@@ -133,7 +138,7 @@ class Attention(nn.Module):
 
 class FeedForward(nn.Module):
     def __init__(self, dim, hidden_dim, multiple_of, ffn_dim_multiplier):
-        super(FeedForward, self).__init__()
+        super().__init__()
         hidden_dim = int(2 * hidden_dim / 3)
         if ffn_dim_multiplier is not None:
             hidden_dim = int(ffn_dim_multiplier * hidden_dim)
@@ -162,7 +167,7 @@ class MoEFeedForward(nn.Module):
         z_loss_coef,
         compute_stats=False
     ):
-        super(MoEFeedForward, self).__init__()
+        super().__init__()
 
         self.num_experts = num_experts
         self.top_k = top_k
@@ -273,7 +278,7 @@ class MoEFeedForward(nn.Module):
 
 class RMSNorm(nn.Module):
     def __init__(self, dim, eps=1e-6):
-        super(RMSNorm, self).__init__()
+        super().__init__()
         self.eps = eps
         self.weight = nn.Parameter(torch.ones(dim))
 
@@ -285,7 +290,7 @@ class RMSNorm(nn.Module):
 
 class TransformerBlock(nn.Module):
     def __init__(self, layer_id, config):
-        super(TransformerBlock, self).__init__()
+        super().__init__()
         self.n_heads = config.n_heads
         self.dim = config.dim
         self.attention = Attention(config)
@@ -324,7 +329,7 @@ class TransformerBlock(nn.Module):
             aux = None
         return output, aux
 
-class Transformer(nn.Module):
+class TendrilTransformer(BaseModel):
     def __init__(
         self,
         *,
@@ -333,12 +338,12 @@ class Transformer(nn.Module):
         vocab_size,
         ignore_index
     ):
-        super(Transformer, self).__init__()
-
-        self.config = config
-        self.pad_token_id = pad_token_id
-        self.vocab_size = vocab_size
-        self.ignore_index = ignore_index
+        super().__init__(
+            config=config,
+            pad_token_id=pad_token_id,
+            vocab_size=vocab_size,
+            ignore_index=ignore_index
+        )
 
         self.n_layers = config.n_layers
 
@@ -369,42 +374,36 @@ class Transformer(nn.Module):
     def get_output_embeddings(self):
         return self.output
 
-    def get_total_parameters_count(self):
-        return sum(p.numel() for p in self.parameters())
-
-    def get_trainable_parameters_count(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad) 
-
-    def get_named_trainable_parameters(self):
-        return [(n, p) for n, p in self.named_parameters() if p.requires_grad]
-
     def set_moe_stats(self, enabled):
         for m in self.modules():
             if isinstance(m, MoEFeedForward):
                 m.compute_stats = enabled
 
-    def enable_moe_stats(self):
-        if self.config.moe.enabled and self.config.moe.compute_stats:
-            self.set_moe_stats(True)
+    def prepare_metrics(self):
+        if not (self.config.moe.enabled and self.config.moe.compute_stats):
+            return
+        self.set_moe_stats(True)
+        for m in self.modules():
+            if isinstance(m, MoEFeedForward):
+                m.reset_stats()
 
-    def disable_moe_stats(self):
-        if self.config.moe.enabled and self.config.moe.compute_stats:
-            self.set_moe_stats(False)
-
-    def reset_moe_stats(self):
-        if self.config.moe.enabled and self.config.moe.compute_stats:
-            for m in self.modules():
-                if isinstance(m, MoEFeedForward):
-                    m.reset_stats()
-
-    def get_moe_stats(self):
+    def collect_metrics(self) -> ModelMetrics:
         if not self.config.moe.enabled or (not self.config.moe.compute_stats):
-            return []
-        stats = []
+            return ModelMetrics()
+        moe_stats = []
         for layer_id, block in enumerate(self.layers):
             if isinstance(block.feed_forward, MoEFeedForward):
-                stats.append((layer_id, block.feed_forward))
-        return stats
+                moe_stats.append(
+                    MoeLayerMetrics(
+                        layer_id=layer_id,
+                        acc_top1_counts=block.feed_forward.acc_top1_counts,
+                        acc_topk_counts=block.feed_forward.acc_topk_counts,
+                        acc_p_sum=block.feed_forward.acc_p_sum,
+                        acc_tokens=block.feed_forward.acc_tokens
+                    )
+                )
+        self.set_moe_stats(False)
+        return ModelMetrics(moe=moe_stats)
 
     def forward(
         self,

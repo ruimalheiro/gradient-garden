@@ -53,8 +53,12 @@ class MoEConfig(BaseModel):
     z_loss_coef: float = 1e-3
     compute_stats: bool = True
 
+class ModelArchitecture(str, Enum):
+    TENDRIL = 'tendril'
+
 class ModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    architecture: ModelArchitecture = ModelArchitecture.TENDRIL
     dim: int = 768
     n_layers: int = 16
     n_heads: int = 16

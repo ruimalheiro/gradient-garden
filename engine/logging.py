@@ -129,7 +129,7 @@ def prepare_val_step_log(
     step_metrics: StepMetrics,
     trainer_state: TrainerState,
     aggregated_metrics: dict[str, float],
-    moe_metrics: dict[str, int | float],
+    model_specific_metrics: dict[str, int | float],
     console_logs: list[str]
 ):
     if step_metrics.step_type != StepType.VAL:
@@ -144,8 +144,8 @@ def prepare_val_step_log(
 
     wandb_metrics = {'Validation Loss': trainer_state.last_val_loss}
     wandb_metrics.update(aggregated_metrics)
-    if moe_metrics:
-        wandb_metrics.update(moe_metrics)
+    if model_specific_metrics:
+        wandb_metrics.update(model_specific_metrics)
 
     console_logs = [console_log, *console_logs]
 
