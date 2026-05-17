@@ -12,3 +12,7 @@ from metrics.step import (
     StepType,
     StepMetrics
 )
+from metrics.model_specific import (
+    MoeLayerMetrics,
+    ModelMetrics
+)

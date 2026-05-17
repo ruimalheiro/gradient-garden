@@ -1,17 +1,19 @@
 import torch
-
 import torch.distributed as dist
 
+from metrics.model_specific import MoeLayerMetrics
 
-def collect_moe_metrics(model, ddp, is_master_process):
-    moe_layer_stats = model.get_moe_stats()
 
-    for layer_id, moe in moe_layer_stats:
+def collect_moe_metrics(moe_layer_metrics: MoeLayerMetrics, ddp, is_master_process):
+    if moe_layer_metrics is None:
+        return {}
+
+    for layer_metric in moe_layer_metrics:
         if ddp:
-            dist.all_reduce(moe.acc_top1_counts, op=dist.ReduceOp.SUM)
-            dist.all_reduce(moe.acc_topk_counts, op=dist.ReduceOp.SUM)
-            dist.all_reduce(moe.acc_p_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(moe.acc_tokens, op=dist.ReduceOp.SUM)
+            dist.all_reduce(layer_metric.acc_top1_counts, op=dist.ReduceOp.SUM)
+            dist.all_reduce(layer_metric.acc_topk_counts, op=dist.ReduceOp.SUM)
+            dist.all_reduce(layer_metric.acc_p_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(layer_metric.acc_tokens, op=dist.ReduceOp.SUM)
 
     moe_metrics = None
     if is_master_process:
@@ -26,9 +28,15 @@ def collect_moe_metrics(model, ddp, is_master_process):
         dead_counts_k = []
         cvsk = []
         pmean_maxes = []
-        for layer_id, moe in moe_layer_stats:
+        for layer_metric in moe_layer_metrics:
+            layer_id = layer_metric.layer_id
+            acc_top1_counts = layer_metric.acc_top1_counts
+            acc_topk_counts = layer_metric.acc_topk_counts
+            acc_p_sum = layer_metric.acc_p_sum
+            acc_tokens = layer_metric.acc_tokens
+
             # top-1 utilization
-            c1 = moe.acc_top1_counts.float()
+            c1 = acc_top1_counts.float()
             p1 = c1 / c1.sum().clamp(min=1.0)
             cv = (c1.std(unbiased=False) / (c1.mean() + 1e-9)).item() # coef of var
 
@@ -36,7 +44,7 @@ def collect_moe_metrics(model, ddp, is_master_process):
             entropy = -(p1 * (p1 + 1e-9).log()).sum()
             eff_experts = torch.exp(entropy).item()
             max_share = p1.max().item()
-            dead = int((moe.acc_top1_counts == 0).sum().item())
+            dead = int((acc_top1_counts == 0).sum().item())
 
             effs.append((layer_id, eff_experts))
             max_shares.append((layer_id, max_share))
@@ -44,7 +52,7 @@ def collect_moe_metrics(model, ddp, is_master_process):
             cvs1.append((layer_id, cv))
 
             # top-k utilization (optional)
-            ck = moe.acc_topk_counts.float()
+            ck = acc_topk_counts.float()
             pk = ck / ck.sum().clamp(min=1.0)
             cvk = (ck.std(unbiased=False) / (ck.mean() + 1e-9)).item()
 
@@ -52,7 +60,7 @@ def collect_moe_metrics(model, ddp, is_master_process):
             entropy_k = -(pk * (pk + 1e-9).log()).sum()
             eff_experts_k = torch.exp(entropy_k).item()
             max_share_k = pk.max().item()
-            dead_k = int((moe.acc_topk_counts == 0).sum().item())
+            dead_k = int((acc_topk_counts == 0).sum().item())
 
             effs_k.append((layer_id, eff_experts_k))
             max_shares_k.append((layer_id, max_share_k))
@@ -60,7 +68,7 @@ def collect_moe_metrics(model, ddp, is_master_process):
             cvsk.append((layer_id, cvk))
 
             # mean router probs (token-weighted)
-            p_mean = (moe.acc_p_sum / moe.acc_tokens.clamp(min=1)).to(torch.float32)
+            p_mean = (acc_p_sum / acc_tokens.clamp(min=1)).to(torch.float32)
             pmean_max = float(p_mean.max().item())
 
             pmean_maxes.append((layer_id, pmean_max))

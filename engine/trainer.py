@@ -49,7 +49,7 @@ from config import (
     TrainingPrecision
 )
 from tokenizer import init_tokenizer
-from model import (Transformer)
+from models.registry import build_model
 from dataloaders import init_data_loaders
 from checkpoints import (
     save_checkpoint,
@@ -66,9 +66,9 @@ from wandb_utils import WandbWrapper
 from lr_schedulers import cosine_scheduler
 from tqdm.auto import tqdm
 from metrics import (
+    collect_moe_metrics,
     reset_memory_usage_metrics,
     compute_memory_usage_metrics,
-    collect_moe_metrics,
     accumulate_weighted_metrics,
     combine_weighted_metrics,
     StepType,
@@ -331,7 +331,7 @@ class Trainer:
         )
 
     def build_model(self):
-        self.model = Transformer(
+        self.model = build_model(
             config=self.config.model,
             pad_token_id=self.tokenizer.pad_id,
             vocab_size=self.tokenizer.vocab_size,
@@ -593,7 +593,7 @@ class Trainer:
         *,
         step_metrics,
         aggregated_metrics=None,
-        moe_metrics=None,
+        model_specific_metrics=None,
         memory_usage_metrics=None,
         console_logs=None,
         pbar=None
@@ -613,7 +613,7 @@ class Trainer:
                 step_metrics=step_metrics,
                 trainer_state=self.trainer_state,
                 aggregated_metrics=aggregated_metrics,
-                moe_metrics=moe_metrics,
+                model_specific_metrics=model_specific_metrics,
                 console_logs=console_logs
             )
         elif step_metrics.step_type in (
@@ -798,21 +798,19 @@ class Trainer:
             pbar=pbar
         )
 
-    def prepare_moe_metrics(self):
-        if self.config.model.moe.enabled and self.config.model.moe.compute_stats:
-            get_model(self.model).enable_moe_stats()
-            get_model(self.model).reset_moe_stats()
+    def prepare_model_specific_metrics(self):
+        get_model(self.model).prepare_metrics()
 
-    def get_moe_metrics(self):
-        moe_metrics = {}
-        if self.config.model.moe.enabled and self.config.model.moe.compute_stats:
-            moe_metrics = collect_moe_metrics(
-                get_model(self.model),
-                self.trainer_ctx.distributed.ddp,
-                self.trainer_ctx.distributed.is_master_process
-            )
-            get_model(self.model).disable_moe_stats()
-        return moe_metrics
+    def collect_model_specific_metrics(self):
+        ddp = self.trainer_ctx.distributed.ddp
+        is_master_process = self.trainer_ctx.distributed.is_master_process
+
+        metrics = {}
+        model_metrics = get_model(self.model).collect_metrics()
+
+        metrics.update(collect_moe_metrics(model_metrics.moe, ddp, is_master_process))
+
+        return metrics
 
     @torch.inference_mode()
     def run_validation(self, pbar):
@@ -829,7 +827,7 @@ class Trainer:
         metrics_weights_acc = {}
 
         self.model.eval()
-        self.prepare_moe_metrics()
+        self.prepare_model_specific_metrics()
 
         for _ in tqdm(range(self.config.validation.validation_steps), 'Validating', disable=not is_master_process, leave=False):
             output = self.task.validation_step(self.model, self.val_loader.next_batch(), self.task_assets)
@@ -877,11 +875,11 @@ class Trainer:
             metrics_weights_acc=metrics_weights_acc,
             ddp=ddp
         )
-        moe_metrics = self.get_moe_metrics()
+        model_specific_metrics = self.collect_model_specific_metrics()
         self.log_step_metrics(
             step_metrics=step_metrics,
             aggregated_metrics=aggregated_metrics,
-            moe_metrics=moe_metrics,
+            model_specific_metrics=model_specific_metrics,
             console_logs=console_logs,
             pbar=pbar
         )
