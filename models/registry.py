@@ -1,9 +1,13 @@
 from config import ModelArchitecture
-from models.tendril import TendrilTransformer
+from models.implementations import (
+    TendrilTransformer,
+    TendrilMoETransformer
+)
 
 
 MODEL_REGISTRY = {
     ModelArchitecture.TENDRIL: TendrilTransformer,
+    ModelArchitecture.TENDRIL_MOE: TendrilMoETransformer,
 }
 
 def build_model(*, config, pad_token_id, vocab_size, ignore_index):

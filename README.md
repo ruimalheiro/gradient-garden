@@ -42,11 +42,16 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - Optional distillation support
   - Teacher models are currently loaded from the Hugging Face Hub, but this can be adapted to other sources if needed
 
-### Model features
-- LoRA
-- Mixture of Experts (MoE)
-  - Reuses the existing FF module for expert MLPs
+### Models
+- Tendril
+  - Current default model architecture. Dense decoder-only transformer with GQA and RoPE support.
+- TendrilMoE
+  - Mixture of Experts (MoE) implementation of Tendril.
+  - Reuses the existing FF module for expert MLPs.
   - Includes load balancing and z-loss
+
+### Other features
+- LoRA
 - KV cache for autoregressive decoding
 
 ### Evaluation
@@ -58,8 +63,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
 
 ## Notes
 - The project is currently focused on CUDA-based training workflows.
-- The current model implementation is a decoder-only transformer with optional MoE feed-forward blocks, but the codebase is intended to support multiple model architectures over time.
-- The project can be adapted to other datasets and model architectures.
+- Additional model architectures can be added through the model registry.
 - By default, the project uses a Hugging Face tokenizer.
 - It also supports a `tiktoken` tokenizer that can be loaded from a local BPE file. For now, this path expects a tokenizer compatible with the Llama 3 tiktoken configuration and chat/control tokens, e.g. (`<|begin_of_text|>`, `<|end_of_text|>`, `<|start_header_id|>`, `<|end_header_id|>`, `<|eot_id|>`). The local tokenizer file is **not** included in this repository and must be provided separately. This will be made more generic later.
 
@@ -73,7 +77,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
     - ARC-Challenge
 - `examples/` Templates for local setup files like the `.env` secrets file and dataset mix.
 - `metrics/` Utilities for metric aggregation.
-- `models` Contains the model registry, the builder and the implementation of the models. 
+- `models/` Contains the model registry, the builder, the base model interface, and model implementations. 
 - `recipes/` Recipe definitions for training and dataset preparation. More will be added here.
   - `recipes/config.py` Defines the recipe schema and recipe loading logic.
   - `recipes/pretraining/`
@@ -143,7 +147,7 @@ A recipe is the preferred way to define an experiment. It contains:
 
 The main sections are:
 - `runtime`: device, precision, FSDP, torch compile, CPU workers
-- `model`: transformer architecture and optional MoE settings
+- `model`: model architecture and model-specific settings
 - `training`: stage, seed, total batch size, max steps, early stopping
 - `optimizers`: AdamW and optional Muon configuration
 - `paths`: dataset, evaluation, checkpoint, and prompt paths
