@@ -11,6 +11,8 @@ def build_model(*, config, pad_token_id, vocab_size, ignore_index):
     if model_cls is None:
         raise ValueError(f'Invalid model architecture: {config.architecture}')
 
+    model_cls.validate_config(config)
+
     return model_cls(
         config=config,
         pad_token_id=pad_token_id,
