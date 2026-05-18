@@ -45,16 +45,15 @@ class RuntimeConfig(BaseModel):
 
 class MoEConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    enabled: bool = False
     num_experts: int = 8
     expert_dim: int = 768
     top_k: int = 2
     load_balancing_coef: float = 1e-2
     z_loss_coef: float = 1e-3
-    compute_stats: bool = True
 
 class ModelArchitecture(str, Enum):
     TENDRIL = 'tendril'
+    TENDRIL_MOE = 'tendril_moe'
 
 class ModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -69,7 +68,7 @@ class ModelConfig(BaseModel):
     rope_theta: float = 500000.0
     max_batch_size: int = 4
     max_seq_len: int = 1024
-    moe: MoEConfig = Field(default_factory=MoEConfig)
+    moe: MoEConfig | None = None
 
 class PromptConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

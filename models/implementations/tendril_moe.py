@@ -1,0 +1,476 @@
+import torch
+import torch.nn.functional as F
+
+from torch import nn
+from models.base import BaseModel
+from kv_cache import KVCache
+from config import ModelConfig
+from metrics import (
+    MoeLayerMetrics,
+    ModelMetrics
+)
+
+
+def precompute_rope_freqs(head_dim, sequence_length, theta=10000.0, device='cpu', dtype=torch.float32):
+    ''' Computes the frequencies that will be used for rope (rotary positional ebedding). Without complex numbers.
+    '''
+    indices = torch.arange(0, head_dim // 2, device=device, dtype=torch.float32)
+    normalised_indices = 2.0 * indices / head_dim
+
+    freqs = 1.0 / (theta ** normalised_indices)
+
+    timesteps = torch.arange(sequence_length, device=device, dtype=torch.float32)
+
+    freqs = torch.outer(timesteps, freqs)
+
+    cos = torch.cos(freqs).repeat_interleave(2, dim=-1).to(dtype)
+    sin = torch.sin(freqs).repeat_interleave(2, dim=-1).to(dtype)
+
+    freqs_sin_cos = torch.stack((cos, sin), dim=-1)
+
+    return freqs_sin_cos
+
+def rotate_half(x):
+    ''' 90 degree rotation
+    '''
+    # get pairs
+    x1 = x[..., ::2]
+    x2 = x[..., 1::2]
+    # rotates the pairs like if we multiplied a rotating matrix ([[0, -1], [1, 0]]) by a vector [x, y]
+    rotated = torch.stack((-x2, x1), dim=-1)
+    return rotated.flatten(-2) # returns flat tensor with all pairs
+
+def apply_rope(xq, xk, freqs):
+    ''' Apply the rotary position embeddings. Without complex numbers.
+        freqs is expected to have dimension [sequence_length, head_dim, 2]
+    '''
+    cos = freqs[..., 0][None, :, None, :] # will have dim (1, sequence_length, 1, model_dim)
+    sin = freqs[..., 1][None, :, None, :]
+
+    xq = (xq * cos) + rotate_half(xq) * sin
+    xk = (xk * cos) + rotate_half(xk) * sin
+
+    return xq, xk
+
+def repeat_kv(x, n_rep):
+    ''' Repeat x n_rep times. The idea is to spread these tensors through more attention heads. 
+    '''
+    bs, slen, n_kv_heads, head_dim = x.shape
+
+    if n_rep == 1:
+        return x
+        
+    return (
+        x[:, :, :, None, :]
+        .expand(bs, slen, n_kv_heads, n_rep, head_dim)
+        .reshape(bs, slen, n_kv_heads * n_rep, head_dim)
+    )
+
+class Attention(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.n_heads = config.n_heads
+        self.n_kv_heads = config.n_heads if config.n_kv_heads is None else config.n_kv_heads
+        self.head_dim = config.dim // config.n_heads
+
+        self.wq = nn.Linear(config.dim, config.n_heads * self.head_dim, bias=False)
+        self.wk = nn.Linear(config.dim, self.n_kv_heads * self.head_dim, bias=False)
+        self.wv = nn.Linear(config.dim, self.n_kv_heads * self.head_dim, bias=False)
+        self.wo = nn.Linear(config.n_heads * self.head_dim, config.dim, bias=False)
+
+    def forward(self, x, rope_freqs, attn_mask=None, layer_id: int = None, kv_cache: KVCache = None, start_position: int = 0):
+        batch_size, sequence_length, _ = x.shape
+        xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
+
+        xq = xq.view(batch_size, sequence_length, self.n_heads, self.head_dim)
+        xk = xk.view(batch_size, sequence_length, self.n_kv_heads, self.head_dim)
+        xv = xv.view(batch_size, sequence_length, self.n_kv_heads, self.head_dim)
+
+        xq, xk = apply_rope(xq, xk, freqs=rope_freqs)
+
+        # KV cache
+        if kv_cache is not None:
+            if layer_id is None:
+                raise ValueError('"layer_id" needs to be set when using kv cache.')
+
+            layer_k = kv_cache.keys[layer_id]
+            layer_v = kv_cache.values[layer_id]
+            end_position = start_position + sequence_length
+            layer_k[:, start_position : end_position].copy_(xk)
+            layer_v[:, start_position : end_position].copy_(xv)
+
+            xk = layer_k[:, :end_position]
+            xv = layer_v[:, :end_position]
+
+        keys = repeat_kv(xk, self.n_heads // self.n_kv_heads)
+        values = repeat_kv(xv, self.n_heads // self.n_kv_heads)
+
+        xq = xq.transpose(1, 2)
+        keys = keys.transpose(1, 2)
+        values = values.transpose(1, 2)
+
+        # triangular mask toggle for torch SDPA
+        if attn_mask is not None:
+            is_causal = False
+        else:
+            if kv_cache is None:
+                is_causal = True
+            else:
+                is_causal = (start_position == 0) # 0 means prefill in this scenario
+
+        # scores = torch.matmul(xq, keys.transpose(2, 3)) / math.sqrt(self.head_dim)
+        # if mask is not None:
+        #     scores = scores + mask
+        # scores = F.softmax(scores.float(), dim=-1).type_as(xq)
+        # output = torch.matmul(scores, values)
+
+        # Torch scaled_dot_product_attention will use flash-attention if possible.
+        output = F.scaled_dot_product_attention(
+            xq,
+            keys,
+            values,
+            attn_mask=attn_mask,
+            is_causal=is_causal
+        )
+
+        output = output.transpose(1, 2).contiguous().view(batch_size, sequence_length, -1)
+
+        return self.wo(output)
+
+class FeedForward(nn.Module):
+    def __init__(self, dim, hidden_dim, multiple_of, ffn_dim_multiplier):
+        super().__init__()
+        hidden_dim = int(2 * hidden_dim / 3)
+        if ffn_dim_multiplier is not None:
+            hidden_dim = int(ffn_dim_multiplier * hidden_dim)
+        hidden_dim = multiple_of * ((hidden_dim + multiple_of - 1) // multiple_of)
+
+        self.w1 = nn.Linear(dim, hidden_dim, bias=False)
+        self.w2 = nn.Linear(hidden_dim, dim, bias=False)
+        self.w3 = nn.Linear(dim, hidden_dim, bias=False)
+
+    def forward(self, x):
+        a, b = self.w1(x), self.w3(x)
+        c = F.silu(a) * b
+        return self.w2(c)
+
+class MoEFeedForward(nn.Module):
+    def __init__(
+        self,
+        dim,
+        hidden_dim,
+        multiple_of,
+        ffn_dim_multiplier,
+        num_experts,
+        expert_dim,
+        top_k,
+        load_balancing_coef,
+        z_loss_coef
+    ):
+        super().__init__()
+
+        self.num_experts = num_experts
+        self.top_k = top_k
+        self.load_balancing_coef = load_balancing_coef
+        self.z_loss_coef = z_loss_coef
+        self.compute_stats = False
+
+        # stats buffers
+        self.register_buffer('acc_top1_counts', torch.zeros(num_experts, dtype=torch.int64), persistent=False)
+        self.register_buffer('acc_topk_counts', torch.zeros(num_experts, dtype=torch.int64), persistent=False)
+        self.register_buffer('acc_p_sum', torch.zeros(num_experts, dtype=torch.float32), persistent=False)
+        self.register_buffer('acc_tokens', torch.zeros((), dtype=torch.int64), persistent=False)
+
+        self.router = nn.Linear(dim, num_experts, bias=False)
+
+        self.experts = nn.ModuleList([
+            FeedForward(expert_dim, hidden_dim, multiple_of, ffn_dim_multiplier) for _ in range(num_experts)
+        ])
+
+    def reset_stats(self):
+        self.acc_top1_counts.zero_()
+        self.acc_topk_counts.zero_()
+        self.acc_p_sum.zero_()
+        self.acc_tokens.zero_()
+
+    def _accumulate_stats(self, top_k_index, topk_counts, p):
+        top1 = top_k_index[:, 0]
+        n_tokens = top_k_index.size(0)
+        top1_counts = torch.bincount(top1, minlength=self.num_experts).to(torch.int64)
+
+        self.acc_top1_counts.add_(top1_counts)
+        self.acc_topk_counts.add_(topk_counts)
+        self.acc_p_sum.add_(p.to(torch.float32) * n_tokens)
+        self.acc_tokens.add_(n_tokens)
+
+    def forward(self, x):
+        B, S, D = x.shape
+        x_flat = x.reshape(B * S, D)
+        y_flat = torch.zeros_like(x_flat)
+
+        logits = self.router(x_flat) # (B*S, E_logits)
+
+        top_k_logits, top_k_index = torch.topk(logits, k=self.top_k, dim=-1) # (B*S, E_logits) / (B*S, E_indexes)
+
+        top_k_probs = F.softmax(top_k_logits, dim=-1, dtype=x_flat.dtype)
+        all_probs = F.softmax(logits, dim=-1, dtype=x_flat.dtype)
+
+        # TOKEN LOAD BALANCE
+        # f
+        total_token_count_possible = B * S * self.top_k
+
+        topk_counts_i64 = torch.bincount(top_k_index.reshape(-1), minlength=self.num_experts).to(torch.int64)
+        counts_per_top_k_expert = topk_counts_i64.to(torch.float32)
+        f = counts_per_top_k_expert / max(1.0, total_token_count_possible)
+        # p
+        p = all_probs.mean(dim=0)
+        load_balance_loss = self.load_balancing_coef * self.num_experts * torch.sum(f * p)
+
+        # Z LOSS
+        z_loss = self.z_loss_coef * torch.mean(torch.logsumexp(logits, dim=-1) ** 2.0)
+
+        aux_loss = load_balance_loss + z_loss
+
+        # COMPUTE STATS
+        if self.compute_stats:
+            with torch.no_grad():
+                self._accumulate_stats(top_k_index, topk_counts_i64, p)
+
+        # PERFORMANCE
+        flat_top_k_index = top_k_index.reshape(-1)
+        flat_top_k_probs = top_k_probs.reshape(-1)
+        flat_token = torch.arange(B * S, device=x_flat.device).repeat_interleave(self.top_k)
+
+        order = torch.argsort(flat_top_k_index)
+        flat_top_k_index = flat_top_k_index.index_select(0, order)
+        flat_top_k_probs = flat_top_k_probs.index_select(0, order)
+        flat_token = flat_token.index_select(0, order)
+
+        counts = counts_per_top_k_expert.int()
+        offsets = torch.cumsum(counts, dim=0)
+        starts = torch.empty_like(offsets)
+        starts[0] = 0
+        starts[1:] = offsets[:-1]
+
+        for i in range(self.num_experts):
+            s_i = starts[i]
+            e_i = offsets[i]
+            if s_i == e_i:
+                if torch.is_grad_enabled():
+                    for p in self.experts[i].parameters(): # hack so the autograd graph considers the expert (otherwise error because of None grad)
+                        aux_loss = aux_loss + p.sum() * 0.0
+                continue
+
+            token_indexes = flat_token[s_i:e_i]
+
+            tokens_for_expert_e = x_flat.index_select(0, token_indexes)
+            expert_activations = self.experts[i](tokens_for_expert_e)
+            gate_activations = flat_top_k_probs[s_i:e_i].unsqueeze(-1)
+
+            activations = expert_activations * gate_activations
+            y_flat.index_add_(0, token_indexes, activations)
+
+        y_flat = y_flat.reshape(B, S, D)
+
+        return y_flat, aux_loss
+
+class RMSNorm(nn.Module):
+    def __init__(self, dim, eps=1e-6):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(dim))
+
+    def _norm(self, x):
+        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+
+    def forward(self, x):
+        return self._norm(x) * self.weight
+
+class TransformerBlock(nn.Module):
+    def __init__(self, layer_id, config):
+        super().__init__()
+        self.n_heads = config.n_heads
+        self.dim = config.dim
+        self.attention = Attention(config)
+        self.feed_forward = MoEFeedForward(
+            dim=config.dim,
+            hidden_dim=4 * config.dim,
+            multiple_of=config.multiple_of,
+            ffn_dim_multiplier=config.ffn_dim_multiplier,
+            num_experts=config.moe.num_experts,
+            expert_dim=config.moe.expert_dim,
+            top_k=config.moe.top_k,
+            load_balancing_coef=config.moe.load_balancing_coef,
+            z_loss_coef=config.moe.z_loss_coef
+        )
+        self.layer_id = layer_id
+        self.attention_norm = RMSNorm(config.dim, eps=config.norm_eps)
+        self.ffn_norm = RMSNorm(config.dim, eps=config.norm_eps)
+
+    def forward(self, x, rope_freqs, mask=None, kv_cache: KVCache = None, start_position: int = 0):
+        hidden_state = x + self.attention(self.attention_norm(x), rope_freqs, mask, layer_id=self.layer_id, kv_cache=kv_cache, start_position=start_position)
+        ff, aux = self.feed_forward(self.ffn_norm(hidden_state))
+        output = hidden_state + ff
+        return output, aux
+
+class TendrilMoETransformer(BaseModel):
+    def __init__(
+        self,
+        *,
+        config: ModelConfig,
+        pad_token_id,
+        vocab_size,
+        ignore_index
+    ):
+        super().__init__(
+            config=config,
+            pad_token_id=pad_token_id,
+            vocab_size=vocab_size,
+            ignore_index=ignore_index
+        )
+
+        self.n_layers = config.n_layers
+
+        self.tok_embeddings = nn.Embedding(
+            self.vocab_size,
+            config.dim,
+            padding_idx=self.pad_token_id
+        )
+
+        self.layers = nn.ModuleList()
+        for layer_id in range(self.n_layers):
+            self.layers.append(TransformerBlock(layer_id, config))
+
+        self.norm = RMSNorm(config.dim, eps=config.norm_eps)
+        self.output = nn.Linear(config.dim, self.vocab_size, bias=False)
+
+        rope_freqs = precompute_rope_freqs(
+            config.dim // config.n_heads,
+            config.max_seq_len * 2,
+            config.rope_theta
+        )
+
+        self.register_buffer('rope_freqs', rope_freqs, persistent=False)
+
+    @classmethod
+    def validate_config(cls, config: ModelConfig):
+        if config.dim % config.n_heads != 0:
+            raise ValueError(f'"dim" ({config.dim}) must be divisible by "n_heads" ({config.n_heads})')
+        if config.n_kv_heads > config.n_heads:
+            raise ValueError(f'"n_kv_heads" ({config.n_kv_heads}) must be less or equal to "n_heads" ({config.n_heads})')
+        if config.n_heads % config.n_kv_heads != 0:
+            raise ValueError(f'"n_heads" ({config.n_heads}) must be divisible by "n_kv_heads" ({config.n_kv_heads})')
+        if config.moe is None:
+            raise ValueError('"moe" config is required when using "tendril_moe" architecture.')
+        # MoEFeedForward assumes expert_dim == dim.
+        if config.moe.expert_dim != config.dim:
+            raise ValueError(f'"moe.expert_dim" ({config.moe.expert_dim}) must equal "dim" ({config.dim})')
+        if config.moe.top_k > config.moe.num_experts:
+            raise ValueError(f'"moe.top_k" ({config.moe.top_k}) must be <= "moe.num_experts" ({config.moe.num_experts})')
+        if config.moe.num_experts <= 0:
+            raise ValueError('"moe.num_experts" must be > 0')
+        if config.moe.top_k <= 0:
+            raise ValueError('"moe.top_k" must be > 0')
+        if config.moe.load_balancing_coef < 0:
+            raise ValueError('"moe.load_balancing_coef" must be >= 0')
+        if config.moe.z_loss_coef < 0:
+            raise ValueError('"moe.z_loss_coef" must be >= 0')
+
+    def get_input_embeddings(self):
+        return self.tok_embeddings
+
+    def get_output_embeddings(self):
+        return self.output
+
+    def set_moe_stats(self, enabled):
+        for m in self.modules():
+            if isinstance(m, MoEFeedForward):
+                m.compute_stats = enabled
+
+    def prepare_metrics(self):
+        self.set_moe_stats(True)
+        for m in self.modules():
+            if isinstance(m, MoEFeedForward):
+                m.reset_stats()
+
+    def collect_metrics(self) -> ModelMetrics:
+        moe_stats = []
+        for layer_id, block in enumerate(self.layers):
+            if isinstance(block.feed_forward, MoEFeedForward):
+                moe_stats.append(
+                    MoeLayerMetrics(
+                        layer_id=layer_id,
+                        acc_top1_counts=block.feed_forward.acc_top1_counts,
+                        acc_topk_counts=block.feed_forward.acc_topk_counts,
+                        acc_p_sum=block.feed_forward.acc_p_sum,
+                        acc_tokens=block.feed_forward.acc_tokens
+                    )
+                )
+        self.set_moe_stats(False)
+        return ModelMetrics(moe=moe_stats)
+
+    def forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        start_position=0,
+        labels=None,
+        kv_cache: KVCache = None
+    ):
+        sequence_length = input_ids.shape[1]
+
+        hidden_state = self.tok_embeddings(input_ids)
+
+        rope_freqs = self.rope_freqs
+        if rope_freqs.device != hidden_state.device or rope_freqs.dtype != hidden_state.dtype:
+            rope_freqs = rope_freqs.to(
+                dtype=hidden_state.dtype,
+                device=hidden_state.device
+            )
+
+        rope_freqs = rope_freqs[start_position : start_position + sequence_length]
+
+        if kv_cache is not None and start_position > 0 and sequence_length != 1:
+            raise ValueError('current kv cache only supports 1 token decoding')
+
+        attn_mask = None
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(hidden_state.device)
+
+            # adjust K length for the mask when using kv_cache
+            k_length = start_position + sequence_length if kv_cache is not None else sequence_length
+            attention_mask = attention_mask[:, :k_length]
+
+            if (attention_mask != 1).any():
+                # only create mask if attention_mask is passed
+                # if following HF convention, mask is expected to have 1s in the valid tokens and 0s in the masked positions.
+                keep_positions = attention_mask.bool() # SDPA bool attn_mask semantics: True = keep, False = mask
+                attn_mask = keep_positions[:, None, None, :] # torch flash attention expects dims [B, H, Q, K]
+
+                need_causal = (kv_cache is None) or (start_position == 0 and sequence_length > 1)
+                if need_causal:
+                    q_pos = torch.arange(0, sequence_length, device=hidden_state.device)
+                    k_pos = torch.arange(0, k_length, device=hidden_state.device)
+                    causal_keep = (k_pos[None, :] <= q_pos[:, None])[None, None, :, :]  # (1,1,Q,K)
+                    attn_mask = attn_mask.expand(attn_mask.size(0), 1, sequence_length, k_length) & causal_keep
+
+        aux_loss_total = hidden_state.new_zeros(())
+        for layer in self.layers:
+            hidden_state, aux = layer(hidden_state, rope_freqs, attn_mask, kv_cache=kv_cache, start_position=start_position)
+            if aux is not None:
+                aux_loss_total = aux_loss_total + aux
+
+        hidden_state = self.norm(hidden_state)
+
+        logits = self.output(hidden_state)
+
+        loss = None
+        if labels is not None:
+            if labels.device != hidden_state.device:
+                labels = labels.to(hidden_state.device)
+            flat_logits = logits.view(-1, logits.size(-1))  # (batch_size * sequence_length, num_classes)
+            flat_labels = labels.view(-1)  # (batch_size * sequence_length)
+            ce = nn.CrossEntropyLoss(ignore_index=self.ignore_index)(flat_logits, flat_labels)
+            loss = ce + (aux_loss_total / self.n_layers)
+
+        return {'logits': logits, 'loss': loss, 'kv_cache': kv_cache}

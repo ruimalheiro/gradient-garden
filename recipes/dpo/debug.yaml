@@ -29,8 +29,6 @@ config:
     rope_theta: 500000.0
     max_batch_size: 2
     max_seq_len: 512
-    moe:
-      enabled: false
 
   prompts:
     system_prompt: You are a helpful AI assistant
