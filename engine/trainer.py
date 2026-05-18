@@ -236,7 +236,7 @@ class Trainer:
             raise ValueError('Invalid training precision')
 
     def compute_grad_accum_steps(self, ddp_world_size):
-        #### BATCH SIZE CHECKS
+        #### BATCH SIZE CHECKS (For now assumes token based autoregressive training...)
         # NOTE: total_batch_size is the total batch size in tokens. The model max_batch_size is the number of sequences per device during forward pass (micro batches).
         # The total batch size must be a multiple of (max_batch_size * max_seq_len * ddp_world_size). This is needed for the gradient accumulation steps to be calculated correctly.
         if self.config.training.total_batch_size % (self.config.model.max_batch_size * self.config.model.max_seq_len * ddp_world_size) != 0:
