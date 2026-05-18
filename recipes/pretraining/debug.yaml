@@ -29,8 +29,6 @@ config:
     rope_theta: 500000.0
     max_batch_size: 4
     max_seq_len: 1024
-    moe:
-      enabled: false
 
   tokenizer:
     checkpoint_path: HuggingFaceTB/SmolLM2-360M
