@@ -107,22 +107,14 @@ class Trainer:
         self.wandb = None
         self.torch_profiler_context = None
 
-        self.validate_config()
+        self.validate_common_config()
 
-    def validate_config(self):
+    def validate_common_config(self):
         config = self.config
 
         # device type
         if self.config.runtime.device_type != DeviceType.CUDA:
             raise ValueError('Only cuda is supported at the moment.')
-
-        # model config
-        if config.model.dim % config.model.n_heads != 0:
-            raise ValueError(f'"dim" ({config.model.dim}) must be divisible by "n_heads" ({config.model.n_heads})')
-        if config.model.n_kv_heads > config.model.n_heads:
-            raise ValueError(f'"n_kv_heads" ({config.model.n_kv_heads}) must be less or equal to "n_heads" ({config.model.n_heads})')
-        if config.model.n_heads % config.model.n_kv_heads != 0:
-            raise ValueError(f'"n_heads" ({config.model.n_heads}) must be divisible by n_kv_heads" ({config.model.n_kv_heads})')
 
     def setup(self):
         self.setup_global_torch_optimizations()
@@ -244,7 +236,7 @@ class Trainer:
             raise ValueError('Invalid training precision')
 
     def compute_grad_accum_steps(self, ddp_world_size):
-        #### BATCH SIZE CHECKS
+        #### BATCH SIZE CHECKS (For now assumes token based autoregressive training...)
         # NOTE: total_batch_size is the total batch size in tokens. The model max_batch_size is the number of sequences per device during forward pass (micro batches).
         # The total batch size must be a multiple of (max_batch_size * max_seq_len * ddp_world_size). This is needed for the gradient accumulation steps to be calculated correctly.
         if self.config.training.total_batch_size % (self.config.model.max_batch_size * self.config.model.max_seq_len * ddp_world_size) != 0:

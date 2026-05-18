@@ -368,6 +368,15 @@ class TendrilTransformer(BaseModel):
 
         self.register_buffer('rope_freqs', rope_freqs, persistent=False)
 
+    @classmethod
+    def validate_config(cls, config: ModelConfig):
+        if config.dim % config.n_heads != 0:
+            raise ValueError(f'"dim" ({config.dim}) must be divisible by "n_heads" ({config.n_heads})')
+        if config.n_kv_heads > config.n_heads:
+            raise ValueError(f'"n_kv_heads" ({config.n_kv_heads}) must be less or equal to "n_heads" ({config.n_heads})')
+        if config.n_heads % config.n_kv_heads != 0:
+            raise ValueError(f'"n_heads" ({config.n_heads}) must be divisible by n_kv_heads" ({config.n_kv_heads})')
+
     def get_input_embeddings(self):
         return self.tok_embeddings
 

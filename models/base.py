@@ -1,9 +1,8 @@
-import torch
 import torch.nn as nn
 
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from metrics import ModelMetrics
+from config import ModelConfig
 
 
 class BaseModel(nn.Module, ABC):
@@ -14,15 +13,18 @@ class BaseModel(nn.Module, ABC):
         self.vocab_size = vocab_size
         self.ignore_index = ignore_index
 
+    @classmethod
     @abstractmethod
-    def forward(self, *args, **kwargs) -> dict:
-        raise NotImplementedError
+    def validate_config(cls, config: ModelConfig):
+        ...
 
+    @abstractmethod
     def get_input_embeddings(self):
-        raise NotImplementedError
+        ...
 
+    @abstractmethod
     def get_output_embeddings(self):
-        raise NotImplementedError
+        ...
 
     def get_total_parameters_count(self) -> int:
         return sum(p.numel() for p in self.parameters())
@@ -38,3 +40,7 @@ class BaseModel(nn.Module, ABC):
 
     def collect_metrics(self) -> ModelMetrics:
         return ModelMetrics()
+
+    @abstractmethod
+    def forward(self, *args, **kwargs) -> dict:
+        ...
