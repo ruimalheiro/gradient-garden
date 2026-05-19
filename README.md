@@ -76,6 +76,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
     - WinoGrande
     - ARC-Challenge
 - `examples/` Templates for local setup files like the `.env` secrets file and dataset mix.
+- `inference/` Contains inference related components like KV cache implementation and logic for sampling and text generation.
 - `metrics/` Utilities for metric aggregation.
 - `models/` Contains the model registry, the builder, the base model interface, and model implementations. 
 - `recipes/` Recipe definitions for training and dataset preparation. More will be added here.
@@ -98,8 +99,6 @@ The project began with a decoder-only transformer baseline and has evolved into 
   - PyTorch DDP [here](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)
 - `distillation_utils.py` Logic for distillation loss.
 - `dpo_utils.py` Logic for DPO loss.
-- `generate.py` Logic for sampling and text generation.
-- `kv_cache.py` KV cache implementation.
 - `logger.py` Simple reusable logger.
 - `lora.py` LoRA module that handles the model modification. Rank, alpha, dropout and target modules can be configured accordingly.
 - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine scheduler.

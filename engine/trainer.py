@@ -74,7 +74,7 @@ from metrics import (
     StepMetrics,
     collect_model_specific_metrics
 )
-from generate import generate_and_decode
+from inference import generate_and_decode
 from evals import (
     load_multiple_choice_eval_file,
     estimate_best_candidate_index_from_logits
