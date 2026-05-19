@@ -1,7 +1,7 @@
 import torch
 
 from collections import defaultdict
-from kv_cache import KVCache
+from inference.kv_cache import KVCache
 from config import TokenizerConfig
 
 
