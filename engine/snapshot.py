@@ -1,0 +1,69 @@
+import json
+import re
+import subprocess
+
+from datetime import datetime, timezone
+from pathlib import Path
+from importlib.metadata import version
+from logger import logger
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+def clean_name(name):
+    return re.sub(r'[^a-zA-Z0-9._-]+', '_', name).strip('_').lower()
+
+def generate_timestamp():
+    return datetime.now(timezone.utc)
+
+def generate_snapshot_name(timestamp, name=None):
+    timestamp_str = timestamp.strftime('%Y%m%d_%H%M%S_UTC')
+    if not name:
+        return timestamp_str
+    return f'{timestamp_str}_{clean_name(name)}'
+
+def git_commit_hash():
+    try:
+        return subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'],
+            cwd=PROJECT_ROOT,
+            text=True,
+            stderr=subprocess.DEVNULL
+        ).strip()
+    except Exception:
+        return None
+
+def get_packages_versions():
+    requirements = (PROJECT_ROOT / 'requirements.txt').read_text().splitlines()
+    valid_requirements = [req.strip() for req in requirements if req.strip() and not req.strip().startswith('#')]
+    package_versions = []
+    for package in valid_requirements:
+        try:
+            resolved = f'{package}=={version(package)}'
+        except Exception:
+            resolved = f'{package}==UNKNOWN'
+        package_versions.append(resolved)
+
+    return package_versions
+
+def create_run_snapshot(*, args, workload_summary, name, save_dir_path):
+    timestamp = generate_timestamp()
+    snapshot_name = generate_snapshot_name(timestamp, name)
+    snapshot_dir = Path(save_dir_path)
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    snapshot_path = snapshot_dir / f'{snapshot_name}.json'
+
+    snapshot = {
+        'snapshot_name': snapshot_name,
+        'snapshot_path': str(snapshot_path),
+        'created_at_utc': timestamp.isoformat(),
+        'args': vars(args),
+        'git_commit_hash': git_commit_hash(),
+        'requirements': get_packages_versions(),
+        'workload_summary': workload_summary
+    }
+
+    snapshot_json = json.dumps(snapshot, indent=2, default=str)
+    snapshot_path.write_text(snapshot_json, encoding='utf-8')
+
+    logger.info(f'Snapshot saved to: {snapshot_path}')
