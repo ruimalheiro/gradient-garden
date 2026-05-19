@@ -35,9 +35,10 @@ def model_has_lora(model):
     return any(isinstance(m, CustomLoRA) for m in model.modules())
 
 def apply_lora(
+    *,
     model,
+    target_modules,
     device='cpu',
-    target_modules=('wq', 'wk', 'wv', 'wo', 'w1', 'w3'),
     rank=16,
     alpha=8,
     dropout=0.0,

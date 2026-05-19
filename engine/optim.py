@@ -4,7 +4,7 @@ import json
 
 from torch.optim import AdamW, Muon
 from dataclasses import dataclass, field
-from lora import is_lora_parameter_name
+from models.adapters.lora import is_lora_parameter_name
 from typing import Literal
 from logger import logger
 

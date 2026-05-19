@@ -238,6 +238,10 @@ class TendrilTransformer(BaseModel):
         if config.n_heads % config.n_kv_heads != 0:
             raise ValueError(f'"n_heads" ({config.n_heads}) must be divisible by "n_kv_heads" ({config.n_kv_heads})')
 
+    @classmethod
+    def supported_lora_target_modules(cls) -> set[str]:
+        return set(['wq', 'wk', 'wv', 'wo', 'w1', 'w3'])
+
     def get_input_embeddings(self):
         return self.tok_embeddings
 

@@ -57,7 +57,7 @@ from checkpoints import (
     load_model_state,
     load_optimizer_state
 )
-from lora import (
+from models.adapters.lora import (
     apply_lora,
     freeze_non_lora_parameters
 )
@@ -432,12 +432,25 @@ class Trainer:
 
     def apply_lora_modification(self):
         config = self.config
+
+        if not self.config.lora.target_modules:
+            raise ValueError('"lora.target_modules" cannot be empty.')
+
+        supported = self.model.supported_lora_target_modules()
+        requested = set(self.config.lora.target_modules)
+        invalid = requested - supported
+        if invalid:
+            raise ValueError(
+                f'The provided LoRA target modules for {self.config.model.architecture} are invalid: {sorted(invalid)}. '
+                f'Supported target modules are: {sorted(supported)}'
+            )
+
         apply_lora(
-            self.model,
+            model=self.model,
+            target_modules=config.lora.target_modules,
             rank=config.lora.rank,
             alpha=config.lora.alpha,
             dropout=config.lora.dropout,
-            target_modules=config.lora.target_modules,
             is_master_process=self.distributed_ctx.is_master_process
         )
         # by default we freeze the other parameters

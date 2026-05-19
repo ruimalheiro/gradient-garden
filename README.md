@@ -78,7 +78,10 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - `examples/` Templates for local setup files like the `.env` secrets file and dataset mix.
 - `inference/` Contains inference related components like KV cache implementation and logic for sampling and text generation.
 - `metrics/` Utilities for metric aggregation.
-- `models/` Contains the model registry, the builder, the base model interface, and model implementations. 
+- `models/` Contains the model registry, the builder and the base model interface.
+  - `adapters/` Contains PEFT adapters.
+    - `lora.py` LoRA module that handles the model modification. Rank, alpha, dropout and target modules can be configured accordingly.
+  - `implementations/` Contains model implementations.
 - `recipes/` Recipe definitions for training and dataset preparation. More will be added here.
   - `recipes/config.py` Defines the recipe schema and recipe loading logic.
   - `recipes/pretraining/`
@@ -100,7 +103,6 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - `distillation_utils.py` Logic for distillation loss.
 - `dpo_utils.py` Logic for DPO loss.
 - `logger.py` Simple reusable logger.
-- `lora.py` LoRA module that handles the model modification. Rank, alpha, dropout and target modules can be configured accordingly.
 - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine scheduler.
 - `prepare_datasets.py` Entry point for data downloading and preparation.
 - `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretraining", "instruct", "dpo".
