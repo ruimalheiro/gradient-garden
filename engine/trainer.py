@@ -57,7 +57,7 @@ from checkpoints import (
     load_model_state,
     load_optimizer_state
 )
-from lora import (
+from models.adapters.lora import (
     apply_lora,
     freeze_non_lora_parameters
 )
@@ -432,16 +432,42 @@ class Trainer:
 
     def apply_lora_modification(self):
         config = self.config
+
+        supported = self.model.supported_lora_target_modules()
+        if not supported:
+            raise ValueError(f'Model architecture {self.config.model.architecture} does not expose LoRA target modules.')
+
+        logger.info('\nLoRA Configuration')
+        logger.info('----------------------------------------')
+        if self.config.lora.target_modules is None:
+            target_modules = supported
+            logger.warn(f'LoRA "target_modules" was not specified in the config. Using all supported: {supported}')
+        elif len(self.config.lora.target_modules) == 0:
+            raise ValueError('"lora.target_modules" cannot be empty.')
+        else:
+            requested = set(self.config.lora.target_modules)
+            invalid = requested - supported
+            if invalid:
+                raise ValueError(
+                    f'The provided LoRA target modules for {self.config.model.architecture} are invalid: {sorted(invalid)}. '
+                    f'Supported target modules are: {sorted(supported)}'
+                )
+            target_modules = requested
+
         apply_lora(
-            self.model,
+            model=self.model,
+            target_modules=target_modules,
             rank=config.lora.rank,
             alpha=config.lora.alpha,
-            dropout=config.lora.dropout,
-            target_modules=config.lora.target_modules,
-            is_master_process=self.distributed_ctx.is_master_process
+            dropout=config.lora.dropout
         )
         # by default we freeze the other parameters
         freeze_non_lora_parameters(self.model)
+
+        logger.info(f'- rank: {config.lora.rank}')
+        logger.info(f'- alpha: {config.lora.alpha}')
+        logger.info(f'- dropout: {config.lora.dropout}')
+        logger.info(f'- target modules: {target_modules}')
 
     def apply_lora_for_checkpoint(self):
         if self.checkpoint_data.is_lora_checkpoint:

@@ -18,6 +18,10 @@ class BaseModel(nn.Module, ABC):
     def validate_config(cls, config: ModelConfig):
         ...
 
+    @classmethod
+    def supported_lora_target_modules(cls) -> set[str]:
+        return set()
+
     @abstractmethod
     def get_input_embeddings(self):
         ...

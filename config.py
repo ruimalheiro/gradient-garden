@@ -139,7 +139,7 @@ class LoRAConfig(BaseModel):
     rank: int = 16
     alpha: int = 8
     dropout: float = 0.05
-    target_modules: list[str] = Field(default_factory=lambda: ['wq', 'wk', 'wv', 'wo', 'w1', 'w3'])
+    target_modules: list[str] | None = None
 
 class DistillationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
