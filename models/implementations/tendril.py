@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 from torch import nn
 from models.base import BaseModel
-from inference import KVCache
+from inference.kv_cache import KVCache
 from config import ModelConfig
 
 
