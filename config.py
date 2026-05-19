@@ -113,12 +113,17 @@ class CheckpointPathsConfig(BaseModel):
     load_file_path: str | None = None
     save_dir_path: str = './checkpoints'
 
+class SnapshotPathsConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    save_dir_path: str = './snapshots'
+
 class PathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     datasets: DatasetPathsConfig = Field(default_factory=DatasetPathsConfig)
     evals: EvalPathsConfig = Field(default_factory=EvalPathsConfig)
     test_prompts_path: str = './test_prompts.json'
     checkpoints: CheckpointPathsConfig = Field(default_factory=CheckpointPathsConfig)
+    snapshots: SnapshotPathsConfig = Field(default_factory=SnapshotPathsConfig)
 
 class GenerationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -205,6 +210,10 @@ class CheckpointingConfig(BaseModel):
     run_on_first_step: bool = False
     run_on_last_step: bool = False
 
+class SnapshotConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    name: str | None = None
+
 class GlobalConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     third_party: ThirdPartyConfig = Field(default_factory=ThirdPartyConfig)
@@ -225,6 +234,7 @@ class GlobalConfig(BaseModel):
     torch_profiler: TorchProfilerConfig = Field(default_factory=TorchProfilerConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     checkpointing: CheckpointingConfig = Field(default_factory=CheckpointingConfig)
+    snapshot: SnapshotConfig = Field(default_factory=SnapshotConfig)
 
     def model_post_init(self, __context: Any) -> None:
         # Sets default paths for huggingface

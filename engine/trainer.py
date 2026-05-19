@@ -37,6 +37,7 @@ from engine.logging import (
 from engine.torch_profiler import (
     init_torch_profiler_context
 )
+from engine.snapshot import create_run_snapshot
 from ddp_utils import (
     init_multi_gpu,
     prepare_model_for_ddp,
@@ -133,6 +134,7 @@ class Trainer:
         self.prepare_runtime()
         self.prepare_workload_summary_json()
         self.log_workload_summary()
+        self.save_run_snapshot()
         self.check_all_devices_ready()
         self.setup_wandb()
         self.setup_torch_profiler()
@@ -582,6 +584,15 @@ class Trainer:
             logger.info('--------------------------------------------------------')
             logger.info(self.workload_summary, is_json=True)
             logger.info('--------------------------------------------------------')
+
+    def save_run_snapshot(self):
+        if self.distributed_ctx.is_master_process:
+            create_run_snapshot(
+                args=self.args,
+                workload_summary=self.workload_summary,
+                name=self.config.snapshot.name,
+                save_dir_path=self.config.paths.snapshots.save_dir_path
+            )
 
     def setup_wandb(self):
         self.wandb = WandbWrapper(
