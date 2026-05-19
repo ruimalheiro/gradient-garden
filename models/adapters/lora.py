@@ -3,7 +3,6 @@ import torch
 import torch.nn.functional as F
 
 from torch import nn
-from logger import logger
 
 
 class CustomLoRA(nn.Module):
@@ -41,17 +40,9 @@ def apply_lora(
     device='cpu',
     rank=16,
     alpha=8,
-    dropout=0.0,
-    is_master_process=True
+    dropout=0.0
 ):
     if model_has_lora(model):
-        if is_master_process:
-            logger.info('\nLoRA Configuration')
-            logger.info('----------------------------------------')
-            logger.info('LoRA is already applied with params:')
-            logger.info(f'- rank: {rank}')
-            logger.info(f'- alpha: {alpha}')
-            logger.info(f'- dropout: {dropout}')
         return
 
     for name, module in model.named_modules():
@@ -66,13 +57,6 @@ def apply_lora(
                 child_name,
                 lora_layer
             )
-    if is_master_process:
-        logger.info('\nLoRA Configuration')
-        logger.info('----------------------------------------')
-        logger.info('LoRA applied with params:')
-        logger.info(f'- rank: {rank}')
-        logger.info(f'- alpha: {alpha}')
-        logger.info(f'- dropout: {dropout}')
 
 def is_lora_parameter_name(name):
     return name.endswith('.A') or name.endswith('.B')
