@@ -15,7 +15,7 @@ class WandbWrapper():
                 self.WANDB = True
                 logger.info('Wandb enabled.')
 
-    def init(self, project_name, *, job_name=None, config=None):
+    def init(self, project_name, *, job_name=None, config=None, output_path=None):
         if not self.WANDB:
             return
         
@@ -23,14 +23,12 @@ class WandbWrapper():
             job_start_time = datetime.now().strftime('%Y-%m-%d %H:%M')
             job_name = f'run_{job_start_time}'
 
-        if config is None:
-            wandb.init(project=project_name, name=job_name)
-        else:
-            wandb.init(
-                project=project_name,
-                name=job_name,
-                config=config
-            )
+        wandb.init(
+            project=project_name,
+            name=job_name,
+            config=config,
+            dir=output_path
+        )
 
     def log(self, data):
         if not self.WANDB:

@@ -22,6 +22,10 @@ class TrainingPrecision(str, Enum):
     FP16 = 'fp16'
     FP32 = 'fp32'
 
+class RunConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    name: str | None = None
+
 class ThirdPartyConfig(BaseSettings):
     model_config = ConfigDict(env_file='.env', extra='ignore')
     wandb_api_key: Annotated[str | None, Field(alias='WANDB_API_KEY', exclude=True)] = None
@@ -108,22 +112,16 @@ class EvalPathsConfig(BaseModel):
     winogrande_path: str = './datasets/winogrande'
     arc_challenge_path: str = './datasets/arc_challenge'
 
-class CheckpointPathsConfig(BaseModel):
+class RunPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    load_file_path: str | None = None
-    save_dir_path: str = './checkpoints'
-
-class SnapshotPathsConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    save_dir_path: str = './snapshots'
+    output_dir_path: str = './runs'
 
 class PathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     datasets: DatasetPathsConfig = Field(default_factory=DatasetPathsConfig)
     evals: EvalPathsConfig = Field(default_factory=EvalPathsConfig)
+    run: RunPathsConfig = Field(default_factory=RunPathsConfig)
     test_prompts_path: str = './test_prompts.json'
-    checkpoints: CheckpointPathsConfig = Field(default_factory=CheckpointPathsConfig)
-    snapshots: SnapshotPathsConfig = Field(default_factory=SnapshotPathsConfig)
 
 class GenerationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -216,6 +214,7 @@ class SnapshotConfig(BaseModel):
 
 class GlobalConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    run: RunConfig = Field(default_factory=RunConfig)
     third_party: ThirdPartyConfig = Field(default_factory=ThirdPartyConfig)
     data_preparation: DatasetPreparationConfig = Field(default_factory=DatasetPreparationConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)

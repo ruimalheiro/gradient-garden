@@ -1,26 +1,13 @@
 import json
-import re
 import subprocess
 
-from datetime import datetime, timezone
 from pathlib import Path
 from importlib.metadata import version
 from logger import logger
+from utils import generate_run_name
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-def clean_name(name):
-    return re.sub(r'[^a-zA-Z0-9._-]+', '_', name).strip('_').lower()
-
-def generate_timestamp():
-    return datetime.now(timezone.utc)
-
-def generate_snapshot_name(timestamp, name=None):
-    timestamp_str = timestamp.strftime('%Y%m%d_%H%M%S_UTC')
-    if not name:
-        return timestamp_str
-    return f'{timestamp_str}_{clean_name(name)}'
 
 def git_commit_hash():
     try:
@@ -47,8 +34,8 @@ def get_packages_versions():
     return package_versions
 
 def create_run_snapshot(*, args, workload_summary, name, save_dir_path):
-    timestamp = generate_timestamp()
-    snapshot_name = generate_snapshot_name(timestamp, name)
+    snapshot_name, timestamp = generate_run_name(name=name)
+
     snapshot_dir = Path(save_dir_path)
     snapshot_dir.mkdir(parents=True, exist_ok=True)
     snapshot_path = snapshot_dir / f'{snapshot_name}.json'
