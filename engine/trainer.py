@@ -607,9 +607,9 @@ class Trainer:
     def save_run_snapshot(self):
         if self.distributed_ctx.is_master_process:
             create_run_snapshot(
+                run_ctx=self.run_ctx,
                 args=self.args,
                 workload_summary=self.workload_summary,
-                name=self.config.snapshot.name,
                 save_dir_path=self.get_snapshots_dir_path()
             )
 

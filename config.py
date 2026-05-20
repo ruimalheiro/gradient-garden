@@ -181,7 +181,7 @@ class WandbConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     enabled: bool = False
     project_name: str = 'gradient-garden'
-    run_name: str = 'debug'
+    run_name: str | None = None
 
 class TorchProfilerConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -208,10 +208,6 @@ class CheckpointingConfig(BaseModel):
     run_on_first_step: bool = False
     run_on_last_step: bool = False
 
-class SnapshotConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    name: str | None = None
-
 class GlobalConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     run: RunConfig = Field(default_factory=RunConfig)
@@ -233,7 +229,6 @@ class GlobalConfig(BaseModel):
     torch_profiler: TorchProfilerConfig = Field(default_factory=TorchProfilerConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     checkpointing: CheckpointingConfig = Field(default_factory=CheckpointingConfig)
-    snapshot: SnapshotConfig = Field(default_factory=SnapshotConfig)
 
     def model_post_init(self, __context: Any) -> None:
         # Sets default paths for huggingface

@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from importlib.metadata import version
 from logger import logger
-from utils import generate_run_name
+from engine.context import RunContext
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -33,8 +33,9 @@ def get_packages_versions():
 
     return package_versions
 
-def create_run_snapshot(*, args, workload_summary, name, save_dir_path):
-    snapshot_name, timestamp = generate_run_name(name=name)
+def create_run_snapshot(*, run_ctx: RunContext, args, workload_summary, save_dir_path):
+    snapshot_name = run_ctx.name
+    timestamp = run_ctx.timestamp
 
     snapshot_dir = Path(save_dir_path)
     snapshot_dir.mkdir(parents=True, exist_ok=True)
