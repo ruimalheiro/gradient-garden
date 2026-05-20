@@ -208,6 +208,10 @@ class CheckpointingConfig(BaseModel):
     run_on_first_step: bool = False
     run_on_last_step: bool = False
 
+class LoggingConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    write_to_file: bool = True
+
 class GlobalConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     run: RunConfig = Field(default_factory=RunConfig)
@@ -229,6 +233,7 @@ class GlobalConfig(BaseModel):
     torch_profiler: TorchProfilerConfig = Field(default_factory=TorchProfilerConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     checkpointing: CheckpointingConfig = Field(default_factory=CheckpointingConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
     def model_post_init(self, __context: Any) -> None:
         # Sets default paths for huggingface

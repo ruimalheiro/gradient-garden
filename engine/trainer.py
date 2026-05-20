@@ -141,6 +141,7 @@ class Trainer:
         self.check_all_devices_ready()
         self.setup_wandb()
         self.setup_torch_profiler()
+        self.setup_local_logging()
 
     def setup_global_torch_optimizations(self):
         torch.backends.cuda.matmul.fp32_precision = 'tf32'
@@ -614,6 +615,9 @@ class Trainer:
     def get_snapshots_dir_path(self):
         return self.get_run_output_dir_path() / 'snapshots'
 
+    def get_local_logs_dir_path(self):
+        return self.get_run_output_dir_path() / 'logs'
+
     def save_run_snapshot(self):
         if self.distributed_ctx.is_master_process:
             create_run_snapshot(
@@ -641,6 +645,12 @@ class Trainer:
             self.config,
             self.distributed_ctx
         )
+
+    def setup_local_logging(self):
+        if not self.distributed_ctx.is_master_process or not self.config.logging.write_to_file:
+            return
+        log_file_path = self.get_local_logs_dir_path() / self.run_ctx.name
+        logger.set_log_file_path(log_file_path)
 
     def check_all_devices_ready(self):
         if self.distributed_ctx.ddp and dist.is_initialized():
