@@ -82,7 +82,6 @@ from evals import (
     estimate_best_candidate_index_from_logits
 )
 from utils import generate_run_name
-from pathlib import Path
 
 
 class Trainer:
@@ -267,10 +266,21 @@ class Trainer:
         )
 
     def build_run_context(self):
-        run_name, timestamp = generate_run_name(name=self.config.run.name)
+        dist_buffer = [None]
+
+        if self.distributed_ctx.is_master_process:
+            name, timestamp = generate_run_name(name=self.config.run.name)
+            dist_buffer[0] = {
+                'name': name,
+                'timestamp': timestamp
+            }
+
+        if self.distributed_ctx.ddp and dist.is_initialized():
+            dist.broadcast_object_list(dist_buffer, src=0)
+
         self.run_ctx = RunContext(
-            name=run_name,
-            timestamp=timestamp
+            name=dist_buffer[0]['name'],
+            timestamp=dist_buffer[0]['timestamp']
         )
 
     def load_test_generation_prompts(self):
@@ -929,14 +939,6 @@ class Trainer:
             pbar=pbar
         )
 
-    def get_save_checkpoints_path(self):
-        checkpoint_save_path = self.get_checkpoints_dir_path()
-
-        if checkpoint_save_path is None:
-            raise ValueError('Checkpoint save dir path must be set in the configuration: "config.paths.checkpoints.save_dir_path"')
-
-        return checkpoint_save_path
-
     def run_save_checkpoint(self, pbar=None):
         if (
             not self.config.checkpointing.save_checkpoints or
@@ -946,7 +948,7 @@ class Trainer:
 
         logger.info(f'{self.trainer_state.current_step:4d} | saving checkpoint...', pbar=pbar)
         save_checkpoint(
-            self.get_save_checkpoints_path(),
+            self.get_checkpoints_dir_path(),
             get_model(self.model),
             self.config,
             self.trainer_state.current_step,
