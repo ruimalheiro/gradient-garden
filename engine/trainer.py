@@ -267,7 +267,7 @@ class Trainer:
         )
 
     def build_run_context(self):
-        run_name, timestamp = generate_run_name(name=self.config.runs.name)
+        run_name, timestamp = generate_run_name(name=self.config.run.name)
         self.run_ctx = RunContext(
             name=run_name,
             timestamp=timestamp
