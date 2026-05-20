@@ -3,6 +3,7 @@ import torch
 from dataclasses import dataclass, asdict
 from typing import Any
 from torch.distributed.fsdp import MixedPrecisionPolicy
+from datetime import datetime
 
 
 @dataclass(frozen=True)
@@ -56,3 +57,8 @@ class TrainerContext:
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=4)
+
+@dataclass(frozen=True)
+class RunContext:
+    name: str
+    timestamp: datetime

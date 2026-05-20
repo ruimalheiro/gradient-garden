@@ -2,6 +2,9 @@ name: debug_dpo
 description: Small DPO recipe for smoke tests.
 
 config:
+  run:
+    name: debug_dpo
+
   runtime:
     device_type: cuda
     training_precision: bf16
@@ -41,8 +44,8 @@ config:
   paths:
     datasets:
       dpo_path: ./datasets/debug/dpo
-    checkpoints:
-      save_dir_path: ./checkpoints/debug/dpo
+    runs:
+      output_dir_path: ./runs
     test_prompts_path: ./test_prompts.json
 
   optimizers:

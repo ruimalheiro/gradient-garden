@@ -16,7 +16,8 @@ from engine.context import (
     DistributedContext,
     DeviceContext,
     PrecisionContext,
-    TrainerContext
+    TrainerContext,
+    RunContext
 )
 from engine.core import (
     TrainerState
@@ -80,6 +81,7 @@ from evals import (
     load_multiple_choice_eval_file,
     estimate_best_candidate_index_from_logits
 )
+from utils import generate_run_name
 
 
 class Trainer:
@@ -91,6 +93,7 @@ class Trainer:
         self.device_ctx = None
         self.precision_ctx = None
         self.trainer_ctx = None
+        self.run_ctx = None
         self.hellaswag_data = None
         self.winogrande_data = None
         self.arc_challenge_data = None
@@ -148,6 +151,7 @@ class Trainer:
         self.build_device_context(device)
         self.build_precision_context()
         self.build_trainer_context()
+        self.build_run_context()
 
     def load_eval_assets(self):
         self.load_hellaswag_eval_data()
@@ -261,6 +265,24 @@ class Trainer:
             grad_accum_steps=self.compute_grad_accum_steps(self.distributed_ctx.ddp_world_size)
         )
 
+    def build_run_context(self):
+        dist_buffer = [None]
+
+        if self.distributed_ctx.is_master_process:
+            name, timestamp = generate_run_name(name=self.config.run.name)
+            dist_buffer[0] = {
+                'name': name,
+                'timestamp': timestamp
+            }
+
+        if self.distributed_ctx.ddp and dist.is_initialized():
+            dist.broadcast_object_list(dist_buffer, src=0)
+
+        self.run_ctx = RunContext(
+            name=dist_buffer[0]['name'],
+            timestamp=dist_buffer[0]['timestamp']
+        )
+
     def load_test_generation_prompts(self):
         if not self.can_run_scheduled_action(self.config.generation):
             return
@@ -367,12 +389,10 @@ class Trainer:
         )
 
     def resolve_checkpoint_request(self):
-        checkpoint_file_path = self.args.checkpoint or self.config.paths.checkpoints.load_file_path
-
-        if checkpoint_file_path is None:
+        if self.args.checkpoint is None:
             return None
 
-        checkpoint_file_path = Path(checkpoint_file_path)
+        checkpoint_file_path = Path(self.args.checkpoint)
 
         if not checkpoint_file_path.exists():
             raise FileNotFoundError(f'Checkpoint file does not exist: {checkpoint_file_path}')
@@ -585,13 +605,22 @@ class Trainer:
             logger.info(self.workload_summary, is_json=True)
             logger.info('--------------------------------------------------------')
 
+    def get_run_output_dir_path(self):
+        return Path(self.config.paths.runs.output_dir_path) / self.config.training.stage.value / self.run_ctx.name
+
+    def get_checkpoints_dir_path(self):
+        return self.get_run_output_dir_path() / 'checkpoints'
+
+    def get_snapshots_dir_path(self):
+        return self.get_run_output_dir_path() / 'snapshots'
+
     def save_run_snapshot(self):
         if self.distributed_ctx.is_master_process:
             create_run_snapshot(
+                run_ctx=self.run_ctx,
                 args=self.args,
                 workload_summary=self.workload_summary,
-                name=self.config.snapshot.name,
-                save_dir_path=self.config.paths.snapshots.save_dir_path
+                save_dir_path=self.get_snapshots_dir_path()
             )
 
     def setup_wandb(self):
@@ -602,8 +631,9 @@ class Trainer:
         )
         self.wandb.init(
             self.config.wandb.project_name,
-            job_name=self.config.wandb.run_name,
-            config=self.workload_summary
+            job_name=self.config.wandb.run_name if self.config.wandb.run_name else self.run_ctx.name,
+            config=self.workload_summary,
+            output_path=self.get_run_output_dir_path()
         )
 
     def setup_torch_profiler(self):
@@ -909,14 +939,6 @@ class Trainer:
             pbar=pbar
         )
 
-    def get_save_checkpoints_path(self):
-        checkpoint_save_path = self.config.paths.checkpoints.save_dir_path
-
-        if checkpoint_save_path is None:
-            raise ValueError('Checkpoint save dir path must be set in the configuration: "config.paths.checkpoints.save_dir_path"')
-
-        return checkpoint_save_path
-
     def run_save_checkpoint(self, pbar=None):
         if (
             not self.config.checkpointing.save_checkpoints or
@@ -926,7 +948,7 @@ class Trainer:
 
         logger.info(f'{self.trainer_state.current_step:4d} | saving checkpoint...', pbar=pbar)
         save_checkpoint(
-            self.get_save_checkpoints_path(),
+            self.get_checkpoints_dir_path(),
             get_model(self.model),
             self.config,
             self.trainer_state.current_step,
