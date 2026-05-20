@@ -1,12 +1,29 @@
 import json
+import re
 
+from pathlib import Path
+
+
+ANSI_REMOVER_RGX = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 class ConsoleLogger:
     def __init__(self):
         self.is_master_process = False
+        self.log_file_path = None
     
     def set_master(self, is_master_process):
         self.is_master_process = is_master_process
+
+    def set_log_file_path(self, path):
+        self.log_file_path = Path(path).with_suffix('.log')
+        self.log_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def write_to_file(self, content):
+        if self.log_file_path is None:
+            return
+        content = ANSI_REMOVER_RGX.sub('', str(content))
+        with self.log_file_path.open('a', encoding='utf-8') as file:
+            file.write(f'{content}\n')
 
     def info(self, content, force=False, pbar=None, is_json=False):
         if is_json:
@@ -16,6 +33,7 @@ class ConsoleLogger:
                 pbar.write(content)
             else:
                 print(content)
+        self.write_to_file(content)
 
     def warning_wrapper(self, content):
         yellow = '\033[93m'

@@ -2,6 +2,9 @@ name: debug_pretraining
 description: Small pretraining recipe for smoke tests.
 
 config:
+  run:
+    name: debug_pretraining
+
   runtime:
     device_type: cuda
     training_precision: bf16
@@ -42,8 +45,8 @@ config:
       hellaswag_path: ./datasets/debug/hellaswag
       winogrande_path: ./datasets/debug/winogrande
       arc_challenge_path: ./datasets/debug/arc_challenge
-    checkpoints:
-      save_dir_path: ./checkpoints/debug/pretraining
+    runs:
+      output_dir_path: ./runs
     test_prompts_path: ./test_prompts.json
 
   optimizers:

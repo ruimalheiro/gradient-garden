@@ -111,6 +111,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
   - `HFTokenizer`: loads a tokenizer from Hugging Face via `AutoTokenizer.from_pretrained(...)` and aligns the required special tokens (`bos`, `eos`, headers, `eot`, `pad`).
   - `init_tokenizer(...)` selects the backend based on `config.tokenizer.huggingface_tokenizer`.
 - `train.py` Entry point for training runs.
+- `utils.py` Common generic logic that can be reused in different components.
 - `wandb_utils.py` A wrapper for Weights & Biases.
   - Weights & Biases [here](https://wandb.ai/site/)
 
@@ -151,7 +152,7 @@ The main sections are:
 - `model`: model architecture and model-specific settings
 - `training`: stage, seed, total batch size, max steps, early stopping
 - `optimizers`: AdamW and optional Muon configuration
-- `paths`: dataset, evaluation, checkpoint, and prompt paths
+- `paths`: dataset, evaluation, runs, and prompt paths
 - `validation`: validation frequency and number of validation steps
 - `evals`: HellaSwag, WinoGrande, and ARC-Challenge settings
 - `generation`: text generation frequency and max generation length
@@ -184,7 +185,7 @@ HF_HOME='./cache'
   --start-step <N>                  # Override internal step counter
 ```
 **NOTES:**
-  - The checkpoint paths are configured in `config.py` under `GlobalConfig.paths.checkpoints`.
+  - The project output path can be configured in `config.py` under `GlobalConfig.paths.runs`. By default it will use `./runs`
   - When using `--recipe`, the recipe defines the training stage. The flags `--pretraining`, `--instruct`, and `--dpo` cannot be combined with `--recipe`.
 
 Example recipe commands:

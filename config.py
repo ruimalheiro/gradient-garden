@@ -22,6 +22,10 @@ class TrainingPrecision(str, Enum):
     FP16 = 'fp16'
     FP32 = 'fp32'
 
+class RunConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    name: str | None = None
+
 class ThirdPartyConfig(BaseSettings):
     model_config = ConfigDict(env_file='.env', extra='ignore')
     wandb_api_key: Annotated[str | None, Field(alias='WANDB_API_KEY', exclude=True)] = None
@@ -108,22 +112,16 @@ class EvalPathsConfig(BaseModel):
     winogrande_path: str = './datasets/winogrande'
     arc_challenge_path: str = './datasets/arc_challenge'
 
-class CheckpointPathsConfig(BaseModel):
+class RunPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    load_file_path: str | None = None
-    save_dir_path: str = './checkpoints'
-
-class SnapshotPathsConfig(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    save_dir_path: str = './snapshots'
+    output_dir_path: str = './runs'
 
 class PathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     datasets: DatasetPathsConfig = Field(default_factory=DatasetPathsConfig)
     evals: EvalPathsConfig = Field(default_factory=EvalPathsConfig)
+    runs: RunPathsConfig = Field(default_factory=RunPathsConfig)
     test_prompts_path: str = './test_prompts.json'
-    checkpoints: CheckpointPathsConfig = Field(default_factory=CheckpointPathsConfig)
-    snapshots: SnapshotPathsConfig = Field(default_factory=SnapshotPathsConfig)
 
 class GenerationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -183,7 +181,7 @@ class WandbConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     enabled: bool = False
     project_name: str = 'gradient-garden'
-    run_name: str = 'debug'
+    run_name: str | None = None
 
 class TorchProfilerConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -210,12 +208,13 @@ class CheckpointingConfig(BaseModel):
     run_on_first_step: bool = False
     run_on_last_step: bool = False
 
-class SnapshotConfig(BaseModel):
+class LoggingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    name: str | None = None
+    write_to_file: bool = True
 
 class GlobalConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    run: RunConfig = Field(default_factory=RunConfig)
     third_party: ThirdPartyConfig = Field(default_factory=ThirdPartyConfig)
     data_preparation: DatasetPreparationConfig = Field(default_factory=DatasetPreparationConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
@@ -234,7 +233,7 @@ class GlobalConfig(BaseModel):
     torch_profiler: TorchProfilerConfig = Field(default_factory=TorchProfilerConfig)
     validation: ValidationConfig = Field(default_factory=ValidationConfig)
     checkpointing: CheckpointingConfig = Field(default_factory=CheckpointingConfig)
-    snapshot: SnapshotConfig = Field(default_factory=SnapshotConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
     def model_post_init(self, __context: Any) -> None:
         # Sets default paths for huggingface

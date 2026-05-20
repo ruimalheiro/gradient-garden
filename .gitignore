@@ -16,6 +16,7 @@ datasets/
 checkpoints/
 snapshots/
 wandb/
+runs/
 
 # Local dataset mix recipes
 *.local.json
