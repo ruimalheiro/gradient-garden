@@ -123,7 +123,7 @@ class Trainer:
     def setup(self):
         self.setup_global_torch_optimizations()
         self.build_contexts()
-        self.set_logger_master()
+        self.setup_local_logging()
         self.load_assets()
         self.build_components()
         self.resolve_checkpoint()
@@ -152,6 +152,18 @@ class Trainer:
         self.build_precision_context()
         self.build_trainer_context()
         self.build_run_context()
+
+    def get_run_output_dir_path(self):
+        return Path(self.config.paths.runs.output_dir_path) / self.config.training.stage.value / self.run_ctx.name
+
+    def get_checkpoints_dir_path(self):
+        return self.get_run_output_dir_path() / 'checkpoints'
+
+    def get_snapshots_dir_path(self):
+        return self.get_run_output_dir_path() / 'snapshots'
+
+    def get_local_logs_dir_path(self):
+        return self.get_run_output_dir_path() / 'logs'
 
     def load_eval_assets(self):
         self.load_hellaswag_eval_data()
@@ -204,8 +216,13 @@ class Trainer:
             device=device
         )
 
-    def set_logger_master(self):
+    def setup_local_logging(self):
         logger.set_master(self.distributed_ctx.is_master_process)
+        if not self.distributed_ctx.is_master_process or not self.config.logging.write_to_file:
+            return
+        log_file_path = self.get_local_logs_dir_path() / self.run_ctx.name
+        logger.info(f'Logging to: {log_file_path}')
+        logger.set_log_file_path(log_file_path)
 
     def build_precision_context(self):
         if self.config.runtime.training_precision == TrainingPrecision.BF16:
@@ -604,15 +621,6 @@ class Trainer:
             logger.info('--------------------------------------------------------')
             logger.info(self.workload_summary, is_json=True)
             logger.info('--------------------------------------------------------')
-
-    def get_run_output_dir_path(self):
-        return Path(self.config.paths.runs.output_dir_path) / self.config.training.stage.value / self.run_ctx.name
-
-    def get_checkpoints_dir_path(self):
-        return self.get_run_output_dir_path() / 'checkpoints'
-
-    def get_snapshots_dir_path(self):
-        return self.get_run_output_dir_path() / 'snapshots'
 
     def save_run_snapshot(self):
         if self.distributed_ctx.is_master_process:
