@@ -267,7 +267,7 @@ class Trainer:
         )
 
     def build_run_context(self):
-        run_name, timestamp = generate_run_name(name=self.config.run.name)
+        run_name, timestamp = generate_run_name(name=self.config.runs.name)
         self.run_ctx = RunContext(
             name=run_name,
             timestamp=timestamp
@@ -596,7 +596,7 @@ class Trainer:
             logger.info('--------------------------------------------------------')
 
     def get_run_output_dir_path(self):
-        return Path(self.config.paths.run.output_dir_path) / self.run_ctx.name
+        return Path(self.config.paths.runs.output_dir_path) / self.run_ctx.name
 
     def get_checkpoints_dir_path(self):
         return self.get_run_output_dir_path() / 'checkpoints'

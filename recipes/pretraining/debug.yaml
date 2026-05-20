@@ -45,7 +45,7 @@ config:
       hellaswag_path: ./datasets/debug/hellaswag
       winogrande_path: ./datasets/debug/winogrande
       arc_challenge_path: ./datasets/debug/arc_challenge
-    run:
+    runs:
       output_dir_path: ./runs
     test_prompts_path: ./test_prompts.json
 

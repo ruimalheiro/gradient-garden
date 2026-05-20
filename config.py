@@ -120,7 +120,7 @@ class PathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     datasets: DatasetPathsConfig = Field(default_factory=DatasetPathsConfig)
     evals: EvalPathsConfig = Field(default_factory=EvalPathsConfig)
-    run: RunPathsConfig = Field(default_factory=RunPathsConfig)
+    runs: RunPathsConfig = Field(default_factory=RunPathsConfig)
     test_prompts_path: str = './test_prompts.json'
 
 class GenerationConfig(BaseModel):
