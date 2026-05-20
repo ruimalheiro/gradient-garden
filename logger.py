@@ -1,7 +1,10 @@
 import json
+import re
 
 from pathlib import Path
 
+
+ANSI_REMOVER_RGX = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 class ConsoleLogger:
     def __init__(self):
@@ -18,8 +21,9 @@ class ConsoleLogger:
     def write_to_file(self, content):
         if self.log_file_path is None:
             return
+        content = ANSI_REMOVER_RGX.sub('', str(content))
         with self.log_file_path.open('a', encoding='utf-8') as file:
-            file.write(f'{str(content)}\n')
+            file.write(f'{content}\n')
 
     def info(self, content, force=False, pbar=None, is_json=False):
         if is_json:

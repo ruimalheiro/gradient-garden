@@ -123,6 +123,7 @@ class Trainer:
     def setup(self):
         self.setup_global_torch_optimizations()
         self.build_contexts()
+        self.setup_local_logging()
         self.set_logger_master()
         self.load_assets()
         self.build_components()
@@ -141,7 +142,6 @@ class Trainer:
         self.check_all_devices_ready()
         self.setup_wandb()
         self.setup_torch_profiler()
-        self.setup_local_logging()
 
     def setup_global_torch_optimizations(self):
         torch.backends.cuda.matmul.fp32_precision = 'tf32'
