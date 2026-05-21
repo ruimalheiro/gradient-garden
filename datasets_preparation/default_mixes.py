@@ -21,42 +21,6 @@ DEFAULT_INSTRUCT_MIX = {
                     'max_turns': 8
                 }
             }
-        },
-        'lmsys/lmsys-chat-1m': {
-            'default': {
-                'weight': 0.0,
-                'transforms': {
-                    'max_turns': 8,
-                    'placeholders': {
-                        'replace': False,
-                        'random_options': [
-                            'Alex',
-                            'Sam',
-                            'Taylor',
-                            'Jordan',
-                            'Casey',
-                            'Riley',
-                            'Jamie',
-                            'Morgan',
-                            'Avery',
-                            'Quinn',
-                            'Charlie',
-                            'Drew',
-                            'Elliot',
-                            'Rowan',
-                            'Skyler',
-                            'Devon',
-                            'Cameron',
-                            'Robin',
-                            'Sage',
-                            'Reese',
-                            'Peyton',
-                            'Kai',
-                            'Jesse'
-                        ]
-                    }
-                }
-            }
         }
     }
 }
