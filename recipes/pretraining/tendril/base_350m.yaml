@@ -1,11 +1,14 @@
-name: base_350m_dry_run_pretraining
-description: 350m pretraining dry run recipe.
+name: base_350m_pretraining
+description: 350m pretraining recipe.
 
 config:
+  run:
+    name: base_350m_pretraining
+
   runtime:
     device_type: cuda
     training_precision: bf16
-    use_torch_compile: false
+    use_torch_compile: true
     use_fsdp: false
     number_of_cpu_processes: 16
 
@@ -37,13 +40,13 @@ config:
 
   paths:
     datasets:
-      pretraining_path: ./datasets/pretraining/base_350m_dry_run
+      pretraining_path: ./datasets/pretraining/base_350m
     evals:
       hellaswag_path: ./datasets/hellaswag
       winogrande_path: ./datasets/winogrande
       arc_challenge_path: ./datasets/arc_challenge
-    checkpoints:
-      save_dir_path: ./checkpoints/pretraining/base_350m_dry_run
+    runs:
+      output_dir_path: ./runs
     test_prompts_path: ./test_prompts.json
 
   optimizers:
@@ -95,12 +98,7 @@ config:
     run_on_last_step: true
 
   wandb:
-    enabled: true
-    project_name: gradient-garden
-    run_name: base_350m_dry_run_pretraining
-
-  snapshot:
-    name: base_350m_dry_run_pretraining
+    enabled: false
 
 data:
   seed: 42

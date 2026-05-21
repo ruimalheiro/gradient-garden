@@ -1,14 +1,14 @@
-name: base_350m_pretraining
-description: 350m pretraining recipe.
+name: base_350m_pretraining_dry_run
+description: 350m pretraining dry run recipe.
 
 config:
   run:
-    name: base_350m_pretraining
+    name: base_350m_pretraining_dry_run
 
   runtime:
     device_type: cuda
     training_precision: bf16
-    use_torch_compile: true
+    use_torch_compile: false
     use_fsdp: false
     number_of_cpu_processes: 16
 
@@ -40,7 +40,7 @@ config:
 
   paths:
     datasets:
-      pretraining_path: ./datasets/pretraining/base_350m
+      pretraining_path: ./datasets/pretraining/base_350m_dry_run
     evals:
       hellaswag_path: ./datasets/hellaswag
       winogrande_path: ./datasets/winogrande
@@ -98,7 +98,7 @@ config:
     run_on_last_step: true
 
   wandb:
-    enabled: true
+    enabled: false
 
 data:
   seed: 42
