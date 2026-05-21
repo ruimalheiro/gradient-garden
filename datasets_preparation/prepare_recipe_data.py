@@ -17,21 +17,23 @@ def prepare_recipe_data(recipe, num_proc):
         raise ValueError('Recipe is missing "data" section required for dataset preparation.')
 
     data_config = recipe.data
-    datasets_mix = data_config.model_dump(mode='python', exclude={'evals'}) # to be compatible with mix dict structure
     data_evals = data_config.evals
 
     logger.info(f'Preparing recipe data for stage: {config.training.stage.value}')
 
-    if config.training.stage == TrainingStage.PRETRAINING:
-        if data_config.shard_size is None:
-            raise ValueError('Pretraining recipes require data.shard_size.')
-        prepare_pretraining_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
-    elif config.training.stage == TrainingStage.INSTRUCT:
-        prepare_instruct_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
-    elif config.training.stage == TrainingStage.DPO:
-        prepare_dpo_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
-    else:
-        raise ValueError(f'Invalid training stage: {config.training.stage}')
+    if data_config.datasets:
+        datasets_mix = data_config.model_dump(mode='python', exclude={'evals'}) # to be compatible with mix dict structure
+
+        if config.training.stage == TrainingStage.PRETRAINING:
+            if data_config.shard_size is None:
+                raise ValueError('Pretraining recipes require data.shard_size.')
+            prepare_pretraining_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
+        elif config.training.stage == TrainingStage.INSTRUCT:
+            prepare_instruct_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
+        elif config.training.stage == TrainingStage.DPO:
+            prepare_dpo_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
+        else:
+            raise ValueError(f'Invalid training stage: {config.training.stage}')
 
     if data_evals.hellaswag.enabled:
         prepare_hellaswag_dataset(config=config, num_proc=num_proc)

@@ -26,7 +26,7 @@ class RecipeDataConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     seed: int
     shard_size: int | None = None
-    datasets: dict[str, dict[str, DatasetEntryConfig]]
+    datasets: dict[str, dict[str, DatasetEntryConfig]] = Field(default_factory=dict)
     evals: RecipeEvalsDataConfig = Field(default_factory=RecipeEvalsDataConfig)
 
 class RecipeConfig(BaseModel):
