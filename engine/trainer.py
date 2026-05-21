@@ -154,7 +154,12 @@ class Trainer:
         self.build_run_context()
 
     def get_run_output_dir_path(self):
-        return Path(self.config.paths.runs.output_dir_path) / self.config.training.stage.value / self.run_ctx.name
+        return (
+            Path(self.config.paths.runs.output_dir_path) /
+            self.config.training.stage.value /
+            self.config.model.architecture.value /
+            self.run_ctx.name
+        )
 
     def get_checkpoints_dir_path(self):
         return self.get_run_output_dir_path() / 'checkpoints'
