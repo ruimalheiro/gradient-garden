@@ -1,9 +1,9 @@
-name: base_350m_pretraining
-description: 350m pretraining recipe.
+name: tendril_870m_1xh100_pretraining_smoke
+description: Tendril 870m 1xH100 pretraining.
 
 config:
   run:
-    name: base_350m_pretraining
+    name: tendril_870m_1xh100_pretraining_smoke
 
   runtime:
     device_type: cuda
@@ -15,23 +15,23 @@ config:
   training:
     stage: pretraining
     seed: 42
-    total_batch_size: 65536
-    max_steps: 100
+    total_batch_size: 131072
+    max_steps: 10
     early_stopping_patience: 100
     early_stopping_patience_skip_steps: 0
 
   model:
     architecture: tendril
-    dim: 1024
-    n_layers: 22
-    n_heads: 16
-    n_kv_heads: 8
-    multiple_of: 256
+    dim: 1280
+    n_layers: 36
+    n_heads: 10
+    n_kv_heads: 5
+    multiple_of: 1024
     ffn_dim_multiplier: 1.0
     norm_eps: 1.0e-5
     rope_theta: 500000.0
-    max_batch_size: 4
-    max_seq_len: 1024
+    max_batch_size: 8
+    max_seq_len: 2048
 
   tokenizer:
     checkpoint_path: HuggingFaceTB/SmolLM2-360M
@@ -40,7 +40,7 @@ config:
 
   paths:
     datasets:
-      pretraining_path: ./datasets/pretraining/base_350m
+      pretraining_path: ./datasets/pretraining
     evals:
       hellaswag_path: ./datasets/hellaswag
       winogrande_path: ./datasets/winogrande
@@ -61,30 +61,30 @@ config:
       enabled: false
 
   validation:
-    every_x_steps: 20
+    every_x_steps: 5
     validation_steps: 20
     run_on_first_step: true
     run_on_last_step: true
 
   generation:
-    every_x_steps: 20
+    every_x_steps: 5
     max_test_gen_len: 64
     run_on_first_step: true
     run_on_last_step: true
 
   evals:
     hellaswag:
-      every_x_steps: 50
+      every_x_steps: 5
       number_of_examples: 50
       run_on_first_step: true
       run_on_last_step: true
     winogrande:
-      every_x_steps: 50
+      every_x_steps: 5
       number_of_examples: 50
       run_on_first_step: true
       run_on_last_step: true
     arc_challenge:
-      every_x_steps: 50
+      every_x_steps: 5
       number_of_examples: 50
       run_on_first_step: true
       run_on_last_step: true
@@ -98,15 +98,15 @@ config:
     run_on_last_step: true
 
   wandb:
-    enabled: false
+    enabled: true
 
 data:
   seed: 42
   shard_size: 100000000
 
   datasets:
-    HuggingFaceFW/fineweb-edu:
-      sample-10BT:
+    HuggingFaceTB/smollm-corpus:
+      fineweb-edu-dedup:
         weight: 1.0
         transforms:
           max_datapoints: 50000

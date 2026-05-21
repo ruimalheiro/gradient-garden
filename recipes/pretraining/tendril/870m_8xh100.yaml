@@ -1,9 +1,9 @@
-name: base_350m_pretraining_dry_run
-description: 350m pretraining dry run recipe.
+name: tendril_870m_8xh100_pretraining
+description: Tendril 870m 1xH100 pretraining.
 
 config:
   run:
-    name: base_350m_pretraining_dry_run
+    name: tendril_870m_8xh100_pretraining
 
   runtime:
     device_type: cuda
@@ -15,23 +15,23 @@ config:
   training:
     stage: pretraining
     seed: 42
-    total_batch_size: 65536
+    total_batch_size: 131072
     max_steps: 100
     early_stopping_patience: 100
     early_stopping_patience_skip_steps: 0
 
   model:
     architecture: tendril
-    dim: 1024
-    n_layers: 22
-    n_heads: 16
-    n_kv_heads: 8
-    multiple_of: 256
+    dim: 1280
+    n_layers: 36
+    n_heads: 10
+    n_kv_heads: 5
+    multiple_of: 1024
     ffn_dim_multiplier: 1.0
     norm_eps: 1.0e-5
     rope_theta: 500000.0
-    max_batch_size: 4
-    max_seq_len: 1024
+    max_batch_size: 8
+    max_seq_len: 2048
 
   tokenizer:
     checkpoint_path: HuggingFaceTB/SmolLM2-360M
@@ -40,7 +40,7 @@ config:
 
   paths:
     datasets:
-      pretraining_path: ./datasets/pretraining/base_350m_dry_run
+      pretraining_path: ./datasets/pretraining
     evals:
       hellaswag_path: ./datasets/hellaswag
       winogrande_path: ./datasets/winogrande
@@ -98,18 +98,16 @@ config:
     run_on_last_step: true
 
   wandb:
-    enabled: false
+    enabled: true
 
 data:
   seed: 42
   shard_size: 100000000
 
   datasets:
-    HuggingFaceFW/fineweb-edu:
-      sample-10BT:
+    HuggingFaceTB/smollm-corpus:
+      fineweb-edu-dedup:
         weight: 1.0
-        transforms:
-          max_datapoints: 50000
 
   evals:
     hellaswag:
