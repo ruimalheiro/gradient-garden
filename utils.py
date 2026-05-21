@@ -16,3 +16,6 @@ def generate_run_name(timestamp=None, name=None) -> dict:
     if not name:
         return timestamp_str, timestamp
     return f'{timestamp_str}_{clean_name(name)}', timestamp
+
+def convert_byte_to_gib(byte_data):
+    return round(byte_data / (1024 ** 3), 2)

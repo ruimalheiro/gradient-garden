@@ -1,10 +1,14 @@
 import json
 import subprocess
+import platform
+import torch
+import os
 
 from pathlib import Path
 from importlib.metadata import version
 from logger import logger
 from engine.context import RunContext
+from utils import convert_byte_to_gib
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +37,29 @@ def get_packages_versions():
 
     return package_versions
 
+def get_hardware_metadata():
+    metadata = {
+        'platform': platform.platform(),
+        'machine': platform.machine(),
+        'processor': platform.processor(),
+        'cpu_count': os.cpu_count(),
+        'cuda_available': torch.cuda.is_available(),
+        'cuda_version': torch.version.cuda,
+        'gpu_count': torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        'gpus': []
+    }
+
+    if torch.cuda.is_available():
+        for i in range(torch.cuda.device_count()):
+            device_properties = torch.cuda.get_device_properties(i)
+            metadata['gpus'].append({
+                'name': device_properties.name,
+                'vram_gib': convert_byte_to_gib(device_properties.total_memory),
+                'multi_processor_count': device_properties.multi_processor_count
+            })
+
+    return metadata
+
 def create_run_snapshot(*, run_ctx: RunContext, args, workload_summary, save_dir_path):
     snapshot_name = run_ctx.name
     timestamp = run_ctx.timestamp
@@ -48,6 +75,7 @@ def create_run_snapshot(*, run_ctx: RunContext, args, workload_summary, save_dir
         'args': vars(args),
         'git_commit_hash': git_commit_hash(),
         'requirements': get_packages_versions(),
+        'hardware': get_hardware_metadata(),
         'workload_summary': workload_summary
     }
 
