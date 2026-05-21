@@ -16,7 +16,7 @@ config:
     stage: pretraining
     seed: 42
     total_batch_size: 131072
-    max_steps: 10
+    max_steps: 20
     early_stopping_patience: 100
     early_stopping_patience_skip_steps: 0
 
