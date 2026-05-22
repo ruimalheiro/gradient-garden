@@ -69,7 +69,21 @@ The project began with a decoder-only transformer baseline and has evolved into 
 
 ## Project structure
 - `datasets_preparation/` Components used for downloading, preparing, and tokenizing datasets.
-- `engine/` Trainer and runtime core components.
+- `engine/` Trainer and runtime core components. The main ones are:
+  - `checkpoints.py` Logic to handle checkpointing.
+  - `context.py` Defines context transport classes.
+  - `core.py` Defines state object used by the trainer.
+  - `dataloaders.py` Dataloader logic for sampling and distributing data.
+  - `distributed.py` Contains the main logic to set up the PyTorch DDP (Distributed Data Parallel) and FSDP2 (Fully Sharded Data Parallel).
+    - PyTorch DDP [here](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)
+  - `logging.py` Handles different logging tasks used in the trainer.
+  - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine scheduler.
+  - `optim.py` Defines and controls the optimizer(s) setup. Also has the necessary logic to build the parameter groups.
+  - `snapshot.py` Implements the logic to create and store the setup snapshot.
+  - `torch_profiler.py` Adds torch profiler logic and context manager.
+  - `trainer.py` The main implementation that orchestrates the entire training process.
+  - `wandb.py` A wrapper for Weights & Biases.
+    - Weights & Biases [here](https://wandb.ai/site/)
 - `evals/` Shared evaluation loading and scoring utilities.
   - Multiple choice evals:
     - HellaSwag
@@ -90,30 +104,26 @@ The project began with a decoder-only transformer baseline and has evolved into 
     - `debug.yaml`
   - `recipes/dpo/`
     - `debug.yaml`
-- `tasks/` Groups the training tasks.
+- `tasks/` Groups the training tasks. Relevant components:
+  - `causal.py` Implements the logic for the causal training task (pretraining and instruct)
+  - `distillation_utils.py` Logic for distillation loss.
+  - `dpo.py` Implements the logic for the DPO training task.
+  - `dpo_utils.py` Logic to calculate DPO loss.
 - `tests/` Groups tests for different components.
-- `checkpoints.py` Logic to handle checkpointing.
+- `tokenization/` Groups any component related to tokenizers.
+  - `tokenizer.py` Provides the tokenizer abstraction used by the project and supports two backends:
+    - `TikTokenizer`: loads tiktoken BPE weights from a local file path and configures the special tokens used by the project.
+    - `HFTokenizer`: loads a tokenizer from Hugging Face via `AutoTokenizer.from_pretrained(...)` and aligns the required special tokens (`bos`, `eos`, headers, `eot`, `pad`).
+    - `init_tokenizer(...)` selects the backend based on `config.tokenizer.huggingface_tokenizer`.
 - `config.py` Defines the nested `GlobalConfig` used by the trainer, dataset preparation, evaluation, checkpointing, and runtime setup.
   - Most experiment settings currently live as defaults in `config.py`.
   - Recipes define experiment settings under the `config` section.
   - `.env` is only used for third party secrets and local cache settings: `WANDB_API_KEY`, `HF_TOKEN`, and `HF_HOME`.
-- `dataloaders.py` Dataloader logic for sampling and distributing data.
-- `ddp_utils.py` Contains the main logic to set up the PyTorch DDP (Distributed Data Parallel) and FSDP2 (Fully Sharded Data Parallel).
-  - PyTorch DDP [here](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)
-- `distillation_utils.py` Logic for distillation loss.
-- `dpo_utils.py` Logic for DPO loss.
 - `logger.py` Simple reusable logger.
-- `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine scheduler.
 - `prepare_datasets.py` Entry point for data downloading and preparation.
 - `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretraining", "instruct", "dpo".
-- `tokenizer.py` Provides the tokenizer abstraction used by the project and supports two backends:
-  - `TikTokenizer`: loads tiktoken BPE weights from a local file path and configures the special tokens used by the project.
-  - `HFTokenizer`: loads a tokenizer from Hugging Face via `AutoTokenizer.from_pretrained(...)` and aligns the required special tokens (`bos`, `eos`, headers, `eot`, `pad`).
-  - `init_tokenizer(...)` selects the backend based on `config.tokenizer.huggingface_tokenizer`.
 - `train.py` Entry point for training runs.
 - `utils.py` Common generic logic that can be reused in different components.
-- `wandb_utils.py` A wrapper for Weights & Biases.
-  - Weights & Biases [here](https://wandb.ai/site/)
 
 ## Setup
 - Create a python environment. Example with conda: `conda create -n my_env python=3.11`;

@@ -39,7 +39,7 @@ from engine.torch_profiler import (
     init_torch_profiler_context
 )
 from engine.snapshot import create_run_snapshot
-from ddp_utils import (
+from engine.distributed import (
     init_multi_gpu,
     prepare_model_for_ddp,
     prepare_model_for_fsdp,
@@ -50,10 +50,10 @@ from config import (
     TrainingStage,
     TrainingPrecision
 )
-from tokenizer import init_tokenizer
+from tokenization import init_tokenizer
 from models.registry import build_model
-from dataloaders import init_data_loaders
-from checkpoints import (
+from engine.dataloaders import init_data_loaders
+from engine.checkpoints import (
     save_checkpoint,
     load_checkpoint,
     load_model_state,
@@ -64,8 +64,8 @@ from models.adapters.lora import (
     freeze_non_lora_parameters
 )
 from tasks import get_task
-from wandb_utils import WandbWrapper
-from lr_schedulers import cosine_scheduler
+from engine.wandb import WandbWrapper
+from engine.lr_schedulers import cosine_scheduler
 from tqdm.auto import tqdm
 from metrics import (
     reset_memory_usage_metrics,
