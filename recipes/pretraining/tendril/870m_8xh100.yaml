@@ -56,12 +56,12 @@ config:
       weight_decay: 0.1
       betas: [0.9, 0.95]
       use_fused: null
-      warmup_steps: 300
+      warmup_steps: 500
     muon:
       enabled: false
 
   validation:
-    every_x_steps: 100
+    every_x_steps: 500
     validation_steps: 200
     run_on_first_step: true
     run_on_last_step: true
