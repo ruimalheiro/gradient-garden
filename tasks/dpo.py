@@ -7,7 +7,7 @@ from tasks.base import (
     TaskStepOutput,
     TaskAssets
 )
-from dpo_utils import (
+from tasks.dpo_utils import (
     dpo_log_probs,
     dpo_loss
 )

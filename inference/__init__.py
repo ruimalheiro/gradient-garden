@@ -1,4 +1,4 @@
-from inference.generate import (
+from inference.generation import (
     generate,
     generate_and_decode
 )
