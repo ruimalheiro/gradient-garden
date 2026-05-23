@@ -2,7 +2,6 @@ import torch
 
 from collections import defaultdict
 from inference.kv_cache import KVCache
-from config import TokenizerConfig
 from engine.checkpoints import CheckpointDataInference
 from models.registry import build_model
 
