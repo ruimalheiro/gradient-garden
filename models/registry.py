@@ -1,8 +1,6 @@
 from config import ModelArchitecture
-from models.implementations import (
-    TendrilTransformer,
-    TendrilMoETransformer
-)
+from models.implementations.tendril import TendrilTransformer
+from models.implementations.tendril_moe import TendrilMoETransformer
 
 
 MODEL_REGISTRY = {

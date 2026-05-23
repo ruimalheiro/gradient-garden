@@ -1,4 +1,5 @@
 import re
+import json
 
 from datetime import datetime, timezone
 
@@ -19,3 +20,7 @@ def generate_run_name(timestamp=None, name=None) -> tuple[str, datetime]:
 
 def convert_byte_to_gib(byte_data):
     return round(byte_data / (1024 ** 3), 2)
+
+def load_json_file(file_path):
+    with open(file_path, 'r') as file:
+        return json.load(file)

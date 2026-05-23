@@ -50,7 +50,7 @@ from config import (
     TrainingStage,
     TrainingPrecision
 )
-from tokenization import init_tokenizer
+from tokenization.tokenizer import init_tokenizer
 from models.registry import build_model
 from engine.dataloaders import init_data_loaders
 from engine.checkpoints import (
@@ -63,20 +63,24 @@ from models.adapters.lora import (
     apply_lora,
     freeze_non_lora_parameters
 )
-from tasks import get_task
+from tasks.factory import get_task
 from engine.wandb import WandbWrapper
 from engine.lr_schedulers import cosine_scheduler
 from tqdm.auto import tqdm
-from metrics import (
+from metrics.memory import (
     reset_memory_usage_metrics,
-    compute_memory_usage_metrics,
-    accumulate_weighted_metrics,
-    combine_weighted_metrics,
-    StepType,
-    StepMetrics,
-    collect_model_specific_metrics
+    compute_memory_usage_metrics
 )
-from inference import generate_and_decode
+from metrics.aggregation import (
+    accumulate_weighted_metrics,
+    combine_weighted_metrics
+)
+from metrics.step import (
+    StepType,
+    StepMetrics
+)
+from metrics.model_specific import collect_model_specific_metrics
+from inference.generation import generate_and_decode
 from evals import (
     load_multiple_choice_eval_file,
     estimate_best_candidate_index_from_logits

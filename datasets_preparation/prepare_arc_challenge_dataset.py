@@ -4,7 +4,7 @@ import torch
 
 from pathlib import Path
 from tqdm import tqdm
-from tokenization import init_tokenizer
+from tokenization.tokenizer import init_tokenizer
 from datasets import load_dataset
 from logger import logger
 

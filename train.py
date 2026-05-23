@@ -1,7 +1,7 @@
 import argparse
 
 from config import load_config, TrainingStage
-from engine import Trainer
+from engine.trainer import Trainer
 from recipes.config import load_recipe
 
 

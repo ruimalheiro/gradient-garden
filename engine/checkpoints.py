@@ -140,7 +140,7 @@ class CheckpointData:
 def load_checkpoint(
     file_path,
     is_master_process=True
-):
+) -> CheckpointData:
     state = torch.load(file_path, map_location='cpu', weights_only=True)
 
     step = state['step'] + 1
@@ -218,6 +218,31 @@ def load_checkpoint(
         val_loader_state=val_dl_state,
         is_lora_checkpoint=metadata.get('lora_enabled', False),
         metadata=metadata
+    )
+
+@dataclass
+class CheckpointDataInference:
+    config: dict[str, Any] = field(default_factory=dict)
+    model_state: dict[str, Any] | None = None
+
+    def to_dict(self):
+        return {
+            'config': self.config
+        }
+
+    def __repr__(self):
+        return json.dumps(self.to_dict(), indent=4)
+
+def load_checkpoint_for_inference(file_path) -> CheckpointDataInference:
+    state = torch.load(file_path, map_location='cpu', weights_only=True)
+
+    config = state['config']
+    model_state = state['model']
+    del state
+
+    return CheckpointDataInference(
+        config=config,
+        model_state=model_state
     )
 
 def load_model_state(model, checkpoint_state_dict):

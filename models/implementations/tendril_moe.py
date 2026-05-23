@@ -5,7 +5,7 @@ from torch import nn
 from models.base import BaseModel
 from inference.kv_cache import KVCache
 from config import ModelConfig
-from metrics import (
+from metrics.model_specific import (
     MoeLayerMetrics,
     ModelMetrics
 )

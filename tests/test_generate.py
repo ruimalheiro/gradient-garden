@@ -1,6 +1,6 @@
 import torch
 
-from inference import generate
+from inference.generation import generate
 
 
 def test_generate_kv_cache_matches_no_cache_greedy(model, tokenizer, device):

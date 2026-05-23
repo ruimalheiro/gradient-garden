@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from abc import ABC, abstractmethod
-from metrics import ModelMetrics
+from metrics.model_specific import ModelMetrics
 from config import ModelConfig
 
 

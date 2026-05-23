@@ -3,6 +3,8 @@ import torch
 from collections import defaultdict
 from inference.kv_cache import KVCache
 from config import TokenizerConfig
+from engine.checkpoints import CheckpointDataInference
+from models.registry import build_model
 
 
 def sample_top_p(probs, p):
@@ -248,3 +250,24 @@ def generate_and_decode(
             else:
                 outputs.append(result)
         return outputs
+
+def generate_from_inference_checkpoint(
+    checkpoint_data: CheckpointDataInference,
+    prompts: list[str],
+    max_gen_len: int,
+    temperature: float,
+    top_p: float,
+    device: str,
+    dtype: str,
+    seed: int,
+    batch_size:int,
+    use_kv_cache: bool,
+    use_torch_compile: bool,
+    full_seq: int,
+    instruct: bool,
+    output_file_path: str
+):
+    config = checkpoint_data.config
+    model_state = checkpoint_data.model_state
+
+    print(config)
