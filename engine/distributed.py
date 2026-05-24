@@ -9,7 +9,7 @@ from logger import logger
 
 os.environ.setdefault('TORCH_NCCL_ASYNC_ERROR_HANDLING', '1')
 
-def init_multi_gpu(seed, device_type):
+def init_multi_gpu(device_type):
     ddp = int(os.environ.get('RANK', -1)) != -1
 
     assert torch.cuda.is_available()
@@ -33,8 +33,7 @@ def init_multi_gpu(seed, device_type):
         is_master_process = True
 
     if is_master_process:
-        logger.info(f'\nDevice setup:')
-        logger.info('----------------------------------------')
+        logger.section('Device setup')
         logger.info(f'Using device type: {device_type}')
         if ddp_rank:
             logger.info(f'DDP rank: {ddp_rank}')
@@ -42,9 +41,6 @@ def init_multi_gpu(seed, device_type):
             logger.info(f'DDP local rank: {ddp_local_rank}')
         if ddp_world_size:
             logger.info(f'DDP world size: {ddp_world_size}')
-
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
 
     return ddp, ddp_rank, ddp_local_rank, ddp_world_size, is_master_process, device
 

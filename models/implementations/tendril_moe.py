@@ -5,7 +5,7 @@ from torch import nn
 from models.base import BaseModel
 from inference.kv_cache import KVCache
 from config import ModelConfig
-from metrics import (
+from metrics.model_specific import (
     MoeLayerMetrics,
     ModelMetrics
 )
@@ -78,7 +78,7 @@ class Attention(nn.Module):
         self.wv = nn.Linear(config.dim, self.n_kv_heads * self.head_dim, bias=False)
         self.wo = nn.Linear(config.n_heads * self.head_dim, config.dim, bias=False)
 
-    def forward(self, x, rope_freqs, attn_mask=None, layer_id: int = None, kv_cache: KVCache = None, start_position: int = 0):
+    def forward(self, x, rope_freqs, attn_mask=None, layer_k_cache=None, layer_v_cache=None, start_position: int = 0):
         batch_size, sequence_length, _ = x.shape
         xq, xk, xv = self.wq(x), self.wk(x), self.wv(x)
 
@@ -89,18 +89,14 @@ class Attention(nn.Module):
         xq, xk = apply_rope(xq, xk, freqs=rope_freqs)
 
         # KV cache
-        if kv_cache is not None:
-            if layer_id is None:
-                raise ValueError('"layer_id" needs to be set when using kv cache.')
-
-            layer_k = kv_cache.keys[layer_id]
-            layer_v = kv_cache.values[layer_id]
+        kv_cache = layer_k_cache is not None and layer_v_cache is not None
+        if kv_cache:
             end_position = start_position + sequence_length
-            layer_k[:, start_position : end_position].copy_(xk)
-            layer_v[:, start_position : end_position].copy_(xv)
+            layer_k_cache[:batch_size, start_position : end_position].copy_(xk)
+            layer_v_cache[:batch_size, start_position : end_position].copy_(xv)
 
-            xk = layer_k[:, :end_position]
-            xv = layer_v[:, :end_position]
+            xk = layer_k_cache[:batch_size, :end_position]
+            xv = layer_v_cache[:batch_size, :end_position]
 
         keys = repeat_kv(xk, self.n_heads // self.n_kv_heads)
         values = repeat_kv(xv, self.n_heads // self.n_kv_heads)
@@ -113,7 +109,7 @@ class Attention(nn.Module):
         if attn_mask is not None:
             is_causal = False
         else:
-            if kv_cache is None:
+            if not kv_cache:
                 is_causal = True
             else:
                 is_causal = (start_position == 0) # 0 means prefill in this scenario
@@ -287,7 +283,7 @@ class RMSNorm(nn.Module):
         return self._norm(x) * self.weight
 
 class TransformerBlock(nn.Module):
-    def __init__(self, layer_id, config):
+    def __init__(self, config):
         super().__init__()
         self.n_heads = config.n_heads
         self.dim = config.dim
@@ -303,12 +299,18 @@ class TransformerBlock(nn.Module):
             load_balancing_coef=config.moe.load_balancing_coef,
             z_loss_coef=config.moe.z_loss_coef
         )
-        self.layer_id = layer_id
         self.attention_norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.ffn_norm = RMSNorm(config.dim, eps=config.norm_eps)
 
-    def forward(self, x, rope_freqs, mask=None, kv_cache: KVCache = None, start_position: int = 0):
-        hidden_state = x + self.attention(self.attention_norm(x), rope_freqs, mask, layer_id=self.layer_id, kv_cache=kv_cache, start_position=start_position)
+    def forward(self, x, rope_freqs, mask=None, layer_k_cache=None, layer_v_cache=None, start_position: int = 0):
+        hidden_state = x + self.attention(
+            self.attention_norm(x),
+            rope_freqs,
+            mask,
+            layer_k_cache=layer_k_cache,
+            layer_v_cache=layer_v_cache,
+            start_position=start_position
+        )
         ff, aux = self.feed_forward(self.ffn_norm(hidden_state))
         output = hidden_state + ff
         return output, aux
@@ -338,8 +340,8 @@ class TendrilMoETransformer(BaseModel):
         )
 
         self.layers = nn.ModuleList()
-        for layer_id in range(self.n_layers):
-            self.layers.append(TransformerBlock(layer_id, config))
+        for _ in range(self.n_layers):
+            self.layers.append(TransformerBlock(config))
 
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.output = nn.Linear(config.dim, self.vocab_size, bias=False)
@@ -459,8 +461,21 @@ class TendrilMoETransformer(BaseModel):
                     attn_mask = attn_mask.expand(attn_mask.size(0), 1, sequence_length, k_length) & causal_keep
 
         aux_loss_total = hidden_state.new_zeros(())
-        for layer in self.layers:
-            hidden_state, aux = layer(hidden_state, rope_freqs, attn_mask, kv_cache=kv_cache, start_position=start_position)
+        for layer_id, layer in enumerate(self.layers):
+            layer_k_cache = None
+            layer_v_cache = None
+            if kv_cache is not None:
+                layer_k_cache = kv_cache.keys[layer_id]
+                layer_v_cache = kv_cache.values[layer_id]
+
+            hidden_state, aux = layer(
+                hidden_state,
+                rope_freqs,
+                attn_mask,
+                layer_k_cache=layer_k_cache,
+                layer_v_cache=layer_v_cache,
+                start_position=start_position
+            )
             if aux is not None:
                 aux_loss_total = aux_loss_total + aux
 

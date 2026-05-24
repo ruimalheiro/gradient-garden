@@ -1,14 +1,14 @@
 import math
 
 from config import TrainingStage, GlobalConfig
-from checkpoints import CheckpointData
+from engine.checkpoints import CheckpointData
 from engine.context import TrainerContext
 from engine.optim import OptimizerPlan
 from engine.core import TrainerState
-from metrics import (
-    MemoryUsageMetrics,
+from metrics.memory import MemoryUsageMetrics
+from metrics.step import (
     StepType,
-    StepMetrics,
+    StepMetrics
 )
 from logger import logger
 

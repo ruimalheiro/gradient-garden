@@ -434,8 +434,7 @@ def init_data_loaders(
 ):
     if training_stage == TrainingStage.PRETRAINING:
         if is_master_process:
-            logger.info('\nPretraining Data Loaders:')
-            logger.info('----------------------------------------')
+            logger.section('Pretraining Data Loaders')
 
         train_loader = PretrainingDataLoader(
             batch_size=batch_size,
@@ -461,8 +460,7 @@ def init_data_loaders(
         assert pad_id is not None
 
         if is_master_process:
-            logger.info('\nInstruct Finetuning Data Loaders:')
-            logger.info('----------------------------------------')
+            logger.section('Instruct Finetuning Data Loaders')
 
         train_loader = InstructDataLoader(
             batch_size=batch_size,
@@ -496,8 +494,7 @@ def init_data_loaders(
         assert pad_id is not None
 
         if is_master_process:
-            logger.info('\nDirect Preference Optimization Data Loaders:')
-            logger.info('----------------------------------------')
+            logger.section('Direct Preference Optimization Data Loaders')
 
         train_loader = DirectPreferenceOptimizationDataLoader(
             batch_size=batch_size,

@@ -7,7 +7,7 @@ from tasks.base import (
     TaskStepOutput,
     TaskAssets
 )
-from distillation_utils import distillation_loss
+from tasks.distillation_utils import distillation_loss
 from logger import logger
 
 

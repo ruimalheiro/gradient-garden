@@ -9,8 +9,8 @@ if str(ROOT) not in sys.path:
 import pytest
 import torch
 
-from tokenizer import init_tokenizer
-from models import build_model
+from tokenization.tokenizer import init_tokenizer
+from models.registry import build_model
 from config import ModelConfig
 
 

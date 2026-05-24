@@ -167,8 +167,7 @@ def classify_trainable_parameters(model) -> ParameterBuckets:
         buckets.num_scalar_params
     )
 
-    logger.info(f'\nOptimizers')
-    logger.info('----------------------------------------')
+    logger.section('Optimizers')
     logger.info(f'num trainable parameters: {buckets.total_trainable_params:,}')
     logger.info(f'num embedding parameters: {buckets.num_embedding_params:,}')
     logger.info(f'num matrix parameters: {buckets.num_matrix_params:,}')
@@ -248,8 +247,7 @@ def build_optimizer_plan(config, parameter_buckets: ParameterBuckets) -> Optimiz
 
 def build_optimizers(config, optimizer_plan: OptimizerPlan) -> Optimizers:
     optimizers = Optimizers()
-    logger.info('\nBuilding Optimizers')
-    logger.info('----------------------------------------')
+    logger.section('Building Optimizers')
     if optimizer_plan.adamw:
         logger.info('initializing AdamW')
         adamw_groups = []

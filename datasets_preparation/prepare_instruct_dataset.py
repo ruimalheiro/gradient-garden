@@ -6,7 +6,7 @@ import copy
 import time
 
 from functools import partial
-from tokenizer import init_tokenizer
+from tokenization.tokenizer import init_tokenizer
 from datasets import (
     load_dataset,
     interleave_datasets

@@ -2,7 +2,6 @@ import torch
 
 from collections import defaultdict
 from inference.kv_cache import KVCache
-from config import TokenizerConfig
 
 
 def sample_top_p(probs, p):
@@ -187,6 +186,11 @@ def generate(
 
     return out_tokens
 
+def batch_generator(texts, batch_size):
+    for i in range(0, len(texts), batch_size):
+        yield texts[i:i + batch_size]
+
+@torch.inference_mode()
 def generate_and_decode(
         *,
         texts,
@@ -202,13 +206,17 @@ def generate_and_decode(
         dtype=torch.float32,
         is_instruct=False,
         skip_encoding=False,
-        use_kv_cache=False
+        use_kv_cache=False,
+        batch_size=None
     ):
         vocab_size = tokenizer.vocab_size
         pad_token_id = tokenizer.pad_id
 
         if not isinstance(texts, list):
             texts = [texts]
+
+        if batch_size is None:
+            batch_size = len(texts)
 
         if not skip_encoding:
             if is_instruct:
@@ -218,33 +226,32 @@ def generate_and_decode(
         else:
             prompt_tokens = texts
         
-        generation_tokens = generate(
-            prompt_tokens=prompt_tokens,
-            model=model,
-            tokenizer=tokenizer,
-            max_gen_len=max_gen_len,
-            temperature=temperature,
-            top_p=top_p,
-            repetition_penalty=repetition_penalty,
-            no_repeat_ngram_size=no_repeat_ngram_size,
-            device=device,
-            dtype=dtype,
-            use_kv_cache=use_kv_cache
-        )
+        outputs = []
+        for prompt_tokens_batches in batch_generator(prompt_tokens, batch_size):
+            output = generate(
+                prompt_tokens=prompt_tokens_batches,
+                model=model,
+                tokenizer=tokenizer,
+                max_gen_len=max_gen_len,
+                temperature=temperature,
+                top_p=top_p,
+                repetition_penalty=repetition_penalty,
+                no_repeat_ngram_size=no_repeat_ngram_size,
+                device=device,
+                dtype=dtype,
+                use_kv_cache=use_kv_cache
+            )
+            outputs.extend(output)
 
         def validate_token(tokens):
             return [token if token < vocab_size else pad_token_id for token in tokens]
 
-        results = [tokenizer.decode(validate_token(t)) for t in generation_tokens]
+        results = [tokenizer.decode(validate_token(t)) for t in outputs]
 
         outputs = []
-
         for text, result in zip(texts, results):
-            prompt_and_result = text + result
-            if is_instruct:
-                prompt_and_result = text + ' ' + result
             if full_seq:
-                outputs.append(prompt_and_result)
+                outputs.append(f'{text} {result}' if is_instruct else f'{text}{result}')
             else:
                 outputs.append(result)
         return outputs

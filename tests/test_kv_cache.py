@@ -1,6 +1,6 @@
 import torch
 
-from inference import KVCache
+from inference.kv_cache import KVCache
 
 
 @torch.no_grad()

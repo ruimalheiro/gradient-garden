@@ -39,7 +39,7 @@ from engine.torch_profiler import (
     init_torch_profiler_context
 )
 from engine.snapshot import create_run_snapshot
-from ddp_utils import (
+from engine.distributed import (
     init_multi_gpu,
     prepare_model_for_ddp,
     prepare_model_for_fsdp,
@@ -50,10 +50,10 @@ from config import (
     TrainingStage,
     TrainingPrecision
 )
-from tokenizer import init_tokenizer
+from tokenization.tokenizer import init_tokenizer
 from models.registry import build_model
-from dataloaders import init_data_loaders
-from checkpoints import (
+from engine.dataloaders import init_data_loaders
+from engine.checkpoints import (
     save_checkpoint,
     load_checkpoint,
     load_model_state,
@@ -63,25 +63,32 @@ from models.adapters.lora import (
     apply_lora,
     freeze_non_lora_parameters
 )
-from tasks import get_task
-from wandb_utils import WandbWrapper
-from lr_schedulers import cosine_scheduler
+from tasks.factory import get_task
+from engine.wandb import WandbWrapper
+from engine.lr_schedulers import cosine_scheduler
 from tqdm.auto import tqdm
-from metrics import (
+from metrics.memory import (
     reset_memory_usage_metrics,
-    compute_memory_usage_metrics,
-    accumulate_weighted_metrics,
-    combine_weighted_metrics,
-    StepType,
-    StepMetrics,
-    collect_model_specific_metrics
+    compute_memory_usage_metrics
 )
-from inference import generate_and_decode
+from metrics.aggregation import (
+    accumulate_weighted_metrics,
+    combine_weighted_metrics
+)
+from metrics.step import (
+    StepType,
+    StepMetrics
+)
+from metrics.model_specific import collect_model_specific_metrics
+from inference.generation import generate_and_decode
 from evals import (
     load_multiple_choice_eval_file,
     estimate_best_candidate_index_from_logits
 )
-from utils import generate_run_name
+from utils import (
+    generate_name,
+    set_seed
+)
 
 
 class Trainer:
@@ -121,6 +128,7 @@ class Trainer:
             raise ValueError('Only cuda is supported at the moment.')
 
     def setup(self):
+        self.set_seed()
         self.setup_global_torch_optimizations()
         self.build_contexts()
         self.setup_local_logging()
@@ -141,6 +149,9 @@ class Trainer:
         self.check_all_devices_ready()
         self.setup_wandb()
         self.setup_torch_profiler()
+
+    def set_seed(self):
+        set_seed(self.config.training.seed)
 
     def setup_global_torch_optimizations(self):
         torch.backends.cuda.matmul.fp32_precision = 'tf32'
@@ -201,10 +212,7 @@ class Trainer:
         self.task_assets = self.task.build_assets(tokenizer=self.tokenizer, model=self.model)
 
     def build_distributed_context(self):
-        ddp, ddp_rank, ddp_local_rank, ddp_world_size, is_master_process, device = init_multi_gpu(
-            self.config.training.seed,
-            self.config.runtime.device_type.value
-        )
+        ddp, ddp_rank, ddp_local_rank, ddp_world_size, is_master_process, device = init_multi_gpu(self.config.runtime.device_type.value)
         self.distributed_ctx = DistributedContext(
             ddp=ddp,
             ddp_rank=ddp_rank,
@@ -291,7 +299,7 @@ class Trainer:
         dist_buffer = [None]
 
         if self.distributed_ctx.is_master_process:
-            name, timestamp = generate_run_name(name=self.config.run.name)
+            name, timestamp = generate_name(name=self.config.run.name)
             dist_buffer[0] = {
                 'name': name,
                 'timestamp': timestamp
@@ -481,8 +489,7 @@ class Trainer:
         if not supported:
             raise ValueError(f'Model architecture {self.config.model.architecture} does not expose LoRA target modules.')
 
-        logger.info('\nLoRA Configuration')
-        logger.info('----------------------------------------')
+        logger.section('LoRA Configuration')
         if self.config.lora.target_modules is None:
             target_modules = supported
             logger.warn(f'LoRA "target_modules" was not specified in the config. Using all supported: {supported}')
@@ -531,8 +538,7 @@ class Trainer:
 
     def restore_model_state(self):
         load_model_state(self.model, self.checkpoint_data.model_state)
-        logger.info('\nModel loading')
-        logger.info('----------------------------------------')
+        logger.section('Model loading')
         logger.info('Model checkpoint loaded and ready')
 
     def restore_data_loaders_state(self):
@@ -556,8 +562,7 @@ class Trainer:
                 raise ValueError('dist must be initialized if "config.runtime.use_fsdp" flag is set. Run with `torchrun` to force `dist` to initialize.')
             if self.config.runtime.use_torch_compile:
                 raise ValueError('Currently not supporting torch compile for FSDP. Please set "config.runtime.use_torch_compile" flag to False.')
-            logger.info('\nFSDP')
-            logger.info('----------------------------------------')
+            logger.section('FSDP')
             logger.info('Wrapping the model in preparation for FSDP')
             # for FSDP no need to move explicitly to device here as that would actually cost more VRAM, instead let FSDP initialization alocate the shard to the device id (ddp_local_rank).
             self.model = prepare_model_for_fsdp(self.model, ddp_local_rank, fsdp_mp)
@@ -565,8 +570,7 @@ class Trainer:
             # move to gpu
             self.model.to(device=device, dtype=model_dtype)
             if dist.is_initialized():
-                logger.info('\nDDP')
-                logger.info('----------------------------------------')
+                logger.section('DDP')
                 logger.info('Wrapping the model in preparation for DDP')
                 self.model = prepare_model_for_ddp(self.model, ddp_local_rank)
             self.compile_model()
@@ -622,10 +626,9 @@ class Trainer:
 
     def log_workload_summary(self):
         if self.distributed_ctx.is_master_process:
-            logger.info(f'\n{self.config.training.stage.value.upper()} WORKLOAD SUMMARY:')
-            logger.info('--------------------------------------------------------')
+            logger.section(f'{self.config.training.stage.value.upper()} WORKLOAD SUMMARY')
             logger.info(self.workload_summary, is_json=True)
-            logger.info('--------------------------------------------------------')
+            logger.separator()
 
     def save_run_snapshot(self):
         if self.distributed_ctx.is_master_process:
@@ -1082,11 +1085,10 @@ class Trainer:
         if not self.trainer_ctx.distributed.is_master_process:
             return
 
-        logger.info(f'{self.trainer_state.current_step:4d} | Generation testing:', pbar=pbar)
-        logger.info('-----------------------------------------------', pbar=pbar)
+        logger.section(f'{self.trainer_state.current_step:4d} | Generation testing:', pbar=pbar)
         for text in outputs:
             logger.info(text, pbar=pbar)
-        logger.info('-----------------------------------------------', pbar=pbar)
+        logger.separator(pbar=pbar)
 
     def process_step(self, pbar):
         self.run_train(pbar)
