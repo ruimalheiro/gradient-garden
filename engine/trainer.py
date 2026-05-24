@@ -86,7 +86,7 @@ from evals import (
     estimate_best_candidate_index_from_logits
 )
 from utils import (
-    generate_run_name,
+    generate_name,
     set_seed
 )
 
@@ -299,7 +299,7 @@ class Trainer:
         dist_buffer = [None]
 
         if self.distributed_ctx.is_master_process:
-            name, timestamp = generate_run_name(name=self.config.run.name)
+            name, timestamp = generate_name(name=self.config.run.name)
             dist_buffer[0] = {
                 'name': name,
                 'timestamp': timestamp
