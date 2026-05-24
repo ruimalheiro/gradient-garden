@@ -227,9 +227,9 @@ def generate_and_decode(
             prompt_tokens = texts
         
         outputs = []
-        for text_batches in batch_generator(texts, batch_size):
+        for prompt_tokens_batches in batch_generator(prompt_tokens, batch_size):
             output = generate(
-                prompt_tokens=prompt_tokens,
+                prompt_tokens=prompt_tokens_batches,
                 model=model,
                 tokenizer=tokenizer,
                 max_gen_len=max_gen_len,
