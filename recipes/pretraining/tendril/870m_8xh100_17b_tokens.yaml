@@ -1,5 +1,5 @@
 name: tendril_870m_8xh100_pretraining
-description: Tendril 870m 8xH100 pretraining.
+description: A validated Tendril 8xH100 pretraining recipe for Tendril 870M over ~17B tokens.
 
 config:
   run:
