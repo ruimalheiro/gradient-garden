@@ -1,26 +1,19 @@
 import argparse
 import json
 
-from config import load_config
-from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
-from datasets_preparation import (
-    prepare_hellaswag_dataset,
-    prepare_winogrande_dataset,
-    prepare_arc_challenge_dataset,
-    prepare_pretraining_dataset,
-    prepare_instruct_dataset,
-    prepare_dpo_dataset,
-    prepare_recipe_data
-)
-from recipes.config import load_recipe
 from logger import logger
+from config import load_config
+from utils import load_json_file
+from recipes.config import load_recipe
+from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
+from datasets_preparation.prepare_hellaswag_dataset import prepare_hellaswag_dataset
+from datasets_preparation.prepare_winogrande_dataset import prepare_winogrande_dataset
+from datasets_preparation.prepare_arc_challenge_dataset import prepare_arc_challenge_dataset
+from datasets_preparation.prepare_pretraining_dataset import prepare_pretraining_dataset
+from datasets_preparation.prepare_instruct_dataset import prepare_instruct_dataset
+from datasets_preparation.prepare_dpo_dataset import prepare_dpo_dataset
+from datasets_preparation.prepare_recipe_data import prepare_recipe_data
 
-
-def load_custom_dataset_mix(mix_file_path):
-    if mix_file_path is None:
-        return None 
-    with open(mix_file_path, 'r') as file:
-        return json.load(file)
 
 if __name__ == '__main__':
     logger.set_master(True)
@@ -71,7 +64,7 @@ if __name__ == '__main__':
         if (args.hellaswag or args.winogrande or args.arc_challenge) and args.mix_file:
             parser.error('"--mix-file" is only supported for training datasets.')
 
-        datasets_mix = load_custom_dataset_mix(args.mix_file)
+        datasets_mix = load_json_file(args.mix_file) if args.mix_file is not None else None
 
         if args.hellaswag:
             prepare_hellaswag_dataset(config=cfg, num_proc=num_proc)

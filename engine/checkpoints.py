@@ -15,6 +15,7 @@ from torch.distributed.checkpoint.state_dict import (
 from logger import logger
 from dataclasses import dataclass, field
 from typing import Any
+from config import GlobalConfig
 
 
 def state_to_cpu(obj):
@@ -140,7 +141,7 @@ class CheckpointData:
 def load_checkpoint(
     file_path,
     is_master_process=True
-):
+) -> CheckpointData:
     state = torch.load(file_path, map_location='cpu', weights_only=True)
 
     step = state['step'] + 1
@@ -162,8 +163,7 @@ def load_checkpoint(
     metadata = state.get('metadata', {})
 
     if is_master_process:
-        logger.info('\nModel checkpoint loading')
-        logger.info('----------------------------------------')
+        logger.section('Model checkpoint loading')
         logger.info(f'model state loaded from checkpoint file: "{file_path}"')
         if optimizers_state is not None:
             logger.info(f'optimizers state loaded from checkpoint')
@@ -182,12 +182,10 @@ def load_checkpoint(
             logger.info('--Val Loader state:')
             logger.info({key: val_dl_state[key] for key in _valid_keys if key in val_dl_state})
 
-        logger.info('\nLoaded config')
-        logger.info('----------------------------------------')
+        logger.section('Loaded config')
         logger.info(state['config'], is_json=True)
 
-        logger.info('\nLoaded model config')
-        logger.info('----------------------------------------')
+        logger.section('Loaded model config')
         logger.info(state['config'], is_json=True)
 
         if step > 0:
@@ -216,6 +214,46 @@ def load_checkpoint(
         best_val_loss=best_val_loss,
         train_loader_state=train_dl_state,
         val_loader_state=val_dl_state,
+        is_lora_checkpoint=metadata.get('lora_enabled', False),
+        metadata=metadata
+    )
+
+@dataclass
+class CheckpointDataInference:
+    file_path: str
+    config: GlobalConfig
+    model_state: dict[str, Any]
+    step: int
+    is_lora_checkpoint: bool = False
+    metadata: dict = field(default_factory=dict)
+
+    def to_dict(self):
+        return {
+            'file_path': self.file_path,
+            'config': self.config,
+            'step': self.step,
+            'is_lora_checkpoint': self.is_lora_checkpoint,
+            'metadata': self.metadata
+        }
+
+    def __repr__(self):
+        return json.dumps(self.to_dict(), indent=4)
+
+def load_checkpoint_for_inference(file_path) -> CheckpointDataInference:
+    state = torch.load(file_path, map_location='cpu', weights_only=True)
+
+    config = state['config']
+    model_state = state['model']
+    step = state['step']
+    metadata = state.get('metadata', {})
+
+    del state
+
+    return CheckpointDataInference(
+        file_path=file_path,
+        config=GlobalConfig.model_validate(config),
+        model_state=model_state,
+        step=step,
         is_lora_checkpoint=metadata.get('lora_enabled', False),
         metadata=metadata
     )

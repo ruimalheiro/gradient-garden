@@ -33,7 +33,14 @@ class ConsoleLogger:
                 pbar.write(content)
             else:
                 print(content)
-        self.write_to_file(content)
+            self.write_to_file(content)
+
+    def separator(self, char='-', length=40, pbar=None):
+        self.info(char * length, pbar=pbar)
+
+    def section(self, title, char='-', length=40, pbar=None):
+        self.info(f'\n{title}:', pbar=pbar)
+        self.separator(char=char, length=length, pbar=pbar)
 
     def warning_wrapper(self, content):
         yellow = '\033[93m'

@@ -3,7 +3,7 @@ import numpy as np
 import time
 import copy
 
-from tokenization import init_tokenizer
+from tokenization.tokenizer import init_tokenizer
 from datasets import (
     load_dataset,
     interleave_datasets
