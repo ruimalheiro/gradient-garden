@@ -163,8 +163,7 @@ def load_checkpoint(
     metadata = state.get('metadata', {})
 
     if is_master_process:
-        logger.info('\nModel checkpoint loading')
-        logger.info('----------------------------------------')
+        logger.section('Model checkpoint loading')
         logger.info(f'model state loaded from checkpoint file: "{file_path}"')
         if optimizers_state is not None:
             logger.info(f'optimizers state loaded from checkpoint')
@@ -183,12 +182,10 @@ def load_checkpoint(
             logger.info('--Val Loader state:')
             logger.info({key: val_dl_state[key] for key in _valid_keys if key in val_dl_state})
 
-        logger.info('\nLoaded config')
-        logger.info('----------------------------------------')
+        logger.section('Loaded config')
         logger.info(state['config'], is_json=True)
 
-        logger.info('\nLoaded model config')
-        logger.info('----------------------------------------')
+        logger.section('Loaded model config')
         logger.info(state['config'], is_json=True)
 
         if step > 0:
