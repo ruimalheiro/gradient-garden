@@ -15,6 +15,7 @@ from torch.distributed.checkpoint.state_dict import (
 from logger import logger
 from dataclasses import dataclass, field
 from typing import Any
+from config import GlobalConfig
 
 
 def state_to_cpu(obj):
@@ -222,12 +223,20 @@ def load_checkpoint(
 
 @dataclass
 class CheckpointDataInference:
-    config: dict[str, Any] = field(default_factory=dict)
-    model_state: dict[str, Any] | None = None
+    file_path: str
+    config: GlobalConfig
+    model_state: dict[str, Any]
+    step: int
+    is_lora_checkpoint: bool = False
+    metadata: dict = field(default_factory=dict)
 
     def to_dict(self):
         return {
-            'config': self.config
+            'file_path': self.file_path,
+            'config': self.config,
+            'step': self.step,
+            'is_lora_checkpoint': self.is_lora_checkpoint,
+            'metadata': self.metadata
         }
 
     def __repr__(self):
@@ -238,11 +247,18 @@ def load_checkpoint_for_inference(file_path) -> CheckpointDataInference:
 
     config = state['config']
     model_state = state['model']
+    step = state['step']
+    metadata = state.get('metadata', {})
+
     del state
 
     return CheckpointDataInference(
-        config=config,
-        model_state=model_state
+        file_path=file_path,
+        config=GlobalConfig.model_validate(config),
+        model_state=model_state,
+        step=step,
+        is_lora_checkpoint=metadata.get('lora_enabled', False),
+        metadata=metadata
     )
 
 def load_model_state(model, checkpoint_state_dict):

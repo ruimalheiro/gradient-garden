@@ -3,7 +3,8 @@ import argparse
 from pathlib import Path
 from engine.checkpoints import load_checkpoint_for_inference
 from utils import load_json_file
-from inference.generation import generate_from_inference_checkpoint
+from inference.runtime import prepare_runtime_for_inference
+from inference.generation import generate_and_decode
 
 
 def validate_file_path(path: str, parser: argparse.ArgumentParser):
@@ -26,8 +27,8 @@ if __name__ == '__main__':
     parser.add_argument('--dtype', type=str, default='auto', choices=['auto', 'bf16', 'fp16', 'fp32'], help='By default the checkpoint/config dtype will be used.')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--batch-size', type=int, default=1)
-    parser.add_argument('--use-kv-cache', action='store_true')
-    parser.add_argument('--use-torch-compile', action='store_true', help='Use torch compile')
+    parser.add_argument('--use-kv-cache', action='store_true', default=True)
+    parser.add_argument('--use-torch-compile', action='store_true', help='Use torch compile', default=True)
     parser.add_argument('--full-seq', action='store_true', help='Return full sequence including the prompt')
     parser.add_argument('--instruct', action='store_true', help='Include the instruct control tokens in the prompt. Should not be set when testing base model.')
 
@@ -50,19 +51,34 @@ if __name__ == '__main__':
     checkpoint_data = load_checkpoint_for_inference(args.checkpoint)
     prompts = load_json_file(args.prompts)
 
-    generate_from_inference_checkpoint(
+    if args.batch_size > checkpoint_data.config.model.max_batch_size:
+        parser.error(f'--batch-size cannot exceed model.max_batch_size ')
+
+    inference_runtime = prepare_runtime_for_inference(
         checkpoint_data=checkpoint_data,
-        prompts=prompts,
+        dtype=args.dtype,
+        device=args.device,
+        use_torch_compile=args.use_torch_compile
+    )
+
+    outputs = generate_and_decode(
+        texts=prompts,
+        model=inference_runtime.model,
+        tokenizer=inference_runtime.tokenizer,
         max_gen_len=args.max_gen_len,
         temperature=args.temperature,
         top_p=args.top_p,
-        device=args.device,
-        dtype=args.dtype,
-        seed=args.seed,
-        batch_size=args.batch_size,
-        use_kv_cache=args.use_kv_cache,
-        use_torch_compile=args.use_torch_compile,
+        repetition_penalty=1.0,
+        no_repeat_ngram_size=1,
         full_seq=args.full_seq,
-        instruct=args.instruct,
-        output_file_path=args.output
+        device=inference_runtime.device,
+        dtype=inference_runtime.dtype,
+        is_instruct=args.instruct,
+        skip_encoding=False,
+        use_kv_cache=args.use_kv_cache,
+        batch_size=args.batch_size
     )
+
+    for text in outputs:
+        print(text)
+    # output_file_path=args.output
