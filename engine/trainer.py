@@ -132,6 +132,7 @@ class Trainer:
         self.setup_global_torch_optimizations()
         self.build_contexts()
         self.setup_local_logging()
+        self.log_distributed_context()
         self.load_assets()
         self.build_components()
         self.resolve_checkpoint()
@@ -236,6 +237,21 @@ class Trainer:
         log_file_path = self.get_local_logs_dir_path() / self.run_ctx.name
         logger.info(f'Logging to: {log_file_path}')
         logger.set_log_file_path(log_file_path)
+
+    def log_distributed_context(self):
+        device_type = self.config.runtime.device_type.value
+        ddp_rank = self.distributed_ctx.ddp_rank
+        ddp_local_rank = self.distributed_ctx.ddp_local_rank
+        ddp_world_size = self.distributed_ctx.ddp_world_size
+
+        logger.section('Device setup')
+        logger.info(f'Using device type: {device_type}')
+        if ddp_rank:
+            logger.info(f'DDP rank: {ddp_rank}')
+        if ddp_local_rank:
+            logger.info(f'DDP local rank: {ddp_local_rank}')
+        if ddp_world_size:
+            logger.info(f'DDP world size: {ddp_world_size}')
 
     def build_precision_context(self):
         if self.config.runtime.training_precision == TrainingPrecision.BF16:
@@ -434,10 +450,7 @@ class Trainer:
     def load_checkpoint_data(self, checkpoint_file_path):
         args = self.args
 
-        checkpoint_data = load_checkpoint(
-            file_path=checkpoint_file_path,
-            is_master_process=self.distributed_ctx.is_master_process
-        )
+        checkpoint_data = load_checkpoint(file_path=checkpoint_file_path)
 
         training_stage_changed = (
             checkpoint_data.metadata.get('training_stage', None) != self.config.training.stage.value
