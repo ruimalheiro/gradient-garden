@@ -20,7 +20,16 @@ from evals.evaluation import (
     evaluate_winogrande,
     evaluate_arc_challenge
 )
+from config import TrainingStage
 
+
+def check_stage_for_validation(stage: TrainingStage, parser: argparse.ArgumentParser):
+    if stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT):
+        parser.error('--validation is only supported for pretraining and instruct checkpoints.')
+
+def check_stage_for_evals(stage: TrainingStage, parser: argparse.ArgumentParser):
+    if stage != TrainingStage.PRETRAINING:
+        parser.error('--hellaswag, --winogrande, or --arc-challenge are only supported for pretraining checkpoints.')
 
 if __name__ == '__main__':
     logger.set_master(True)
@@ -87,6 +96,7 @@ if __name__ == '__main__':
     results = {}
 
     if args.validation:
+        check_stage_for_validation(checkpoint_data.config.training.stage, parser)
         results['validation'] = evaluate_validation_ppl(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
@@ -95,6 +105,7 @@ if __name__ == '__main__':
             ignore_index=checkpoint_data.config.tokenizer.ignore_index
         )
     if args.hellaswag:
+        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
         results['hellaswag'] = evaluate_hellaswag(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
@@ -102,18 +113,20 @@ if __name__ == '__main__':
             num_examples=args.hellaswag_examples
         )
     if args.winogrande:
+        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
         results['winogrande'] = evaluate_winogrande(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
             batch_size=args.batch_size,
-            num_examples=args.hellaswag_examples
+            num_examples=args.winogrande_examples
         )
     if args.arc_challenge:
+        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
         results['arc_challenge'] = evaluate_arc_challenge(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
             batch_size=args.batch_size,
-            num_examples=args.hellaswag_examples
+            num_examples=args.arc_challenge_examples
         )
 
     data = {
