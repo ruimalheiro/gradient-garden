@@ -66,3 +66,7 @@ def set_seed(seed: int, *, deterministic: bool = False):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         torch.use_deterministic_algorithms(True, warn_only=True)
+
+def batch_generator(items, batch_size):
+    for i in range(0, len(items), batch_size):
+        yield items[i:i + batch_size]

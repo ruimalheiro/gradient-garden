@@ -2,6 +2,7 @@ import torch
 
 from collections import defaultdict
 from inference.kv_cache import KVCache
+from utils import batch_generator
 
 
 def sample_top_p(probs, p):
@@ -185,10 +186,6 @@ def generate(
     out_tokens = build_tokens(tokens, prompt_tokens, stop_tokens, max_gen_len)
 
     return out_tokens
-
-def batch_generator(texts, batch_size):
-    for i in range(0, len(texts), batch_size):
-        yield texts[i:i + batch_size]
 
 @torch.inference_mode()
 def generate_and_decode(

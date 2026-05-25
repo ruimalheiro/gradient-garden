@@ -72,7 +72,7 @@ def evaluate_validation_ppl(
         'mean_cross_entropy_loss': val_loss,
         'perplexity': perplexity,
         'total_cross_entropy_loss': loss_sum,
-        'total_valid_tokens': tokens_sum,
+        'total_valid_tokens': int(tokens_sum),
         'steps': validation_steps,
         'batch_size': batch_size,
         'sequence_length': config.model.max_seq_len,
