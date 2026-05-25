@@ -4,7 +4,6 @@ import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group
 from torch.distributed.fsdp import fully_shard
-from logger import logger
 
 
 os.environ.setdefault('TORCH_NCCL_ASYNC_ERROR_HANDLING', '1')
@@ -31,16 +30,6 @@ def init_multi_gpu(device_type):
 
         device = 'cuda'
         is_master_process = True
-
-    if is_master_process:
-        logger.section('Device setup')
-        logger.info(f'Using device type: {device_type}')
-        if ddp_rank:
-            logger.info(f'DDP rank: {ddp_rank}')
-        if ddp_local_rank:
-            logger.info(f'DDP local rank: {ddp_local_rank}')
-        if ddp_world_size:
-            logger.info(f'DDP world size: {ddp_world_size}')
 
     return ddp, ddp_rank, ddp_local_rank, ddp_world_size, is_master_process, device
 

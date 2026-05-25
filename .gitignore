@@ -33,6 +33,10 @@ outputs/
 *.local.yml
 *.private.yml
 
+# Local md files
+*.local.md
+*.private.md
+
 # Optional extra ignores for local tokenizer assets
 tokenizer.model
 *.tiktoken

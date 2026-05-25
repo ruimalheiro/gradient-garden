@@ -138,10 +138,7 @@ class CheckpointData:
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=4)
 
-def load_checkpoint(
-    file_path,
-    is_master_process=True
-) -> CheckpointData:
+def load_checkpoint(file_path) -> CheckpointData:
     state = torch.load(file_path, map_location='cpu', weights_only=True)
 
     step = state['step'] + 1
@@ -162,47 +159,45 @@ def load_checkpoint(
 
     metadata = state.get('metadata', {})
 
-    if is_master_process:
-        logger.section('Model checkpoint loading')
-        logger.info(f'model state loaded from checkpoint file: "{file_path}"')
-        if optimizers_state is not None:
-            logger.info(f'optimizers state loaded from checkpoint')
-            if optimizers_state['adamw']:
-                logger.info('-- loaded state for adamW')
-            if optimizers_state['muon']:
-                logger.info('-- loaded state for Muon')
+    logger.section('Model checkpoint loading')
+    logger.info(f'model state loaded from checkpoint file: "{file_path}"')
+    if optimizers_state is not None:
+        logger.info(f'optimizers state loaded from checkpoint')
+        if optimizers_state['adamw']:
+            logger.info('-- loaded state for adamW')
+        if optimizers_state['muon']:
+            logger.info('-- loaded state for Muon')
 
-        if train_dl_state is not None and val_dl_state is not None:
-            logger.info('Dataloaders state loaded')
-            _valid_keys = ['current_shard', 'current_position', 'epoch']
+    if train_dl_state is not None and val_dl_state is not None:
+        logger.info('Dataloaders state loaded')
+        _valid_keys = ['current_shard', 'current_position', 'epoch']
 
-            logger.info('--Train Loader state:')
-            logger.info({key: train_dl_state[key] for key in _valid_keys if key in train_dl_state})
+        logger.info('--Train Loader state:')
+        logger.info({key: train_dl_state[key] for key in _valid_keys if key in train_dl_state})
 
-            logger.info('--Val Loader state:')
-            logger.info({key: val_dl_state[key] for key in _valid_keys if key in val_dl_state})
+        logger.info('--Val Loader state:')
+        logger.info({key: val_dl_state[key] for key in _valid_keys if key in val_dl_state})
 
-        logger.section('Loaded config')
-        logger.info(state['config'], is_json=True)
+    logger.section('Loaded config')
+    logger.info(state['config'], is_json=True)
 
-        logger.section('Loaded model config')
-        logger.info(state['config'], is_json=True)
+    logger.section('Loaded model config')
+    logger.info(state['config'], is_json=True)
 
-        if step > 0:
-            logger.info(f'\nResuming from step: {step}')
-        else:
-            logger.info(f'\nStarting from step: 0')
-        logger.info(f'Last calculated loss: {last_val_loss:.4f}')
-        logger.info(f'Last calculated best loss: {best_val_loss:.4f}')
+    if step > 0:
+        logger.info(f'\nResuming from step: {step}')
+    else:
+        logger.info(f'\nStarting from step: 0')
+    logger.info(f'Last calculated loss: {last_val_loss:.4f}')
+    logger.info(f'Last calculated best loss: {best_val_loss:.4f}')
 
-        logger.info('\nExtra metadata stored in the checkpoint:')
-        logger.info(metadata, is_json=True)
+    logger.info('\nExtra metadata stored in the checkpoint:')
+    logger.info(metadata, is_json=True)
     
     # Delete large state file to free memory
     del state
     if torch.cuda.is_available():
-        if is_master_process:
-            logger.info('\nClearing cuda cache...\n')
+        logger.info('\nClearing cuda cache...\n')
         torch.cuda.empty_cache()
 
     return CheckpointData(

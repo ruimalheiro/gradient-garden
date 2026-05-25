@@ -68,6 +68,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - It also supports a `tiktoken` tokenizer that can be loaded from a local BPE file. For now, this path expects a tokenizer compatible with the Llama 3 tiktoken configuration and chat/control tokens, e.g. (`<|begin_of_text|>`, `<|end_of_text|>`, `<|start_header_id|>`, `<|end_header_id|>`, `<|eot_id|>`). The local tokenizer file is **not** included in this repository and must be provided separately. This will be made more generic later.
 
 ## Project structure
+- `cli/` Common cli related logic.
 - `datasets_preparation/` Components used for downloading, preparing, and tokenizing datasets.
 - `engine/` Trainer and runtime core components. The main ones are:
   - `checkpoints.py` Logic to handle checkpointing.
@@ -119,10 +120,12 @@ The project began with a decoder-only transformer baseline and has evolved into 
   - Most experiment settings currently live as defaults in `config.py`.
   - Recipes define experiment settings under the `config` section.
   - `.env` is only used for third party secrets and local cache settings: `WANDB_API_KEY`, `HF_TOKEN`, and `HF_HOME`.
+- `evaluate.py` CLI / entry point for evals / benchmarking.
+- `generate` CLI / entry point for inference against prompts.
 - `logger.py` Simple reusable logger.
 - `prepare_datasets.py` Entry point for data downloading and preparation.
 - `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretraining", "instruct", "dpo".
-- `train.py` Entry point for training runs.
+- `train.py` CLI / entry point for training runs.
 - `utils.py` Common generic logic that can be reused in different components.
 
 ## Setup

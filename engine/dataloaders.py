@@ -60,8 +60,7 @@ class PretrainingDataLoader:
         self.shards = [shard_path for _, shard_path in valid_shards]
         assert self.shards, f'no shards found in split {split}'
 
-        if is_master_process:
-            logger.info(f'found {len(self.shards)} shards for split {split}')
+        logger.info(f'found {len(self.shards)} shards for split {split}')
 
         self.validate_shards_size()
         self.reset()
@@ -187,8 +186,7 @@ class InstructDataLoader:
         self.ignore_index = ignore_index
 
         dataset = datasets.load_from_disk(os.path.join(data_root, split))
-        if is_master_process:
-            logger.info(f'found {len(dataset)} examples for {split}')
+        logger.info(f'found {len(dataset)} examples for {split}')
 
         self.is_master_process = is_master_process
 
@@ -278,8 +276,7 @@ class InstructDataLoader:
 
     def load_state_dict(self, state):
         if 'epoch' not in state:
-            if self.is_master_process:
-                logger.warn('"epoch" not present, starting fresh dataloader (most likely transition from pretraining to SFT).')
+            logger.warn('"epoch" not present, starting fresh dataloader (most likely transition from pretraining to SFT).')
             return
         epoch = state['epoch']
         self.sampler.set_epoch(epoch)
@@ -310,8 +307,7 @@ class DirectPreferenceOptimizationDataLoader:
         self.number_of_cpu_processes = number_of_cpu_processes
 
         dataset = datasets.load_from_disk(os.path.join(data_root, split))
-        if is_master_process:
-            logger.info(f'found {len(dataset)} examples for {split}')
+        logger.info(f'found {len(dataset)} examples for {split}')
 
         self.is_master_process = is_master_process
 
@@ -430,22 +426,24 @@ def init_data_loaders(
     training_stage,
     number_of_cpu_processes,
     ignore_index,
-    pad_id=None
+    pad_id=None,
+    validation_only=False
 ):
+    train_loader = None
     if training_stage == TrainingStage.PRETRAINING:
-        if is_master_process:
-            logger.section('Pretraining Data Loaders')
+        logger.section('Pretraining Data Loaders')
 
-        train_loader = PretrainingDataLoader(
-            batch_size=batch_size,
-            sequence_length=sequence_length,
-            is_master_process=is_master_process,
-            ddp_rank=ddp_rank,
-            ddp_world_size=ddp_world_size,
-            data_root=data_root,
-            split='train',
-            use_shuffle=True
-        )
+        if validation_only is False:
+            train_loader = PretrainingDataLoader(
+                batch_size=batch_size,
+                sequence_length=sequence_length,
+                is_master_process=is_master_process,
+                ddp_rank=ddp_rank,
+                ddp_world_size=ddp_world_size,
+                data_root=data_root,
+                split='train',
+                use_shuffle=True
+            )
         val_loader = PretrainingDataLoader(
             batch_size=batch_size,
             sequence_length=sequence_length,
@@ -459,23 +457,23 @@ def init_data_loaders(
     elif training_stage == TrainingStage.INSTRUCT:
         assert pad_id is not None
 
-        if is_master_process:
-            logger.section('Instruct Finetuning Data Loaders')
+        logger.section('Instruct Finetuning Data Loaders')
 
-        train_loader = InstructDataLoader(
-            batch_size=batch_size,
-            sequence_length=sequence_length,
-            is_master_process=is_master_process,
-            ddp_rank=ddp_rank,
-            ddp_world_size=ddp_world_size,
-            data_root=data_root,
-            split='train',
-            use_shuffle=True,
-            pad_id=pad_id,
-            drop_last=True,
-            number_of_cpu_processes=number_of_cpu_processes,
-            ignore_index=ignore_index
-        )
+        if validation_only is False:
+            train_loader = InstructDataLoader(
+                batch_size=batch_size,
+                sequence_length=sequence_length,
+                is_master_process=is_master_process,
+                ddp_rank=ddp_rank,
+                ddp_world_size=ddp_world_size,
+                data_root=data_root,
+                split='train',
+                use_shuffle=True,
+                pad_id=pad_id,
+                drop_last=True,
+                number_of_cpu_processes=number_of_cpu_processes,
+                ignore_index=ignore_index
+            )
         val_loader = InstructDataLoader(
             batch_size=batch_size,
             sequence_length=sequence_length,
@@ -493,22 +491,22 @@ def init_data_loaders(
     elif training_stage == TrainingStage.DPO:
         assert pad_id is not None
 
-        if is_master_process:
-            logger.section('Direct Preference Optimization Data Loaders')
+        logger.section('Direct Preference Optimization Data Loaders')
 
-        train_loader = DirectPreferenceOptimizationDataLoader(
-            batch_size=batch_size,
-            sequence_length=sequence_length,
-            is_master_process=is_master_process,
-            ddp_rank=ddp_rank,
-            ddp_world_size=ddp_world_size,
-            data_root=data_root,
-            split='train',
-            use_shuffle=True,
-            pad_id=pad_id,
-            drop_last=False,
-            number_of_cpu_processes=number_of_cpu_processes
-        )
+        if validation_only is False:
+            train_loader = DirectPreferenceOptimizationDataLoader(
+                batch_size=batch_size,
+                sequence_length=sequence_length,
+                is_master_process=is_master_process,
+                ddp_rank=ddp_rank,
+                ddp_world_size=ddp_world_size,
+                data_root=data_root,
+                split='train',
+                use_shuffle=True,
+                pad_id=pad_id,
+                drop_last=False,
+                number_of_cpu_processes=number_of_cpu_processes
+            )
         val_loader = DirectPreferenceOptimizationDataLoader(
             batch_size=batch_size,
             sequence_length=sequence_length,
