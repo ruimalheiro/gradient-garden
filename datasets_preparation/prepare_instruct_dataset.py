@@ -88,57 +88,31 @@ def ensure_user_first(conversation):
         return [{'role': 'user', 'content': ''}] + conversation
     return conversation
 
-def has_assistant_content(conversation):
-    return any(message['role'] == 'assistant' and message['content'].strip() for message in conversation)
+def trim_to_last_assistant(conversation):
+    for i in range(len(conversation) - 1, -1, -1):
+        if (
+            conversation[i]['role'] == 'assistant' and
+            conversation[i]['content'].strip()
+        ):
+            return conversation[:i + 1]
+    return []
 
 tokenizer = None
-SYS = None
-SYS_PROMPT = None
-NL = None
 
-def tokenize(tokenizer_kwargs, system_prompt, ignore_index, doc):
-    global tokenizer, SYS, SYS_PROMPT, NL
+def tokenize(tokenizer_kwargs, ignore_index, doc):
+    global tokenizer
     if tokenizer is None:
         tokenizer = init_tokenizer(**tokenizer_kwargs)
-        SYS = tokenizer.encode('system')
-        SYS_PROMPT = tokenizer.encode('\n' + system_prompt)
-        NL = tokenizer.encode('\n')
 
-    bot = tokenizer.bos_id
-    sh = tokenizer.sh_id
-    eh = tokenizer.eh_id
-    eot = tokenizer.eos_id
+    tokens, labels = tokenizer.encode_chat(
+        conversation=doc['conversation'],
+        ignore_index=ignore_index
+    )
 
-    tokens, labels = [], []
-    def push(tok_ids, is_assistant):
-        tokens.extend(tok_ids)
-        if is_assistant:
-            labels.extend(tok_ids)
-        else:
-            labels.extend([ignore_index] * len(tok_ids))
-
-    push([bot], False)
-    push([sh], False)
-    push(SYS, False)
-    push([eh], False)
-    push(SYS_PROMPT, False)
-    push([eot], False)
-
-    for interaction in doc['conversation']:
-        role = interaction['role']
-        content = interaction['content']
-
-        push([sh], False)
-        push(tokenizer.encode(role), False)
-        push([eh], False)
-        push(NL, False)
-        push(tokenizer.encode(content), role == 'assistant')
-        push([eot], role == 'assistant')
-
-    input_ids = np.array(tokens, dtype=np.uint32)
-    labels = np.array(labels[1:] + [ignore_index], dtype=np.int32)
-
-    return { 'input_ids': input_ids, 'labels': labels }
+    return {
+        'input_ids': np.array(tokens, dtype=np.uint32),
+        'labels': np.array(labels, dtype=np.int32)
+    }
 
 def download_and_prepare_data(
     *,
@@ -167,7 +141,7 @@ def download_and_prepare_data(
         transforms = dataset.get('transforms', {})
 
         max_datapoints = transforms.get('max_datapoints', None)
-        max_turns = transforms.get('max_turns', 8)
+        max_messages = transforms.get('max_messages', 8)
 
         hf_name = None if name == 'default' else name
 
@@ -186,13 +160,14 @@ def download_and_prepare_data(
         def normalize(doc):
             conversation = adapter(doc, transforms, seed)
             conversation = ensure_user_first(conversation)
-            conversation = conversation[:max_turns]
+            conversation = conversation[:max_messages]
+            conversation = trim_to_last_assistant(conversation)
 
             result = {'conversation': []}
             if config.data_preparation.hf_include_source_id:
                 result['source'] = ds_id
 
-            if not has_assistant_content(conversation):
+            if not conversation:
                 return result
 
             result['conversation'] = conversation
@@ -206,12 +181,16 @@ def download_and_prepare_data(
             partial(
                 tokenize,
                 tokenizer_kwargs,
-                config.prompts.system_prompt,
                 config.tokenizer.ignore_index
             ),
             num_proc=num_proc,
             remove_columns=columns_to_remove
         )
+
+        def has_supervision(example):
+            return any(label != config.tokenizer.ignore_index for label in example['labels'])
+
+        tokenized_ds = tokenized_ds.filter(has_supervision, num_proc=num_proc)
 
         prepared_datasets.append(tokenized_ds)
 

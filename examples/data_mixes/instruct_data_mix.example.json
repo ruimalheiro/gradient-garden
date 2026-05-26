@@ -6,7 +6,7 @@
         "weight": 1.0,
         "transforms": {
           "max_datapoints": 100,
-          "max_turns": 8
+          "max_messages": 8
         }
       }
     }
