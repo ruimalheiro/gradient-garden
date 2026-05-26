@@ -106,4 +106,4 @@ data:
         weight: 1.0
         transforms:
           max_datapoints: 50000
-          max_turns: 4
+          max_turns: 2
