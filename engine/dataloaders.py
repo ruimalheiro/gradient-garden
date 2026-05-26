@@ -200,8 +200,34 @@ class InstructDataLoader:
         )
 
         def collate(examples):
-            ids = [torch.tensor(e['input_ids']) for e in examples]
-            labels = [torch.tensor(e['labels']) for e in examples]
+            ids = []
+            labels = []
+
+            for i, e in enumerate(examples):
+                input_ids = torch.tensor(e['input_ids'], dtype=torch.long)
+                target_labels = torch.tensor(e['labels'], dtype=torch.long)
+
+                if input_ids.numel() == 0:
+                    raise ValueError(f'Empty input_ids in collate example {i}: {e}')
+                if target_labels.numel() == 0:
+                    raise ValueError(f'Empty labels in collate example {i}: {e}')
+                if input_ids.numel() != target_labels.numel():
+                    raise ValueError(
+                        f'input_ids/labels length do not match in collate example {i}: '
+                        f'{input_ids.numel()} vs {target_labels.numel()}'
+                    )
+                if (target_labels != self.ignore_index).sum().item() == 0:
+                    raise ValueError(f'No labels before truncation in collate example {i}: {e}')
+                if input_ids.numel() > sequence_length:
+                    input_ids = input_ids[-sequence_length:]
+                    target_labels = target_labels[-sequence_length:]
+                if (input_ids != int(pad_id)).sum().item() == 0:
+                    raise ValueError(f'Input ids after truncation are all pad tokens in collate example {i}: {e}')
+                if (target_labels != self.ignore_index).sum().item() == 0:
+                    raise ValueError(f'No labels after truncation in collate example {i}: {e}')
+
+                ids.append(input_ids)
+                labels.append(target_labels)
 
             ids = pad_sequence(
                 ids,
@@ -213,9 +239,6 @@ class InstructDataLoader:
                 batch_first=True,
                 padding_value=self.ignore_index
             )
-            if ids.size(1) > sequence_length:
-                ids  = ids[:, -sequence_length:]
-                labels = labels[:, -sequence_length:]
 
             return ids, labels
 
@@ -321,33 +344,55 @@ class DirectPreferenceOptimizationDataLoader:
         )
 
         def collate(examples):
-            prompt = [torch.tensor(e['prompt_input_ids']) for e in examples]
-            chosen = [torch.tensor(e['chosen_input_ids']) for e in examples]
-            rejected = [torch.tensor(e['rejected_input_ids']) for e in examples]
+            prompts = []
+            chosens = []
+            rejecteds = []
+
+            for i, e in enumerate(examples):
+                prompt = torch.tensor(e['prompt_input_ids'], dtype=torch.long)
+                chosen = torch.tensor(e['chosen_input_ids'], dtype=torch.long)
+                rejected = torch.tensor(e['rejected_input_ids'], dtype=torch.long)
+
+                if prompt.numel() == 0:
+                    raise ValueError(f'Empty prompt_input_ids in collate example {i}: {e}')
+                if chosen.numel() == 0:
+                    raise ValueError(f'Empty chosen_input_ids in collate example {i}: {e}')
+                if rejected.numel() == 0:
+                    raise ValueError(f'Empty rejected in collate example {i}: {e}')
+
+                if prompt.numel() > sequence_length:
+                    prompt = prompt[-sequence_length:]
+                if chosen.numel() > sequence_length:
+                    chosen = chosen[-sequence_length:]
+                if rejected.numel() > sequence_length:
+                    rejected = rejected[-sequence_length:]
+
+                if (prompt != int(pad_id)).sum().item() == 0:
+                    raise ValueError(f'The prompt after truncation is all pad tokens in collate example {i}: {e}')
+                if (chosen != int(pad_id)).sum().item() == 0:
+                    raise ValueError(f'The chosen after truncation is all pad tokens in collate example {i}: {e}')
+                if (rejected != int(pad_id)).sum().item() == 0:
+                    raise ValueError(f'The rejected after truncation is all pad tokens in collate example {i}: {e}')
+
+                prompts.append(prompt)
+                chosens.append(chosen)
+                rejecteds.append(rejected)
 
             prompt_padded = pad_sequence(
-                prompt,
+                prompts,
                 batch_first=True,
                 padding_value=int(pad_id)
             )
-            if prompt_padded.size(1) > sequence_length:
-                prompt_padded = prompt_padded[:, -sequence_length:]
-
             chosen_padded = pad_sequence(
-                chosen,
+                chosens,
                 batch_first=True,
                 padding_value=int(pad_id)
             )
-            if chosen_padded.size(1) > sequence_length:
-                chosen_padded = chosen_padded[:, -sequence_length:]
-
             rejected_padded = pad_sequence(
-                rejected,
+                rejecteds,
                 batch_first=True,
                 padding_value=int(pad_id)
             )
-            if rejected_padded.size(1) > sequence_length:
-                rejected_padded = rejected_padded[:, -sequence_length:]
 
             return prompt_padded, chosen_padded, rejected_padded
 
