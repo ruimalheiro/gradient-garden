@@ -59,7 +59,8 @@ def test_generate_batched_variable_lengths_smoke(model, tokenizer, device):
     assert isinstance(out, list)
     assert len(out) == len(prompts)
 
-    for gen_tokens in out:
+    for r in out:
+        gen_tokens = r['result']
         assert isinstance(gen_tokens, list)
         assert len(gen_tokens) <= max_gen_len
 
