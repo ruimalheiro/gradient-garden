@@ -15,7 +15,7 @@ class BaseTokenizer(ABC):
         bot = self.bos_id
         sh = self.sh_id
         eh = self.eh_id
-        eot = self.eot_id
+        eot = self.eos_id
 
         tokens = [bot, sh]
         if system_msg:

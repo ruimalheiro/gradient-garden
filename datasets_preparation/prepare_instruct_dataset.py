@@ -107,7 +107,7 @@ def tokenize(tokenizer_kwargs, system_prompt, ignore_index, doc):
     bot = tokenizer.bos_id
     sh = tokenizer.sh_id
     eh = tokenizer.eh_id
-    eot = tokenizer.eot_id
+    eot = tokenizer.eos_id
 
     tokens, labels = [], []
     def push(tok_ids, is_assistant):
