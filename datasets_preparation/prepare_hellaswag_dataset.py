@@ -3,7 +3,7 @@ import json
 import torch
 
 from pathlib import Path
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from tokenization.tokenizer import init_tokenizer
 from datasets import load_dataset
 from logger import logger

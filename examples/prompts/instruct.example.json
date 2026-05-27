@@ -1,0 +1,11 @@
+[
+  "What is the capital of France? Answer in one short sentence.",
+  "How do I cook a boiled egg? Give exactly three steps.",
+  "Write one sentence about rain.",
+  "Translate \"Good morning\" to Spanish. Only provide the translation.",
+  "List exactly three fruits.",
+  "Explain what a GPU is in simple words. Use at most two sentences.",
+  "Write a short friendly reply to: Can we meet tomorrow? Use at most one sentence.",
+  "Summarize in one sentence: Penguins are birds that cannot fly but are excellent swimmers.",
+  "Fix the grammar: He don't like apples. Only provide the corrected sentence."
+]

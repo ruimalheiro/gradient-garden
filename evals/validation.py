@@ -4,7 +4,7 @@ import math
 from inference.runtime import InferenceRuntime
 from config import GlobalConfig, TrainingStage
 from engine.dataloaders import init_data_loaders
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def get_dataloader_root_path(config):

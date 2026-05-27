@@ -65,7 +65,7 @@ if __name__ == '__main__':
     )
 
     outputs = generate_and_decode(
-        texts=prompts,
+        prompts=prompts,
         model=inference_runtime.model,
         tokenizer=inference_runtime.tokenizer,
         max_gen_len=args.max_gen_len,
@@ -85,7 +85,8 @@ if __name__ == '__main__':
     for prompt, output in zip(prompts, outputs):
         results.append({
             'prompt': prompt,
-            'output': output,
+            'output': output['result_decoded'],
+            'metadata': output['metadata']
         })
 
     data = {

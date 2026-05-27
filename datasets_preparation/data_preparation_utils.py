@@ -7,7 +7,7 @@ import multiprocessing as mp
 import hashlib
 import math
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from functools import partial
 from logger import logger
 

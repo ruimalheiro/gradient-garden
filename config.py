@@ -76,7 +76,7 @@ class ModelConfig(BaseModel):
 
 class PromptConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    system_prompt: str = 'You are a helpful AI assistant'
+    system_prompt: str = 'You are a helpful AI assistant.'
 
 class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

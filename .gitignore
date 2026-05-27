@@ -37,6 +37,10 @@ outputs/
 *.local.md
 *.private.md
 
+# Local python files
+*.local.py
+*.private.py
+
 # Optional extra ignores for local tokenizer assets
 tokenizer.model
 *.tiktoken

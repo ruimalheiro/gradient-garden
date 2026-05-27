@@ -157,6 +157,7 @@ class Trainer:
     def setup_global_torch_optimizations(self):
         torch.backends.cuda.matmul.fp32_precision = 'tf32'
         torch.backends.cudnn.conv.fp32_precision = 'tf32'
+        torch.backends.cuda.enable_cudnn_sdp(True)
 
     def build_contexts(self):
         device = self.build_distributed_context()
@@ -1082,7 +1083,7 @@ class Trainer:
             enabled=self.trainer_ctx.precision.use_autocast
         ):
             outputs = generate_and_decode(
-                texts=self.test_generation_prompts,
+                prompts=self.test_generation_prompts,
                 model=get_model(self.model),
                 tokenizer=self.tokenizer,
                 max_gen_len=self.config.generation.max_test_gen_len,
@@ -1099,8 +1100,8 @@ class Trainer:
             return
 
         logger.section(f'{self.trainer_state.current_step:4d} | Generation testing:', pbar=pbar)
-        for text in outputs:
-            logger.info(text, pbar=pbar)
+        for output in outputs:
+            logger.info(output['result_decoded'], pbar=pbar)
         logger.separator(pbar=pbar)
 
     def process_step(self, pbar):

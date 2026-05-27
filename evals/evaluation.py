@@ -7,7 +7,7 @@ from evals import (
     load_multiple_choice_eval_file,
     estimate_best_candidate_index_from_logits
 )
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 class EvalTask(str, Enum):

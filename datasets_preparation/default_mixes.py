@@ -18,7 +18,7 @@ DEFAULT_INSTRUCT_MIX = {
             'default': {
                 'weight': 1.0,
                 'transforms': {
-                    'max_turns': 8
+                    'max_messages': 8
                 }
             }
         }

@@ -74,20 +74,46 @@ def apply_no_repeat_ngram(current_tokens, logits, ngram_size):
         for banned_token in banned.get(prefix, ()):
             logits[batch_index, banned_token] = float('-inf')
 
-def build_tokens(tokens, prompt_tokens, stop_tokens, max_gen_len):
-    out_tokens = []
-    for i, toks in enumerate(tokens.tolist()):
+def build_response(tokens_batch, prompt_tokens, stop_tokens, max_gen_len, eos_id, eot_id):
+    stop_tokens_set = set(stop_tokens)
+    result = []
+    for i, tokens in enumerate(tokens_batch.tolist()):
         start = len(prompt_tokens[i])
-        toks = toks[start : len(prompt_tokens[i]) + max_gen_len]
+        raw_tokens = tokens[start : start + max_gen_len]
 
-        for stop_token in stop_tokens:
-            try:
-                eos_idx = toks.index(stop_token)
-                toks = toks[:eos_idx]
-            except ValueError:
-                pass
-        out_tokens.append(toks)
-    return out_tokens
+        stop_index = None
+        stop_token_id = None
+        result_tokens = raw_tokens
+        effective_tokens = raw_tokens
+
+        for j, token in enumerate(raw_tokens):
+            if token in stop_tokens_set:
+                stop_index = j
+                stop_token_id = token
+                result_tokens = raw_tokens[:stop_index]
+                effective_tokens = raw_tokens[:stop_index + 1]
+                break
+
+        effective_set = set(effective_tokens)
+
+        metadata = {
+            'generated_tokens_before_stop_or_limit': len(effective_tokens),
+            'result_tokens': len(result_tokens),
+            'last_generated_token_id': effective_tokens[-1] if effective_tokens else None,
+            'last_result_token_id': result_tokens[-1] if result_tokens else None,
+            'last_10_generated_token_ids': effective_tokens[-10:],
+            'contains_eos': eos_id in effective_set,
+            'contains_eot': eot_id in effective_set,
+            'stop_token_id': stop_token_id,
+            'stopped_by_stop_token': stop_index is not None,
+            'stop_index': stop_index,
+        }
+
+        result.append({
+            'metadata': metadata,
+            'result': result_tokens,
+        })
+    return result
 
 @torch.no_grad()
 def generate(
@@ -109,6 +135,8 @@ def generate(
     vocab_size = tokenizer.vocab_size
     pad_token_id = tokenizer.pad_id
     stop_tokens = tokenizer.stop_tokens
+    eos_id = tokenizer.eos_id
+    eot_id = tokenizer.eot_id
 
     # Finding the boundaries / limits.
     min_prompt_len = min(len(t) for t in prompt_tokens)
@@ -170,9 +198,16 @@ def generate(
         # Gets the next token depending on the condition (mask) and appends to tokens.
         next_token = torch.where(input_text_mask[:, current_position], tokens[:, current_position], next_token)
 
+        # Should keep padding if the row already finished in a previous iteration.
+        next_token = torch.where(
+            eos_reached & (~input_text_mask[:, current_position]),
+            torch.full_like(next_token, pad_token_id),
+            next_token,
+        )
+
         tokens[:, current_position] = next_token
 
-        # # Checks if we reached the eos on all sequences in the batch and updates the current position.
+        # Checks if we reached the eos on all sequences in the batch and updates the current position.
         eos_reached |= (~input_text_mask[:, current_position]) & (torch.isin(next_token, stop_tokens))
         if torch.all(eos_reached):
             break
@@ -182,15 +217,19 @@ def generate(
         start_position = current_position - 1 if use_kv_cache else 0
         out = model(tokens[:, start_position : current_position], start_position=start_position, kv_cache=kv_cache)
 
-    # For all the sequences, we extract all tokens up to a stop_token if it exists.
-    out_tokens = build_tokens(tokens, prompt_tokens, stop_tokens, max_gen_len)
-
-    return out_tokens
+    return build_response(
+        tokens,
+        prompt_tokens,
+        list(tokenizer.stop_tokens),
+        max_gen_len,
+        eos_id,
+        eot_id
+    )
 
 @torch.inference_mode()
 def generate_and_decode(
         *,
-        texts,
+        prompts,
         model,
         tokenizer,
         max_gen_len=256,
@@ -209,19 +248,19 @@ def generate_and_decode(
         vocab_size = tokenizer.vocab_size
         pad_token_id = tokenizer.pad_id
 
-        if not isinstance(texts, list):
-            texts = [texts]
+        if not isinstance(prompts, list):
+            prompts = [prompts]
 
         if batch_size is None:
-            batch_size = len(texts)
+            batch_size = len(prompts)
 
         if not skip_encoding:
-            if is_instruct:
-                prompt_tokens = [tokenizer.encode_instruct(text) for text in texts]
-            else:
-                prompt_tokens = [tokenizer.encode(text) for text in texts]
+            prompt_tokens = [
+                tokenizer.encode_instruct(prompt) if is_instruct else tokenizer.encode(prompt)
+                for prompt in prompts
+            ]
         else:
-            prompt_tokens = texts
+            prompt_tokens = prompts
         
         outputs = []
         for prompt_tokens_batches in batch_generator(prompt_tokens, batch_size):
@@ -243,12 +282,12 @@ def generate_and_decode(
         def validate_token(tokens):
             return [token if token < vocab_size else pad_token_id for token in tokens]
 
-        results = [tokenizer.decode(validate_token(t)) for t in outputs]
+        for prompt, output in zip(prompts, outputs):
+            result_decoded = tokenizer.decode(validate_token(output['result']))
 
-        outputs = []
-        for text, result in zip(texts, results):
             if full_seq:
-                outputs.append(f'{text} {result}' if is_instruct else f'{text}{result}')
+                output['result_decoded'] = f'{prompt} {result_decoded}' if is_instruct else f'{prompt}{result_decoded}'
             else:
-                outputs.append(result)
+                output['result_decoded'] = result_decoded
+
         return outputs

@@ -22,7 +22,7 @@ def device():
 def tokenizer():
     return init_tokenizer(
         path='HuggingFaceTB/SmolLM2-360M',
-        system_prompt='You are a helpful AI assistant',
+        system_prompt='You are a helpful AI assistant.',
         is_huggingface_tokenizer=True
     )
 
