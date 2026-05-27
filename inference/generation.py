@@ -256,7 +256,7 @@ def generate_and_decode(
 
         if not skip_encoding:
             prompt_tokens = [
-                tokenizer.encode_instruct(prompt) if is_instruct else tokenizer.encode(prompt)
+                tokenizer.encode_instruct_inference(prompt) if is_instruct else tokenizer.encode(prompt)
                 for prompt in prompts
             ]
         else:

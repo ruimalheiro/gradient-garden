@@ -104,7 +104,7 @@ def tokenize(tokenizer_kwargs, ignore_index, doc):
     if tokenizer is None:
         tokenizer = init_tokenizer(**tokenizer_kwargs)
 
-    tokens, labels = tokenizer.encode_chat(
+    tokens, labels = tokenizer.encode_instruct_chat(
         conversation=doc['conversation'],
         ignore_index=ignore_index
     )
