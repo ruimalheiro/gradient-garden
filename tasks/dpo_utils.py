@@ -52,13 +52,17 @@ def dpo_loss(
     margin_avg = margin.mean().item()
     pol_logprobs_pos = policy_log_probs_pos.mean().item()
     pol_logprobs_neg = policy_log_probs_neg.mean().item()
+    ref_logprobs_pos = reference_log_probs_pos.mean().item()
+    ref_logprobs_neg = reference_log_probs_neg.mean().item()
 
     metrics_s = (
         f'rewards/chosen: {rewards_chosen:4f} | '
         f'rewards/rejected: {rewards_rejected:4f} | '
         f'accuracy: {accuracy:4f} | margin: {margin_avg:4f} | '
         f'pol_logprobs/chosen: {pol_logprobs_pos:4f} | '
-        f'pol_logprobs/rejected: {pol_logprobs_neg:4f}'
+        f'pol_logprobs/rejected: {pol_logprobs_neg:4f} | '
+        f'ref_logprobs/chosen: {ref_logprobs_pos:4f} | '
+        f'ref_logprobs/rejected: {ref_logprobs_neg:4f}'
     )
     metrics = {
         'str': metrics_s,
@@ -68,7 +72,9 @@ def dpo_loss(
             'Accuracy': accuracy,
             'Margin': margin_avg,
             'PolicyLogP/Chosen': pol_logprobs_pos,
-            'PolicyLogP/Rejected': pol_logprobs_neg
+            'PolicyLogP/Rejected': pol_logprobs_neg,
+            'ReferenceLogP/Chosen': ref_logprobs_pos,
+            'ReferenceLogP/Rejected': ref_logprobs_neg
         }
     }
     return loss, metrics

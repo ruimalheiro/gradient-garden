@@ -100,7 +100,6 @@ class DPOTask(BaseTask):
             n_valid=n_valid,
             loss=loss,
             loss_for_backward=loss_for_backward,
-            console_logs=[dpo_metrics['str']],
             metrics={
                 'Train Loss': loss.detach(),
                 **dpo_metrics['wandb']
@@ -153,6 +152,5 @@ class DPOTask(BaseTask):
         return TaskStepOutput(
             n_valid=n_valid,
             loss=loss,
-            console_logs=[dpo_metrics['str']],
             metrics=dpo_metrics['wandb']
         )
