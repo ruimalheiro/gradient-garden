@@ -81,3 +81,49 @@ class BaseTokenizer(ABC):
         labels = labels[1:] + [ignore_index]
 
         return tokens, labels
+
+    def encode_chat_dpo(
+        self,
+        *,
+        conversation: object,
+        chosen: str,
+        rejected: str,
+    ):
+        bot = self.bos_id
+        sh = self.sh_id
+        eh = self.eh_id
+        eot = self.eot_id
+
+        tokens = []
+        tokens.extend([bot])
+        tokens.extend([sh])
+        tokens.extend(self.encode('system'))
+        tokens.extend([eh])
+        tokens.extend(self.encode('\n' + self.system_prompt))
+        tokens.extend([eot])
+
+        for interaction in conversation:
+            role = interaction['role']
+            content = interaction['content']
+
+            tokens.extend([sh])
+            tokens.extend(self.encode(role))
+            tokens.extend([eh])
+            tokens.extend(self.encode('\n'))
+            tokens.extend(self.encode(content))
+            tokens.extend([eot])
+
+        def build_answer_sequence(text):
+            tokens = []
+            tokens.extend([sh])
+            tokens.extend(self.encode('assistant'))
+            tokens.extend([eh])
+            tokens.extend(self.encode('\n'))
+            tokens.extend(self.encode(text))
+            tokens.extend([eot])
+            return tokens
+
+        chosen_tokens = build_answer_sequence(chosen)
+        rejected_tokens = build_answer_sequence(rejected)
+
+        return tokens, chosen_tokens, rejected_tokens

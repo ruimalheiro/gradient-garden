@@ -69,62 +69,21 @@ def ensure_user_first(conversation):
     return conversation
 
 tokenizer = None
-SYS = None
-SYS_PROMPT = None
-NL = None
-ASSIST = None
 
 def tokenize(tokenizer_kwargs, system_prompt, doc):
-    global tokenizer, SYS, SYS_PROMPT, NL, ASSIST
+    global tokenizer
     if tokenizer is None:
         tokenizer = init_tokenizer(**tokenizer_kwargs)
-        SYS = tokenizer.encode('system')
-        SYS_PROMPT = tokenizer.encode('\n' + system_prompt)
-        NL = tokenizer.encode('\n')
-        ASSIST = tokenizer.encode('assistant')
 
-    prompt_sequence = doc['prompt']
-    chosen_assistant = doc['chosen']
-    rejected_assistant = doc['rejected']
+    prompt_tokens, chosen_tokens, rejected_tokens = tokenizer.encode_chat_dpo(
+        conversation=doc['prompt'],
+        chosen=doc['chosen'],
+        rejected=doc['rejected']
+    )
 
-    bot = tokenizer.bos_id
-    sh = tokenizer.sh_id
-    eh = tokenizer.eh_id
-    eot = tokenizer.eot_id
-
-    tokens = []
-    tokens.extend([bot])
-    tokens.extend([sh])
-    tokens.extend(SYS)
-    tokens.extend([eh])
-    tokens.extend(SYS_PROMPT)
-    tokens.extend([eot])
-
-    for interaction in prompt_sequence:
-        role = interaction['role']
-        content = interaction['content']
-
-        tokens.extend([sh])
-        tokens.extend(tokenizer.encode(role))
-        tokens.extend([eh])
-        tokens.extend(NL)
-        tokens.extend(tokenizer.encode(content))
-        tokens.extend([eot])
-
-    prompt_input_ids = np.array(tokens, dtype=np.uint32)
-
-    def build_answer_sequence(text):
-        tokens = []
-        tokens.extend([sh])
-        tokens.extend(ASSIST)
-        tokens.extend([eh])
-        tokens.extend(NL)
-        tokens.extend(tokenizer.encode(text))
-        tokens.extend([eot])
-        return np.array(tokens, dtype=np.uint32)
-
-    chosen_input_ids = build_answer_sequence(chosen_assistant)
-    rejected_input_ids = build_answer_sequence(rejected_assistant)
+    prompt_input_ids = np.array(prompt_tokens, dtype=np.uint32)
+    chosen_input_ids = np.array(chosen_tokens, dtype=np.uint32)
+    rejected_input_ids = np.array(rejected_tokens, dtype=np.uint32)
 
     return { 
         'prompt_input_ids': prompt_input_ids,
