@@ -4,6 +4,7 @@ import torch
 import random
 import datasets
 import torch.distributed as dist
+import torch.nn.functional as F
 import re
 
 from torch.utils.data import DataLoader
@@ -19,6 +20,26 @@ def load_tokens(filename):
         npt = npt.astype(np.int64)
     ptt = torch.from_numpy(npt)
     return ptt
+
+def pad_batch_to_multiple_of(*, sequences, padding_value, multiple, max_length=None):
+    padded = pad_sequence(
+        sequences,
+        batch_first=True,
+        padding_value=padding_value
+    )
+
+    if multiple is None or multiple <= 1:
+        return padded
+
+    seq_len = padded.size(1)
+    target_len = ((seq_len + multiple - 1) // multiple) * multiple
+    if max_length is not None:
+        target_len = min(target_len, max_length)
+
+    remaining = target_len - seq_len
+    if remaining <= 0:
+        return padded
+    return F.pad(padded, (0, remaining), value=padding_value)
 
 class PretrainingDataLoader:
     def __init__(
@@ -196,7 +217,8 @@ class InstructDataLoader:
             dataset,
             num_replicas=ddp_world_size,
             rank=ddp_rank,
-            shuffle=use_shuffle
+            shuffle=use_shuffle,
+            drop_last=drop_last
         )
 
         def collate(examples):
@@ -229,15 +251,17 @@ class InstructDataLoader:
                 ids.append(input_ids)
                 labels.append(target_labels)
 
-            ids = pad_sequence(
-                ids,
-                batch_first=True,
-                padding_value=int(pad_id)
+            ids = pad_batch_to_multiple_of(
+                sequences=ids,
+                padding_value=int(pad_id),
+                multiple=8,
+                max_length=sequence_length,
             )
-            labels = pad_sequence(
-                labels,
-                batch_first=True,
-                padding_value=self.ignore_index
+            labels = pad_batch_to_multiple_of(
+                sequences=labels,
+                padding_value=self.ignore_index,
+                multiple=8,
+                max_length=sequence_length,
             )
 
             return ids, labels
@@ -340,7 +364,8 @@ class DirectPreferenceOptimizationDataLoader:
             dataset,
             num_replicas=ddp_world_size,
             rank=ddp_rank,
-            shuffle=use_shuffle
+            shuffle=use_shuffle,
+            drop_last=drop_last
         )
 
         def collate(examples):
@@ -378,20 +403,23 @@ class DirectPreferenceOptimizationDataLoader:
                 chosens.append(chosen)
                 rejecteds.append(rejected)
 
-            prompt_padded = pad_sequence(
-                prompts,
-                batch_first=True,
-                padding_value=int(pad_id)
+            prompt_padded = pad_batch_to_multiple_of(
+                sequences=prompts,
+                padding_value=int(pad_id),
+                multiple=8,
+                max_length=sequence_length,
             )
-            chosen_padded = pad_sequence(
-                chosens,
-                batch_first=True,
-                padding_value=int(pad_id)
+            chosen_padded = pad_batch_to_multiple_of(
+                sequences=chosens,
+                padding_value=int(pad_id),
+                multiple=8,
+                max_length=sequence_length,
             )
-            rejected_padded = pad_sequence(
-                rejecteds,
-                batch_first=True,
-                padding_value=int(pad_id)
+            rejected_padded = pad_batch_to_multiple_of(
+                sequences=rejecteds,
+                padding_value=int(pad_id),
+                multiple=8,
+                max_length=sequence_length,
             )
 
             return prompt_padded, chosen_padded, rejected_padded

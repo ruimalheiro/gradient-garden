@@ -157,6 +157,7 @@ class Trainer:
     def setup_global_torch_optimizations(self):
         torch.backends.cuda.matmul.fp32_precision = 'tf32'
         torch.backends.cudnn.conv.fp32_precision = 'tf32'
+        torch.backends.cuda.enable_cudnn_sdp(True)
 
     def build_contexts(self):
         device = self.build_distributed_context()
