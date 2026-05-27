@@ -30,7 +30,7 @@ class ThirdPartyConfig(BaseSettings):
     model_config = ConfigDict(env_file='.env', extra='ignore')
     wandb_api_key: Annotated[str | None, Field(alias='WANDB_API_KEY', exclude=True)] = None
     hf_token: Annotated[str | None, Field(alias='HF_TOKEN', exclude=True)] = None
-    hf_home: str = Field(default='./cache', alias='HF_HOME')
+    hf_home: str = Field(default=str(Path.cwd() / 'cache'), alias='HF_HOME')
 
 class DatasetPreparationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

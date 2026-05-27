@@ -70,25 +70,30 @@ def ensure_user_first(conversation):
 
 tokenizer = None
 
-def tokenize(tokenizer_kwargs, system_prompt, doc):
+def tokenize(tokenizer_kwargs, ignore_index, doc):
     global tokenizer
     if tokenizer is None:
         tokenizer = init_tokenizer(**tokenizer_kwargs)
 
-    prompt_tokens, chosen_tokens, rejected_tokens = tokenizer.encode_chat_dpo(
+    (
+        prompt_input_ids,
+        chosen_input_ids,
+        chosen_labels,
+        rejected_input_ids,
+        rejected_labels
+    ) = tokenizer.encode_instruct_chat_dpo(
         conversation=doc['prompt'],
         chosen=doc['chosen'],
-        rejected=doc['rejected']
+        rejected=doc['rejected'],
+        ignore_index=ignore_index
     )
 
-    prompt_input_ids = np.array(prompt_tokens, dtype=np.uint32)
-    chosen_input_ids = np.array(chosen_tokens, dtype=np.uint32)
-    rejected_input_ids = np.array(rejected_tokens, dtype=np.uint32)
-
-    return { 
-        'prompt_input_ids': prompt_input_ids,
-        'chosen_input_ids': chosen_input_ids,
-        'rejected_input_ids': rejected_input_ids 
+    return {
+        'prompt_input_ids': np.array(prompt_input_ids, dtype=np.uint32),
+        'chosen_input_ids': np.array(chosen_input_ids, dtype=np.uint32),
+        'chosen_labels': np.array(chosen_labels, dtype=np.int64),
+        'rejected_input_ids': np.array(rejected_input_ids, dtype=np.uint32),
+        'rejected_labels': np.array(rejected_labels, dtype=np.int64),
     }
 
 def download_and_prepare_data(
@@ -149,7 +154,7 @@ def download_and_prepare_data(
             partial(
                 tokenize,
                 tokenizer_kwargs,
-                config.prompts.system_prompt
+                config.tokenizer.ignore_index
             ),
             num_proc=num_proc,
             remove_columns=columns_to_remove

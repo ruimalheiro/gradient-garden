@@ -343,7 +343,8 @@ class DirectPreferenceOptimizationDataLoader:
         use_shuffle,
         pad_id,
         drop_last,
-        number_of_cpu_processes
+        number_of_cpu_processes,
+        ignore_index
     ):
         self.B = batch_size
         self.S = sequence_length
@@ -352,6 +353,7 @@ class DirectPreferenceOptimizationDataLoader:
         self.ddp_world_size = ddp_world_size
         self.total_tokens = None
         self.number_of_cpu_processes = number_of_cpu_processes
+        self.ignore_index = ignore_index
 
         dataset = datasets.load_from_disk(os.path.join(data_root, split))
         logger.info(f'found {len(dataset)} examples for {split}')
@@ -369,60 +371,87 @@ class DirectPreferenceOptimizationDataLoader:
         )
 
         def collate(examples):
-            prompts = []
-            chosens = []
-            rejecteds = []
+            chosen_ids = []
+            chosen_labels = []
+            rejected_ids = []
+            rejected_labels = []
 
             for i, e in enumerate(examples):
-                prompt = torch.tensor(e['prompt_input_ids'], dtype=torch.long)
-                chosen = torch.tensor(e['chosen_input_ids'], dtype=torch.long)
-                rejected = torch.tensor(e['rejected_input_ids'], dtype=torch.long)
+                chosen_input_ids = torch.tensor(e['chosen_input_ids'], dtype=torch.long)
+                chosen_target_labels = torch.tensor(e['chosen_labels'], dtype=torch.long)
+                rejected_input_ids = torch.tensor(e['rejected_input_ids'], dtype=torch.long)
+                rejected_target_labels = torch.tensor(e['rejected_labels'], dtype=torch.long)
 
-                if prompt.numel() == 0:
-                    raise ValueError(f'Empty prompt_input_ids in collate example {i}: {e}')
-                if chosen.numel() == 0:
+                if chosen_input_ids.numel() == 0:
                     raise ValueError(f'Empty chosen_input_ids in collate example {i}: {e}')
-                if rejected.numel() == 0:
-                    raise ValueError(f'Empty rejected in collate example {i}: {e}')
+                if chosen_target_labels.numel() == 0:
+                    raise ValueError(f'Empty chosen_labels in collate example {i}: {e}')
+                if rejected_input_ids.numel() == 0:
+                    raise ValueError(f'Empty rejected_input_ids in collate example {i}: {e}')
+                if rejected_target_labels.numel() == 0:
+                    raise ValueError(f'Empty rejected_labels in collate example {i}: {e}')
+                if chosen_input_ids.numel() != chosen_target_labels.numel():
+                    raise ValueError(
+                        f'chosen input_ids/labels length do not match in collate example {i}: '
+                        f'{chosen_input_ids.numel()} vs {chosen_target_labels.numel()}'
+                    )
+                if rejected_input_ids.numel() != rejected_target_labels.numel():
+                    raise ValueError(
+                        f'rejected input_ids/labels length do not match in collate example {i}: '
+                        f'{rejected_input_ids.numel()} vs {rejected_target_labels.numel()}'
+                    )
+                if (chosen_target_labels != self.ignore_index).sum().item() == 0:
+                    raise ValueError(f'No chosen labels before truncation in collate example {i}: {e}')
+                if (rejected_target_labels != self.ignore_index).sum().item() == 0:
+                    raise ValueError(f'No rejected labels before truncation in collate example {i}: {e}')
 
-                if prompt.numel() > sequence_length:
-                    prompt = prompt[-sequence_length:]
-                if chosen.numel() > sequence_length:
-                    chosen = chosen[-sequence_length:]
-                if rejected.numel() > sequence_length:
-                    rejected = rejected[-sequence_length:]
+                if chosen_input_ids.numel() > sequence_length:
+                    chosen_input_ids = chosen_input_ids[-sequence_length:]
+                    chosen_target_labels = chosen_target_labels[-sequence_length:]
+                if rejected_input_ids.numel() > sequence_length:
+                    rejected_input_ids = rejected_input_ids[-sequence_length:]
+                    rejected_target_labels = rejected_target_labels[-sequence_length:]
 
-                if (prompt != int(pad_id)).sum().item() == 0:
-                    raise ValueError(f'The prompt after truncation is all pad tokens in collate example {i}: {e}')
-                if (chosen != int(pad_id)).sum().item() == 0:
-                    raise ValueError(f'The chosen after truncation is all pad tokens in collate example {i}: {e}')
-                if (rejected != int(pad_id)).sum().item() == 0:
-                    raise ValueError(f'The rejected after truncation is all pad tokens in collate example {i}: {e}')
+                if (chosen_input_ids != int(pad_id)).sum().item() == 0:
+                    raise ValueError(f'Chosen input ids after truncation are all pad tokens in collate example {i}: {e}')
+                if (rejected_input_ids != int(pad_id)).sum().item() == 0:
+                    raise ValueError(f'Rejected input ids after truncation are all pad tokens in collate example {i}: {e}')
+                if (chosen_target_labels != self.ignore_index).sum().item() == 0:
+                    raise ValueError(f'No chosen labels after truncation in collate example {i}: {e}')
+                if (rejected_target_labels != self.ignore_index).sum().item() == 0:
+                    raise ValueError(f'No rejected labels after truncation in collate example {i}: {e}')
 
-                prompts.append(prompt)
-                chosens.append(chosen)
-                rejecteds.append(rejected)
+                chosen_ids.append(chosen_input_ids)
+                chosen_labels.append(chosen_target_labels)
+                rejected_ids.append(rejected_input_ids)
+                rejected_labels.append(rejected_target_labels)
 
-            prompt_padded = pad_batch_to_multiple_of(
-                sequences=prompts,
+            chosen_ids = pad_batch_to_multiple_of(
+                sequences=chosen_ids,
                 padding_value=int(pad_id),
                 multiple=8,
                 max_length=sequence_length,
             )
-            chosen_padded = pad_batch_to_multiple_of(
-                sequences=chosens,
+            chosen_labels = pad_batch_to_multiple_of(
+                sequences=chosen_labels,
+                padding_value=self.ignore_index,
+                multiple=8,
+                max_length=sequence_length,
+            )
+            rejected_ids = pad_batch_to_multiple_of(
+                sequences=rejected_ids,
                 padding_value=int(pad_id),
                 multiple=8,
                 max_length=sequence_length,
             )
-            rejected_padded = pad_batch_to_multiple_of(
-                sequences=rejecteds,
-                padding_value=int(pad_id),
+            rejected_labels = pad_batch_to_multiple_of(
+                sequences=rejected_labels,
+                padding_value=self.ignore_index,
                 multiple=8,
                 max_length=sequence_length,
             )
 
-            return prompt_padded, chosen_padded, rejected_padded
+            return chosen_ids, chosen_labels, rejected_ids, rejected_labels
 
         self._dataloader = DataLoader(
             dataset,
@@ -458,7 +487,7 @@ class DirectPreferenceOptimizationDataLoader:
 
         def _calculate():
             return sum(self._dataloader.dataset.map(
-                lambda ex: {'len': len(ex['prompt_input_ids']) + len(ex['chosen_input_ids']) + len(ex['rejected_input_ids'])},
+                lambda ex: {'len': len(ex['chosen_input_ids']) + len(ex['rejected_input_ids'])},
                 num_proc=self.number_of_cpu_processes,
                 remove_columns=[],
                 desc='Calculating number of tokens'
@@ -577,8 +606,9 @@ def init_data_loaders(
                 split='train',
                 use_shuffle=True,
                 pad_id=pad_id,
-                drop_last=False,
-                number_of_cpu_processes=number_of_cpu_processes
+                drop_last=True,
+                number_of_cpu_processes=number_of_cpu_processes,
+                ignore_index=ignore_index
             )
         val_loader = DirectPreferenceOptimizationDataLoader(
             batch_size=batch_size,
@@ -591,7 +621,8 @@ def init_data_loaders(
             use_shuffle=False,
             pad_id=pad_id,
             drop_last=False,
-            number_of_cpu_processes=number_of_cpu_processes
+            number_of_cpu_processes=number_of_cpu_processes,
+            ignore_index=ignore_index
         )
     else:
         raise ValueError('Invalid training stage for dataloader')

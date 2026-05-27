@@ -64,6 +64,42 @@ def prepare_workload_summary(
 
     return summary
 
+def format_dpo_console_metrics(aggregated_metrics: dict[str, float]) -> str:
+    required = [
+        'Accuracy',
+        'Margin',
+        'Rewards/Chosen',
+        'Rewards/Rejected',
+    ]
+
+    if not all(key in aggregated_metrics for key in required):
+        return ''
+
+    acc = aggregated_metrics['Accuracy']
+    margin = aggregated_metrics['Margin']
+    reward_chosen = aggregated_metrics['Rewards/Chosen']
+    reward_rejected = aggregated_metrics['Rewards/Rejected']
+
+    message = (
+        f'\n       dpo acc: {acc:.4f} | '
+        f'margin: {margin:.4f} | '
+        f'r+/r-: {reward_chosen:.4f} / {reward_rejected:.4f}'
+    )
+
+    if (
+        'PolicyLogP/Chosen' in aggregated_metrics and
+        'PolicyLogP/Rejected' in aggregated_metrics
+    ):
+        policy_chosen = aggregated_metrics['PolicyLogP/Chosen']
+        policy_rejected = aggregated_metrics['PolicyLogP/Rejected']
+
+        message += (
+            f' | '
+            f'logp+/logp-: {policy_chosen:.2f} / {policy_rejected:.2f}'
+        )
+
+    return message
+
 def prepare_train_step_log(
     *,
     step_metrics: StepMetrics,
@@ -95,6 +131,8 @@ def prepare_train_step_log(
     peak_allocated_mb = memory_usage_metrics.peak_allocated_mb
     peak_reserved_mb = memory_usage_metrics.peak_reserved_mb
 
+    dpo_console_message = format_dpo_console_metrics(aggregated_metrics)
+
     console_log = (
         f'{step:4d} | '
         f'train loss: {train_loss:.4f} | '
@@ -105,6 +143,7 @@ def prepare_train_step_log(
         f'tok/s: {int(tokens_per_sec)}'
         f'\n       mem MiB current alloc/res: {current_allocated_mb:.0f} / {current_reserved_mb:.0f} | '
         f'peak alloc/res: {peak_allocated_mb:.0f} / {peak_reserved_mb:.0f}'
+        f'{dpo_console_message}'
     )
 
     wandb_metrics = dict(aggregated_metrics)
@@ -137,9 +176,12 @@ def prepare_val_step_log(
 
     step = trainer_state.current_step
 
+    dpo_console_message = format_dpo_console_metrics(aggregated_metrics)
+
     console_log = (
         f'{step:4d} | '
         f'val loss: {trainer_state.last_val_loss:.4f}'
+        f'{dpo_console_message}'
     )
 
     wandb_metrics = {'Validation Loss': trainer_state.last_val_loss}

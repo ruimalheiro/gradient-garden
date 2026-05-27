@@ -2,47 +2,30 @@ import torch
 import torch.nn.functional as F
 
 
-def dpo_log_probs(model, prompt_ids, resp_ids):
-    ''' Computes de log probabilities for each entry in the batch. Prompt + response.
+def dpo_log_probs(model, input_ids, labels, ignore_index):
+    ''' Computes de log probabilities for DPO.
 
-        Assumes dimensions prompt_ids [B, P] and resp_ids [B, R]
+        Assumes dimensions input_ids [B, L] and labels_ids [B, L]
+        labels here are already shifted. Prompt and pad tokens are ignore_index (ignored)
     '''
-    device = prompt_ids.device
-
-    # Get dimensions
-    B, P = prompt_ids.shape
-    R = resp_ids.size(1)
-
-    # Here we concatenate prompt + response but remove the last token (once it goes in the model, for each token we predict the next). Lets assume L = size prompt length + response length
-    full_input = torch.cat([prompt_ids, resp_ids[:, :-1]], dim=1) # [B, L]
-    # The response flattened
-    labels = resp_ids.reshape(-1) # [B * R]
-
     # compute logits
-    logits = model(full_input)['logits'] # [B, L, V]
+    logits = model(input_ids)['logits'] # [B, L, V]
+    log_probs = F.log_softmax(logits, dim=-1)
 
-    # Flatten B * L
-    logits_flat = F.log_softmax(logits, dim=-1).view(-1, logits.size(-1)) # [B * L, V]
+    mask = labels != ignore_index # [B, L]
+    safe_labels = labels.masked_fill(~mask, 0)
 
-    L = logits.size(1)
-    # Since we have a flat representation and we need to get the logprobs of the response segments, we do:
-    # - Generate the base indexes that will contain the response for the first item in the batch. Then repeat this B times E.g: Indexes [3, 4, 5] and B = 2 -> [[3, 4, 5], [3, 4, 5]]
-    base_indexes = torch.arange(P - 1, L, device=device).repeat(B)
-    # - Generate the offsets by taking advantage of batch size and creating B entries that jump L by L E.g: If L is 2 [[0],[2]]. Finally for each of them we allocate
-    # space for the response by repeating R times. E.g if R = 2 -> [[0, 0],[2, 2]]
-    offsets = (torch.arange(B, device=device) * L).repeat_interleave(R)
+    token_log_probs = log_probs.gather(
+        dim=-1,
+        index=safe_labels.unsqueeze(-1)
+    ).squeeze(-1) # [B, L]
 
-    # Add them together and we have a mask for all the resp positions accross all entries.
-    resp_pos = base_indexes + offsets
+    # cancels the fake log probs in token_log_probs
+    token_log_probs = token_log_probs * mask
 
-    # Get log probabilites of the response tokens (labels)
-    resp_logp = logits_flat[resp_pos, labels]
-
-    # Restore dimensions and sum accoss axis 1 to get the response log probs for each entry in the batch
-    logp_per_sequence = resp_logp.view(B, R).sum(dim=-1)
+    logp_per_sequence = token_log_probs.sum(dim=-1)  # [B]
 
     return logp_per_sequence
-
 
 def dpo_loss(
     policy_log_probs_pos,
@@ -69,8 +52,18 @@ def dpo_loss(
     margin_avg = margin.mean().item()
     pol_logprobs_pos = policy_log_probs_pos.mean().item()
     pol_logprobs_neg = policy_log_probs_neg.mean().item()
+    ref_logprobs_pos = reference_log_probs_pos.mean().item()
+    ref_logprobs_neg = reference_log_probs_neg.mean().item()
 
-    metrics_s = f'rewards/chosen: {rewards_chosen:4f} | rewards/rejected: {rewards_rejected:4f} | accuracy: {accuracy:4f} | margin: {margin_avg:4f} | pol_logprobs/chosen: {pol_logprobs_pos:4f} | pol_logprobs/rejected: {pol_logprobs_neg:4f}'
+    metrics_s = (
+        f'rewards/chosen: {rewards_chosen:4f} | '
+        f'rewards/rejected: {rewards_rejected:4f} | '
+        f'accuracy: {accuracy:4f} | margin: {margin_avg:4f} | '
+        f'pol_logprobs/chosen: {pol_logprobs_pos:4f} | '
+        f'pol_logprobs/rejected: {pol_logprobs_neg:4f} | '
+        f'ref_logprobs/chosen: {ref_logprobs_pos:4f} | '
+        f'ref_logprobs/rejected: {ref_logprobs_neg:4f}'
+    )
     metrics = {
         'str': metrics_s,
         'wandb': {
@@ -79,7 +72,9 @@ def dpo_loss(
             'Accuracy': accuracy,
             'Margin': margin_avg,
             'PolicyLogP/Chosen': pol_logprobs_pos,
-            'PolicyLogP/Rejected': pol_logprobs_neg
+            'PolicyLogP/Rejected': pol_logprobs_neg,
+            'ReferenceLogP/Chosen': ref_logprobs_pos,
+            'ReferenceLogP/Rejected': ref_logprobs_neg
         }
     }
     return loss, metrics

@@ -1,6 +1,78 @@
 from abc import ABC, abstractmethod
 
 
+class PromptBuilder:
+    def __init__(self, tokenizer, *, ignore_index=None, no_labels=False):
+        self.tokenizer = tokenizer
+        if no_labels is False and ignore_index is None:
+            raise ValueError('ignore_index cannot be None when building labels')
+        self.ignore_index = ignore_index
+        self.no_labels = no_labels
+        self.system_prompt = tokenizer.system_prompt
+        self.bot = tokenizer.bos_id
+        self.sh = tokenizer.sh_id
+        self.eh = tokenizer.eh_id
+        self.eot = tokenizer.eot_id
+        self.eos = tokenizer.eos_id
+        self.tokens = []
+        self.labels = []
+
+    def encode(self, text):
+        return self.tokenizer.encode(text)
+
+    def push(self, tok_ids, supervise=False):
+        self.tokens.extend(tok_ids)
+        if self.no_labels:
+            return
+        if supervise:
+            self.labels.extend(tok_ids)
+        else:
+            self.labels.extend([self.ignore_index] * len(tok_ids))
+
+    def add_header(self, system_msg=True):
+        self.push([self.bot], supervise=False)
+        if system_msg:
+            self.add_role_prefix('system')
+            self.push(self.encode(self.system_prompt), supervise=False)
+            self.push([self.eot], supervise=False)
+
+    def add_role_prefix(self, role):
+        self.push([self.sh], supervise=False)
+        self.push(self.encode(role), supervise=False)
+        self.push([self.eh], supervise=False)
+        self.push(self.encode('\n'), supervise=False)
+
+    def add_message(self, role, text, *, supervise=False, final_assistant=False):
+        self.add_role_prefix(role)
+        self.push(self.encode(text), supervise=supervise)
+        if final_assistant:
+            self.push([self.eos], supervise=supervise)
+        else:
+            self.push([self.eot], supervise=supervise and role == 'assistant')
+
+    def clone(self):
+        other = PromptBuilder(
+            self.tokenizer,
+            ignore_index=self.ignore_index,
+            no_labels=self.no_labels
+        )
+        other.tokens = list(self.tokens)
+        other.labels = list(self.labels)
+        return other
+
+    def build(self):
+        if self.no_labels:
+            return self.tokens
+
+        if len(self.tokens) != len(self.labels):
+            raise ValueError(
+                f'Tokens and labels length do not match: {len(self.tokens)} vs {len(self.labels)}'
+            )
+
+        shifted_labels = self.labels[1:] + [self.ignore_index]
+
+        return self.tokens, shifted_labels
+
 class BaseTokenizer(ABC):
 
     @abstractmethod
@@ -11,119 +83,76 @@ class BaseTokenizer(ABC):
     def decode(self, ids):
         ...
 
-    def encode_instruct(self, s, system_msg=True):
-        bot = self.bos_id
-        sh = self.sh_id
-        eh = self.eh_id
-        eot = self.eot_id
+    def encode_instruct_inference(
+        self,
+        text: str,
+        system_msg: bool = True
+    ):
+        builder = PromptBuilder(self, no_labels=True)
+        builder.add_header(system_msg=system_msg)
+        builder.add_message('user', text, supervise=False)
+        builder.add_role_prefix('assistant')
+        return builder.build()
 
-        tokens = [bot, sh]
-        if system_msg:
-            tokens.extend(self.encode('system'))
-            tokens.extend([eh])
-            tokens.extend(self.encode('\n' + self.system_prompt))
-            tokens.extend([eot, sh])
-        tokens.extend(self.encode('user'))
-        tokens.extend([eh])
-        tokens.extend(self.encode('\n'))
-        tokens.extend(self.encode(s))
-        tokens.extend([eot, sh])
-        tokens.extend(self.encode('assistant'))
-        tokens.extend([eh])
-        tokens.extend(self.encode('\n'))
-        return tokens
-
-    def encode_chat(
+    def encode_instruct_chat(
         self,
         *,
         conversation: object,
         ignore_index: int
     ):
-        bot = self.bos_id
-        sh = self.sh_id
-        eh = self.eh_id
-        eot = self.eot_id
-        eos = self.eos_id
-
-        tokens, labels = [], []
-        def push(tok_ids, is_assistant):
-            tokens.extend(tok_ids)
-            if is_assistant:
-                labels.extend(tok_ids)
-            else:
-                labels.extend([ignore_index] * len(tok_ids))
-
-        push([bot], False)
-        push([sh], False)
-        push(self.encode('system'), False)
-        push([eh], False)
-        push(self.encode('\n' + self.system_prompt), False)
-        push([eot], False)
+        builder = PromptBuilder(self, ignore_index=ignore_index)
+        builder.add_header(system_msg=True)
 
         for idx, interaction in enumerate(conversation):
             role = interaction['role']
             content = interaction['content']
 
-            is_assistant = role == 'assistant'
-            is_last_message = idx == len(conversation) - 1
+            is_assistant = (role == 'assistant')
+            is_last_message = (idx == len(conversation) - 1)
 
-            push([sh], False)
-            push(self.encode(role), False)
-            push([eh], False)
-            push(self.encode('\n'), False)
-            push(self.encode(content), is_assistant)
+            builder.add_message(
+                role,
+                content,
+                supervise=is_assistant,
+                final_assistant=(is_assistant and is_last_message)
+            )
 
-            if is_last_message and is_assistant:
-                push([eos], True)
-            else:
-                push([eot], is_assistant)
+        return builder.build()
 
-        labels = labels[1:] + [ignore_index]
-
-        return tokens, labels
-
-    def encode_chat_dpo(
+    def encode_instruct_chat_dpo(
         self,
         *,
         conversation: object,
         chosen: str,
         rejected: str,
+        ignore_index: int
     ):
-        bot = self.bos_id
-        sh = self.sh_id
-        eh = self.eh_id
-        eot = self.eot_id
-
-        tokens = []
-        tokens.extend([bot])
-        tokens.extend([sh])
-        tokens.extend(self.encode('system'))
-        tokens.extend([eh])
-        tokens.extend(self.encode('\n' + self.system_prompt))
-        tokens.extend([eot])
+        prefix = PromptBuilder(self, ignore_index=ignore_index)
+        prefix.add_header(system_msg=True)
 
         for interaction in conversation:
             role = interaction['role']
             content = interaction['content']
 
-            tokens.extend([sh])
-            tokens.extend(self.encode(role))
-            tokens.extend([eh])
-            tokens.extend(self.encode('\n'))
-            tokens.extend(self.encode(content))
-            tokens.extend([eot])
+            prefix.add_message(
+                role,
+                content,
+                supervise=False,
+                final_assistant=False
+            )
 
-        def build_answer_sequence(text):
-            tokens = []
-            tokens.extend([sh])
-            tokens.extend(self.encode('assistant'))
-            tokens.extend([eh])
-            tokens.extend(self.encode('\n'))
-            tokens.extend(self.encode(text))
-            tokens.extend([eot])
-            return tokens
+        prefix.add_role_prefix('assistant')
 
-        chosen_tokens = build_answer_sequence(chosen)
-        rejected_tokens = build_answer_sequence(rejected)
+        def build_answer(answer):
+            builder = prefix.clone()
 
-        return tokens, chosen_tokens, rejected_tokens
+            builder.push(builder.encode(answer), supervise=True)
+            builder.push([builder.eos], supervise=True)
+
+            return builder.build()
+
+        prompt_input_ids, _ = prefix.build()
+        chosen_input_ids, chosen_labels = build_answer(chosen)
+        rejected_input_ids, rejected_labels = build_answer(rejected)
+
+        return prompt_input_ids, chosen_input_ids, chosen_labels, rejected_input_ids, rejected_labels
