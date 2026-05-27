@@ -49,23 +49,35 @@ class DPOTask(BaseTask):
         use_autocast = self.ctx.precision.use_autocast
         grad_accum_steps = self.ctx.grad_accum_steps
         dpo_beta = self.config.dpo.beta
+        ignore_index = self.config.tokenizer.ignore_index
 
-        # x, y, z = prompt, chosen, rejected
-        x, y, z = batch
-        x = x.to(device, non_blocking=True)
-        y = y.to(device, non_blocking=True)
-        z = z.to(device, non_blocking=True)
+        chosen_input_ids, chosen_labels, rejected_input_ids, rejected_labels = batch
+        chosen_input_ids = chosen_input_ids.to(device, non_blocking=True)
+        chosen_labels = chosen_labels.to(device, non_blocking=True)
+        rejected_input_ids = rejected_input_ids.to(device, non_blocking=True)
+        rejected_labels = rejected_labels.to(device, non_blocking=True)
 
-        tokens_processed = 4 * x.numel() + 2 * y.numel() + 2 * z.numel()
+        chosen_valid_tokens = (chosen_labels != ignore_index).sum()
+        rejected_valid_tokens = (rejected_labels != ignore_index).sum()
+
+        if chosen_valid_tokens.item() == 0:
+            raise ValueError('DPO batch has no supervised chosen tokens')
+        if rejected_valid_tokens.item() == 0:
+            raise ValueError('DPO batch has no supervised rejected tokens')
+
+        tokens_processed = (
+            chosen_input_ids.numel()
+            + rejected_input_ids.numel()
+        )
 
         with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-            policy_log_probs_pos = dpo_log_probs(model, x, y)
-            policy_log_probs_neg = dpo_log_probs(model, x, z)
+            policy_log_probs_pos = dpo_log_probs(model, chosen_input_ids, chosen_labels, ignore_index)
+            policy_log_probs_neg = dpo_log_probs(model, rejected_input_ids, rejected_labels, ignore_index)
 
         with torch.no_grad():
             with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-                reference_log_probs_pos = dpo_log_probs(assets.dpo_ref_model, x, y)
-                reference_log_probs_neg = dpo_log_probs(assets.dpo_ref_model, x, z)
+                reference_log_probs_pos = dpo_log_probs(assets.dpo_ref_model, chosen_input_ids, chosen_labels, ignore_index)
+                reference_log_probs_neg = dpo_log_probs(assets.dpo_ref_model, rejected_input_ids, rejected_labels, ignore_index)
 
         loss, dpo_metrics = dpo_loss(
             policy_log_probs_pos,
@@ -77,10 +89,11 @@ class DPOTask(BaseTask):
 
         loss_for_backward = loss / grad_accum_steps
 
-        n_valid = x.size(0) # Assume 1 valid example as the entire triple.
-
-        if not torch.is_tensor(n_valid):
-            n_valid = torch.tensor(n_valid, device=device, dtype=loss.dtype)
+        n_valid = torch.tensor(
+            chosen_input_ids.size(0),
+            device=device,
+            dtype=loss.dtype
+        )
 
         return TaskStepOutput(
             tokens_processed=tokens_processed,
@@ -101,18 +114,28 @@ class DPOTask(BaseTask):
         autocast_dtype = self.ctx.precision.autocast_dtype
         use_autocast = self.ctx.precision.use_autocast
         dpo_beta = self.config.dpo.beta
+        ignore_index = self.config.tokenizer.ignore_index
 
-        # x, y, z = prompt, chosen, rejected
-        x, y, z = batch
-        x = x.to(device, non_blocking=True)
-        y = y.to(device, non_blocking=True)
-        z = z.to(device, non_blocking=True)
+        chosen_input_ids, chosen_labels, rejected_input_ids, rejected_labels = batch
+
+        chosen_input_ids = chosen_input_ids.to(device, non_blocking=True)
+        chosen_labels = chosen_labels.to(device, non_blocking=True)
+        rejected_input_ids = rejected_input_ids.to(device, non_blocking=True)
+        rejected_labels = rejected_labels.to(device, non_blocking=True)
+
+        chosen_valid_tokens = (chosen_labels != ignore_index).sum()
+        rejected_valid_tokens = (rejected_labels != ignore_index).sum()
+
+        if chosen_valid_tokens.item() == 0:
+            raise ValueError('DPO validation batch has no supervised chosen tokens')
+        if rejected_valid_tokens.item() == 0:
+            raise ValueError('DPO validation batch has no supervised rejected tokens')
 
         with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-            policy_log_probs_pos = dpo_log_probs(model, x, y)
-            policy_log_probs_neg = dpo_log_probs(model, x, z)
-            reference_log_probs_pos = dpo_log_probs(assets.dpo_ref_model, x, y)
-            reference_log_probs_neg = dpo_log_probs(assets.dpo_ref_model, x, z)
+            policy_log_probs_pos = dpo_log_probs(model, chosen_input_ids, chosen_labels, ignore_index)
+            policy_log_probs_neg = dpo_log_probs(model, rejected_input_ids, rejected_labels, ignore_index)
+            reference_log_probs_pos = dpo_log_probs(assets.dpo_ref_model, chosen_input_ids, chosen_labels, ignore_index)
+            reference_log_probs_neg = dpo_log_probs(assets.dpo_ref_model, rejected_input_ids, rejected_labels, ignore_index)
 
         loss, dpo_metrics = dpo_loss(
             policy_log_probs_pos,
@@ -121,7 +144,11 @@ class DPOTask(BaseTask):
             reference_log_probs_neg,
             dpo_beta
         )
-        n_valid = torch.tensor(x.size(0), device=device, dtype=loss.dtype) # Assume 1 valid example as the entire triple.
+        n_valid = torch.tensor(
+            chosen_input_ids.size(0),
+            device=device,
+            dtype=loss.dtype
+        )
 
         return TaskStepOutput(
             n_valid=n_valid,
