@@ -1,23 +1,16 @@
 import os
-import glob
-import re
 import numpy as np
 import sys
 import multiprocessing as mp
 import hashlib
+import time
 import math
 
 from tqdm.auto import tqdm
 from functools import partial
+from pathlib import Path
 from logger import logger
 
-
-def stable_hash(text, *, seed=None, hash_bytes=8):
-    # fast and stable hash. More info: https://docs.python.org/3/library/hashlib.html#blake2
-    if seed is not None:
-        salt = f'{seed}-salt'.encode('utf-8')
-        return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=8, key=salt).digest(), 'big')
-    return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=8).digest(), 'big')
 
 def get_max_number_of_cpu_processes(config):
     num_processes = max(1, os.cpu_count() // 2)
@@ -26,15 +19,42 @@ def get_max_number_of_cpu_processes(config):
     logger.info(f'Number of CPU processes: {num_processes}\n')
     return num_processes
 
+def stable_hash(text, *, seed=None, hash_bytes=8):
+    # fast and stable hash. More info: https://docs.python.org/3/library/hashlib.html#blake2
+    if seed is not None:
+        salt = f'{seed}-salt'.encode('utf-8')
+        return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=hash_bytes, key=salt).digest(), 'big')
+    return int.from_bytes(hashlib.blake2b(text.encode(), digest_size=hash_bytes).digest(), 'big')
+
+def make_source_key(ds_id, name):
+    if name and name != 'default':
+        return f'{ds_id}::{name}'
+    return ds_id
+
 def assert_common_structure_and_extract(datasets_mix, supported_datasets):
-    ''' Validates common file structure and extracts seed, valid datasets and probabilities (normalized weight distribution)
+    ''' Validates common file structure and extracts seed, common dataset settings, valid datasets and probabilities (normalized weight distribution)
     '''
-    assert 'datasets' in datasets_mix
     assert 'seed' in datasets_mix
-
-    datasets, seed = datasets_mix['datasets'], datasets_mix['seed']
-
+    seed = datasets_mix['seed']
     assert isinstance(seed, int)
+
+    # Validate common settings if present.
+    common_settings = datasets_mix.get('datasets_common_settings', {})
+    shard_size = None
+    target_tokens = None
+    validation_ratio = None
+    if 'shard_size' in common_settings:
+        shard_size = common_settings['shard_size']
+        assert shard_size is None or int(shard_size) > 0, 'datasets_common_settings.shard_size must be > 0'
+    if 'target_tokens' in common_settings:
+        target_tokens = common_settings['target_tokens']
+        assert target_tokens is None or isinstance(target_tokens, int), 'datasets_common_settings.target_tokens must be an integer'
+    if 'validation_ratio' in common_settings:
+        validation_ratio = common_settings['validation_ratio']
+        assert validation_ratio is None or isinstance(validation_ratio, float), 'datasets_common_settings.validation_ratio must be a float'
+
+    assert 'datasets' in datasets_mix
+    datasets = datasets_mix['datasets']
 
     # Validate candidates
     valid_datasets = []
@@ -44,8 +64,8 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
         for name in names:
             assert name in supported_datasets[dataset_id]
             assert 'weight' in datasets[dataset_id][name]
-            assert 0.0 <= float(datasets[dataset_id][name]['weight']) <= 1.0, 'weight must be a value between 0 and 1.'
             weight = float(datasets[dataset_id][name].get('weight', 0.0))
+            assert weight >= 0.0, f'weight must be >= 0 for {dataset_id}/{name}'
             if weight > 0:
                 valid_datasets.append({
                     'id': dataset_id,
@@ -60,159 +80,272 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
 
     # normalize probabilities
     total_p = sum(probabilities)
-    assert math.isclose(total_p, 1.0, rel_tol=1e-9, abs_tol=1e-12), f'weight distribution must add to 1. Currently: {total_p}'
+    assert total_p > 0.0, 'weight distribution must have positive total weight'
     probabilities = [p / total_p for p in probabilities]
 
-    def ds_with_name(ds):
-        _id, name = ds['id'], ds.get('name', None)
-        if name and name != 'default':
-            return f'{_id}_{name}'
-        return _id
+    mixture_probs = [
+        {make_source_key(ds['id'], ds.get('name', None)): round(p, 3)}
+        for ds, p in zip(valid_datasets, probabilities)
+    ]
+    logger.info(f'Mixture probabilities: {mixture_probs}\n')
 
-    logger.info(f'Mixture probabilities: {[{ds_with_name(ds): round(p, 3)} for ds, p in zip(valid_datasets, probabilities)]}\n')
-
-    return seed, valid_datasets, probabilities
+    return seed, common_settings, valid_datasets, probabilities
 
 def get_progress_bar(shard_index, shard_size, initial_tokens=0):
     return tqdm(total=shard_size, initial=initial_tokens, unit='tokens', desc=f'Shard {shard_index}')
 
-def get_filename(shard_index, data_cache_dir, shard_file_prefix):
-    base_filename = f'{shard_file_prefix}_{shard_index:06d}'
-    final_path = os.path.join(data_cache_dir, f'{base_filename}.npy')
-    temp_path = os.path.join(data_cache_dir, f'{base_filename}.temp.npy')
-    return temp_path, final_path
+class ShardWriter:
+    def __init__(self,
+        *,
+        target_folder,
+        shard_file_prefix,
+        shard_size,
+        split_name,
+        target_tokens=None
+    ):
+        self.cache_dir = Path(target_folder)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-def save_filename(all_tokens_np, shard_index, data_cache_dir, shard_file_prefix):
-    temp_filepath, final_filepath = get_filename(shard_index, data_cache_dir, shard_file_prefix)
-    try:
-        np.save(temp_filepath, all_tokens_np)
-        os.replace(temp_filepath, final_filepath) # Small protection in case of file corruption..
-    except Exception as e:
-        logger.error(f'\nError saving shard {shard_index} to {final_filepath}: {e}')
-        logger.error('Stopping processing. Rerun the script to resume.')
-        if os.path.exists(temp_filepath):
-            try: os.remove(temp_filepath)
-            except OSError: pass
-        sys.exit(1)
+        self.shard_file_prefix = shard_file_prefix
+        self.shard_size = int(shard_size)
+        self.split_name = split_name
+        self.target_tokens = target_tokens
 
+        self.shard_index = 0
+        self.token_count = 0
+        self.total_tokens = 0
+        self.buffer = np.empty((self.shard_size,), dtype=np.uint32)
+        self.progress_bar = None
 
-def find_last_shard_info(data_cache_dir, shard_file_prefix):
-    shard_pattern = re.compile(rf'^{re.escape(shard_file_prefix)}_(\d+)\.npy$')
-    files = []
+    def is_done(self):
+        return self.target_tokens is not None and self.total_tokens >= self.target_tokens
 
-    for file_path in glob.glob(os.path.join(data_cache_dir, f'{shard_file_prefix}_*.npy')):
-        match = shard_pattern.match(os.path.basename(file_path))
-        if match:
-            files.append((int(match.group(1)), file_path))
+    def init_progress_bar(self):
+        if self.progress_bar is None:
+            self.progress_bar = get_progress_bar(
+                shard_index=self.shard_index,
+                shard_size=self.shard_size,
+                initial_tokens=self.token_count
+            )
+            self.progress_bar.set_description(f'{self.split_name} shard {self.shard_index}')
 
-    if not files:
-        logger.info('No previous shards found.')
-        return -1, 0
+    def get_save_paths(self):
+        current_filename = f'{self.shard_file_prefix}_{self.shard_index:06d}'
+        final_path = self.cache_dir / f'{current_filename}.npy'
+        temp_path = self.cache_dir / f'{current_filename}.tmp.npy'
+        return final_path, temp_path
 
-    files.sort(key=lambda x: x[0])
+    def save_tokens(self, tokens):
+        final_path, temp_path = self.get_save_paths()
+        try:
+            np.save(temp_path, tokens.astype(np.uint32, copy=False))
+            temp_path.replace(final_path)
+        except Exception as e:
+            logger.error(f'\nError saving shard {self.shard_index} to {final_path}: {e}')
+            logger.error('Stopping processing. Need to rerun the script to resume...')
 
-    # validate sequence: There should not be missing shards like 1 2 3 6
-    indexes = [i for i, _ in files]
-    if indexes != list(range(0, indexes[-1] + 1)):
-        raise ValueError(f'Shard sequence broken: {indexes}')
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except OSError:
+                    pass
 
-    total_tokens_saved = 0
-    for _, file_path in files:
-        shard = np.load(file_path, mmap_mode='r', allow_pickle=False)
-        total_tokens_saved += shard.shape[0]
-        del shard
+            sys.exit(1)
 
-    last_shard_index = files[-1][0]
-    logger.info(f'Resuming after shard {last_shard_index}. Total tokens in existing shards: {total_tokens_saved}')
-    return last_shard_index, total_tokens_saved
+    def save_shard(self):
+        if self.token_count == 0:
+            return
+        tokens = self.buffer if self.token_count == self.shard_size else self.buffer[:self.token_count]
+        self.save_tokens(tokens)
+        self.shard_index += 1
+        self.token_count = 0
 
-def prepare_dataset(
+    def finish(self):
+        if self.progress_bar is not None:
+            self.progress_bar.close()
+            self.progress_bar = None
+        self.save_shard()
+
+    def write(self, tokens):
+        if tokens.size == 0 or self.is_done():
+            return 0
+
+        tokens = tokens.astype(np.uint32, copy=False)
+
+        if self.target_tokens is not None:
+            remaining_target_tokens = self.target_tokens - self.total_tokens
+            tokens = tokens[:remaining_target_tokens]
+
+        written_count = 0
+        offset = 0
+
+        while offset < tokens.size:
+            self.init_progress_bar()
+
+            remaining_space = self.shard_size - self.token_count
+            slice_length = min(remaining_space, tokens.size - offset)
+
+            # populate the buffer
+            self.buffer[self.token_count : self.token_count + slice_length] = tokens[offset : offset + slice_length]
+
+            self.token_count += slice_length
+            self.total_tokens += slice_length
+
+            written_count += slice_length
+            offset += slice_length
+
+            self.progress_bar.update(slice_length)
+
+            if self.token_count == self.shard_size:
+                self.progress_bar.close()
+                self.progress_bar = None
+                self.save_shard()
+
+            if self.is_done():
+                break
+
+        return written_count
+
+def tokenize_and_route(
+    tokenizer_kwargs,
+    tokenize_function,
+    seed,
+    validation_ratio,
+    doc,
+):
+    source = doc.get('source', 'unknown')
+    tokens = tokenize_function(tokenizer_kwargs, doc)
+
+    # Makes assignment of 'train' or 'val' to the doc deterministic.
+    HASH_BYTES = 8
+    HASH_SPACE = 1 << (HASH_BYTES * 8) # 64 bit
+    SEPARATION_THRESHOLD = int(validation_ratio * HASH_SPACE)
+
+    is_val = stable_hash(doc['text'], seed=seed, hash_bytes=HASH_BYTES) < SEPARATION_THRESHOLD
+
+    split = 'val' if is_val else 'train'
+
+    return source, tokens, split
+
+def shard_and_tokenize(
     *,
+    seed,
     dataset,
     tokenize_function,
     tokenizer_kwargs,
-    target_folder,
+    train_path,
+    val_path,
     shard_file_prefix,
     shard_size,
+    target_tokens,
+    validation_ratio,
     num_proc,
     chunksize
 ):
-    data_cache_dir = os.path.join(os.getcwd(), target_folder)
-    os.makedirs(data_cache_dir, exist_ok=True)
+    shard_size = int(shard_size)
+    assert shard_size > 0
 
-    last_shard_index, tokens_to_skip = find_last_shard_info(data_cache_dir, shard_file_prefix)
-    start_shard_index = last_shard_index + 1
-    processed_token_count_in_loop = 0
-    skipping_phase = tokens_to_skip > 0
+    if target_tokens is not None:
+        target_tokens = int(target_tokens)
+        assert target_tokens > 0
 
-    skipping_progress_bar = None
-    if skipping_phase:
-        logger.info('Starting skipping phase...')
-        skipping_progress_bar = tqdm(total=tokens_to_skip, desc='Skipping tokens', unit='tokens', smoothing=0.1)
+    validation_ratio = float(validation_ratio)
+    assert 0.0 <= validation_ratio < 1.0
+
+    if target_tokens is not None and validation_ratio > 0.0:
+        val_target_tokens = math.ceil(
+            target_tokens * validation_ratio / (1.0 - validation_ratio)
+        )
+    else:
+        val_target_tokens = 0
+
+    train_writer = ShardWriter(
+        target_folder=train_path,
+        shard_file_prefix=shard_file_prefix,
+        shard_size=shard_size,
+        target_tokens=target_tokens,
+        split_name='train'
+    )
+
+    val_writer = ShardWriter(
+        target_folder=val_path,
+        shard_file_prefix=shard_file_prefix,
+        shard_size=shard_size,
+        target_tokens=val_target_tokens,
+        split_name='val'
+    )
+
+    def reached_target():
+        if target_tokens is None:
+            return False
+        return train_writer.is_done() and val_writer.is_done()
+
+    source_doc_counts = {}
+    source_token_counts = {}
+    split_doc_counts = {
+        'train': 0,
+        'val': 0,
+    }
+    split_token_counts = {
+        'train': 0,
+        'val': 0,
+    }
+
+    logger.info('Preparing pretraining train and val shards...')
 
     with mp.Pool(num_proc) as pool:
-        shard_index = start_shard_index
-        token_count = 0
-        progress_bar = None
-        all_tokens_np = np.empty((shard_size,), dtype=np.uint32)
-
-        for tokens in pool.imap(partial(tokenize_function, tokenizer_kwargs), dataset, chunksize=chunksize):
+        iterator = pool.imap(
+            partial(
+                tokenize_and_route,
+                tokenizer_kwargs,
+                tokenize_function,
+                seed,
+                validation_ratio
+            ),
+            dataset,
+            chunksize=chunksize
+        )
+        for source, tokens, split in iterator:
             if tokens.size == 0:
                 continue
-
-            tokens_len = tokens.size
-
-            # Skipping phase...
-            if skipping_phase:
-                if processed_token_count_in_loop + tokens_len <= tokens_to_skip:
-                    processed_token_count_in_loop += tokens_len
-                    if skipping_progress_bar:
-                        skipping_progress_bar.update(tokens_len)
-                    continue
-                else:
-                    if skipping_progress_bar:
-                        remaining_to_skip = tokens_to_skip - processed_token_count_in_loop
-                        if remaining_to_skip > 0:
-                            skipping_progress_bar.update(remaining_to_skip)
-                        skipping_progress_bar.close()
-                        skipping_progress_bar = None
-
-                    offset = tokens_to_skip - processed_token_count_in_loop
-                    tokens_to_process = tokens[offset:]
-                    tokens_len = tokens_to_process.size
-                    logger.info(f'Skipping phase complete. Starting to process from token {offset+1} of the current batch.')
-                    skipping_phase = False
+            if split == 'val':
+                written = val_writer.write(tokens)
             else:
-                tokens_to_process = tokens
+                written = train_writer.write(tokens)
 
-            if progress_bar is None:
-                progress_bar = get_progress_bar(shard_index, shard_size, initial_tokens=token_count)
+            if written == 0:
+                if reached_target():
+                    break
+                continue
 
-            # Normal processing...
-            if token_count + tokens_len < shard_size:
-                all_tokens_np[token_count:token_count + tokens_len] = tokens_to_process
-                token_count += tokens_len
-                progress_bar.update(tokens_len)
-            else:
-                remaining_space = shard_size - token_count
-                all_tokens_np[token_count:token_count + remaining_space] = tokens_to_process[:remaining_space]
-                progress_bar.update(remaining_space)
-                progress_bar.close()
+            source_doc_counts[source] = source_doc_counts.get(source, 0) + 1
+            source_token_counts[source] = source_token_counts.get(source, 0) + written
+            split_doc_counts[split] += 1
+            split_token_counts[split] += written
 
-                # save file
-                save_filename(all_tokens_np, shard_index, data_cache_dir, shard_file_prefix)
+            if reached_target():
+                logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
+                logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}')
+                break
 
-                shard_index += 1
-                progress_bar = None
+    train_writer.finish()
+    val_writer.finish()
 
-                tokens_leftover = tokens_to_process[remaining_space:]
-                token_count = tokens_leftover.size
-                all_tokens_np[:token_count] = tokens_leftover
+    # Workaround for occasional pool shutdown issue...
+    # Without this, some streaming runs crash after successful shard writing with PyGILState_Release during finalization...
+    logger.info('Ensuring pool is terminated...')
+    time.sleep(5)
 
-                if token_count > 0:
-                    progress_bar = get_progress_bar(shard_index, shard_size, initial_tokens=token_count)
+    logger.info('Pretraining shard preparation complete.')
+    logger.info(f'- Train tokens: {train_writer.total_tokens:,}')
+    logger.info(f'- Val tokens: {val_writer.total_tokens:,}')
+    logger.info(f'- Train docs: {split_doc_counts["train"]:,}')
+    logger.info(f'- Val docs: {split_doc_counts["val"]:,}')
 
-        if token_count > 0:
-            if progress_bar:
-                progress_bar.close()
-            save_filename(all_tokens_np[:token_count], shard_index, data_cache_dir, shard_file_prefix)
+    logger.info('Source document counts:')
+    for source, count in sorted(source_doc_counts.items()):
+        logger.info(f'- {source}: {count:,}')
+
+    logger.info('Source token counts:')
+    for source, count in sorted(source_token_counts.items()):
+        logger.info(f'- {source}: {count:,}')

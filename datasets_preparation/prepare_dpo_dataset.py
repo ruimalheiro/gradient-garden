@@ -10,7 +10,10 @@ from datasets import (
     load_dataset,
     interleave_datasets
 )
-from datasets_preparation.data_preparation_utils import assert_common_structure_and_extract
+from datasets_preparation.data_preparation_utils import (
+    assert_common_structure_and_extract,
+    make_source_key
+)
 from datasets_preparation.default_mixes import DEFAULT_DPO_MIX
 from logger import logger
 
@@ -125,6 +128,7 @@ def download_and_prepare_data(
         max_datapoints = transforms.get('max_datapoints', None)
 
         hf_name = None if name == 'default' else name
+        source_key = make_source_key(ds_id, name)
 
         ds = load_dataset(
             ds_id,
@@ -141,8 +145,7 @@ def download_and_prepare_data(
         def normalize(doc):
             data = adapter(doc, transforms)
             data['prompt'] = ensure_user_first(data['prompt'])
-            if config.data_preparation.hf_include_source_id:
-                data.update({'source': ds_id})
+            data['source'] = source_key
 
             return data
 
@@ -197,7 +200,7 @@ def prepare_dpo_dataset(
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_DPO_MIX)
 
     #### VERIFY MIX FILE STRUCTURE
-    seed, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
+    seed, _, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
 
     download_and_prepare_data(
         config=config,

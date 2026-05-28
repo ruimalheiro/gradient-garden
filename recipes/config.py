@@ -7,6 +7,12 @@ from config import GlobalConfig
 from logger import logger
 
 
+class DatasetsCommonSettings(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    shard_size: int | None = None
+    target_tokens: int | None = None
+    validation_ratio: float = 0.01
+
 class DatasetEntryConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     weight: float
@@ -25,7 +31,7 @@ class RecipeEvalsDataConfig(BaseModel):
 class RecipeDataConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     seed: int
-    shard_size: int | None = None
+    datasets_common_settings: DatasetsCommonSettings = Field(default_factory=DatasetsCommonSettings)
     datasets: dict[str, dict[str, DatasetEntryConfig]] = Field(default_factory=dict)
     evals: RecipeEvalsDataConfig = Field(default_factory=RecipeEvalsDataConfig)
 

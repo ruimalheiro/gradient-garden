@@ -1,6 +1,8 @@
 {
     "seed": 42,
-    "shard_size": 100000000,
+    "datasets_common_settings": {
+        "shard_size": 100000000
+    },
     "datasets": {
         "HuggingFaceFW/fineweb-edu": {
             "sample-10BT": {
