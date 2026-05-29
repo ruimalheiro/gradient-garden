@@ -9,9 +9,9 @@ from datasets import (
     interleave_datasets
 )
 from datasets_preparation.data_preparation_utils import (
-    stable_hash,
-    prepare_dataset,
-    assert_common_structure_and_extract
+    make_source_key,
+    assert_common_structure_and_extract,
+    shard_and_tokenize
 )
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
 from logger import logger
@@ -70,6 +70,7 @@ def download_and_prepare_data(
         max_datapoints = transforms.get('max_datapoints', None)
 
         hf_name = None if name == 'default' else name
+        source_key = make_source_key(ds_id, name)
 
         ds = load_dataset(
             ds_id,
@@ -83,7 +84,6 @@ def download_and_prepare_data(
 
         if max_datapoints:
             max_datapoints = int(max_datapoints)
-            assert isinstance(max_datapoints, int)
             assert max_datapoints > 0
             ds = ds.take(max_datapoints)
 
@@ -92,18 +92,15 @@ def download_and_prepare_data(
             *,
             adapter=adapter,
             transforms=transforms,
-            ds_id=ds_id,
+            source_key=source_key
         ):
             batch = adapter(batch, transforms)
             texts = batch['text']
 
-            if config.data_preparation.hf_include_source_id:
-                return {
-                    'text': texts,
-                    'source': [ds_id] * len(texts),
-                }
-
-            return {'text': texts}
+            return {
+                'text': texts,
+                'source': [source_key] * len(texts)
+            }
 
         ds = ds.map(
             normalize,
@@ -126,24 +123,7 @@ def download_and_prepare_data(
     else:
         prepared_dataset = prepared_datasets[0]
 
-    # Split into train / val iterators. (no train_test_split with stream) The idea here is based in the law of large numbers (assuming we have enough datapoints).
-    # We want to draw datapoints and approach the proportions (probs) for train / val so. The hash is to make the assignment deterministic.
-    HASH_BYTES = 8
-    HASH_SPACE = 1 << (HASH_BYTES * 8) # 64 bit
-
-    VAL_FRACTION = 0.01
-    SEPARATION_THRESHOLD = int(VAL_FRACTION * HASH_SPACE)
-
-    def is_train(ex):
-        return stable_hash(ex['text'], seed=seed, hash_bytes=HASH_BYTES) >= SEPARATION_THRESHOLD
-
-    def is_val(ex):
-        return not is_train(ex)
-
-    train_ds = prepared_dataset.filter(is_train)
-    val_ds = prepared_dataset.filter(is_val)
-
-    return train_ds, val_ds
+    return prepared_dataset
 
 tokenizer = None
 def tokenize(tokenizer_kwargs, doc):
@@ -156,45 +136,6 @@ def tokenize(tokenizer_kwargs, doc):
     tokens_np[1:] = input_ids
     return tokens_np
 
-def shard_and_tokenize(
-    *,
-    config,
-    shard_size,
-    train_ds,
-    val_ds,
-    num_proc
-):
-    tokenizer_kwargs = {
-        'path': config.tokenizer.checkpoint_path,
-        'system_prompt': config.prompts.system_prompt,
-        'is_huggingface_tokenizer': config.tokenizer.huggingface_tokenizer,
-        'hf_token': config.third_party.hf_token if config.tokenizer.huggingface_tokenizer else None
-    }
-
-    logger.info('Preparing train dataset...')
-    prepare_dataset(
-        dataset=train_ds,
-        tokenize_function=tokenize,
-        tokenizer_kwargs=tokenizer_kwargs,
-        target_folder=os.path.join(config.paths.datasets.pretraining_path, 'train'),
-        shard_file_prefix='data',
-        shard_size=shard_size,
-        num_proc=num_proc,
-        chunksize=config.data_preparation.mp_pool_chunk_size
-    )
-
-    logger.info('Preparing val dataset...')
-    prepare_dataset(
-        dataset=val_ds,
-        tokenize_function=tokenize,
-        tokenizer_kwargs=tokenizer_kwargs,
-        target_folder=os.path.join(config.paths.datasets.pretraining_path, 'val'),
-        shard_file_prefix='data',
-        shard_size=shard_size,
-        num_proc=num_proc,
-        chunksize=config.data_preparation.mp_pool_chunk_size
-    )
-
 def prepare_pretraining_dataset(
     *,
     config,
@@ -203,24 +144,45 @@ def prepare_pretraining_dataset(
 ):
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_PRETRAINING_MIX)
 
-    assert 'shard_size' in datasets_mix
-    shard_size = datasets_mix['shard_size']
+    assert 'datasets_common_settings' in datasets_mix
+    assert 'shard_size' in datasets_mix['datasets_common_settings']
+    shard_size = datasets_mix['datasets_common_settings']['shard_size']
     assert isinstance(shard_size, int)
 
     #### VERIFY MIX FILE STRUCTURE
-    seed, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
+    seed, common_settings, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
 
-    train_ds, val_ds = download_and_prepare_data(
+    target_tokens = common_settings.get('target_tokens')
+    if target_tokens is not None:
+        target_tokens = int(target_tokens)
+
+    validation_ratio = float(common_settings.get('validation_ratio', 0.01))
+
+    prepared_dataset = download_and_prepare_data(
         config=config,
         seed=seed,
         valid_datasets=valid_datasets,
         probabilities=probabilities
     )
 
+    tokenizer_kwargs = {
+        'path': config.tokenizer.checkpoint_path,
+        'system_prompt': config.prompts.system_prompt,
+        'is_huggingface_tokenizer': config.tokenizer.huggingface_tokenizer,
+        'hf_token': config.third_party.hf_token if config.tokenizer.huggingface_tokenizer else None
+    }
+
     shard_and_tokenize(
-        config=config,
+        seed=seed,
+        dataset=prepared_dataset,
+        tokenize_function=tokenize,
+        tokenizer_kwargs=tokenizer_kwargs,
+        train_path=os.path.join(config.paths.datasets.pretraining_path, 'train'),
+        val_path=os.path.join(config.paths.datasets.pretraining_path, 'val'),
+        shard_file_prefix='data',
         shard_size=shard_size,
-        train_ds=train_ds,
-        val_ds=val_ds,
-        num_proc=num_proc
+        target_tokens=target_tokens,
+        validation_ratio=validation_ratio,
+        num_proc=num_proc,
+        chunksize=config.data_preparation.mp_pool_chunk_size
     )

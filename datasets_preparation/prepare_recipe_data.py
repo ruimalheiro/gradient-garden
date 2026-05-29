@@ -24,7 +24,7 @@ def prepare_recipe_data(recipe, num_proc):
         datasets_mix = data_config.model_dump(mode='python', exclude={'evals'}) # to be compatible with mix dict structure
 
         if config.training.stage == TrainingStage.PRETRAINING:
-            if data_config.shard_size is None:
+            if data_config.datasets_common_settings.shard_size is None:
                 raise ValueError('Pretraining recipes require data.shard_size.')
             prepare_pretraining_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
         elif config.training.stage == TrainingStage.INSTRUCT:

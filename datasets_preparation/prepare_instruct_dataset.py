@@ -13,7 +13,8 @@ from datasets import (
 )
 from datasets_preparation.data_preparation_utils import (
     stable_hash,
-    assert_common_structure_and_extract
+    assert_common_structure_and_extract,
+    make_source_key
 )
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
 from logger import logger
@@ -144,6 +145,7 @@ def download_and_prepare_data(
         max_messages = transforms.get('max_messages', 8)
 
         hf_name = None if name == 'default' else name
+        source_key = make_source_key(ds_id, name)
 
         ds = load_dataset(
             ds_id,
@@ -163,15 +165,10 @@ def download_and_prepare_data(
             conversation = conversation[:max_messages]
             conversation = trim_to_last_assistant(conversation)
 
-            result = {'conversation': []}
-            if config.data_preparation.hf_include_source_id:
-                result['source'] = ds_id
-
-            if not conversation:
-                return result
-
-            result['conversation'] = conversation
-            return result
+            return {
+                'conversation': conversation,
+                'source': source_key
+            }
 
         ds = ds.map(normalize, num_proc=num_proc)
         ds = ds.filter(lambda x: len(x['conversation']) > 0, num_proc=num_proc)
@@ -228,7 +225,7 @@ def prepare_instruct_dataset(
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_INSTRUCT_MIX)
 
     #### VERIFY MIX FILE STRUCTURE
-    seed, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
+    seed, _, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
 
     download_and_prepare_data(
         config=config,
