@@ -50,8 +50,15 @@ def convert_byte_to_gib(byte_data):
     return round(byte_data / (1024 ** 3), 2)
 
 def load_json_file(file_path):
-    with open(file_path, 'r') as file:
+    file_path = Path(file_path)
+    with open(file_path, 'r', encoding='utf-8') as file:
         return json.load(file)
+
+def save_json_file(file_path, data):
+    file_path = Path(file_path)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(file_path, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False)
 
 def set_seed(seed: int, *, deterministic: bool = False):
     random.seed(seed)

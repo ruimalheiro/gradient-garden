@@ -34,7 +34,6 @@ class ThirdPartyConfig(BaseSettings):
 
 class DatasetPreparationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    hf_include_source_id: bool = False
     mp_pool_chunk_size: int = 64
     hf_map_batch_size: int = 1000
     hf_map_writer_batch_size: int = 1000

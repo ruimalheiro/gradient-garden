@@ -10,6 +10,11 @@ from tqdm.auto import tqdm
 from functools import partial
 from pathlib import Path
 from logger import logger
+from utils import (
+    load_json_file,
+    save_json_file
+)
+from dataclasses import dataclass
 
 
 def get_max_number_of_cpu_processes(config):
@@ -116,6 +121,39 @@ class ShardWriter:
         self.total_tokens = 0
         self.buffer = np.empty((self.shard_size,), dtype=np.uint32)
         self.progress_bar = None
+
+    def get_state_dict(self):
+        return {
+            'shard_index': self.shard_index,
+            'token_count': self.token_count,
+            'total_tokens': self.total_tokens
+        }
+
+    def load_state_dict(self, state):
+        self.shard_index = state['shard_index']
+        self.token_count = state['token_count']
+        self.total_tokens = state['total_tokens']
+
+    def get_buffer_checkpoint(self):
+        return self.buffer[:self.token_count]
+
+    def load_buffer_checkpoint(self, buffer):
+        assert buffer.size == self.token_count, (
+            f'{self.split_name} buffer size does no match: '
+            f'buffer has {buffer.size} but state expects {self.token_count}'
+        )
+        self.buffer[:self.token_count] = buffer.astype(np.uint32, copy=False)
+
+    def delete_shards_from_current_index(self):
+        for path in self.cache_dir.glob(f'{self.shard_file_prefix}_*.npy'):
+            try:
+                shard_index = int(path.stem.rsplit('_', 1)[1])
+            except (IndexError, ValueError):
+                continue
+
+            if shard_index >= self.shard_index:
+                logger.warning(f'Removing stale shard created after resume checkpoint: {path}')
+                path.unlink()
 
     def is_done(self):
         return self.target_tokens is not None and self.total_tokens >= self.target_tokens
@@ -242,6 +280,90 @@ def shard_and_tokenize(
     num_proc,
     chunksize
 ):
+    root_path = Path(train_path).parent
+    state_dir = root_path / '.prep_state'
+    state_dir.mkdir(parents=True, exist_ok=True)
+
+    state_path = state_dir / 'state.json'
+    train_buffer_path = state_dir / 'train_buffer.npy'
+    val_buffer_path = state_dir / 'val_buffer.npy'
+
+    @dataclass
+    class ShardAndTokenizeState:
+        train_writer: ShardWriter
+        val_writer: ShardWriter
+        status: str
+        docs_seen: int
+        source_doc_counts: dict
+        source_token_counts: dict
+        split_doc_counts: dict
+        split_token_counts: dict
+
+    def save_state(state: ShardAndTokenizeState):
+        state_data = {
+            'status': state.status,
+            'docs_seen': state.docs_seen,
+            'source_doc_counts': state.source_doc_counts,
+            'source_token_counts': state.source_token_counts,
+            'split_doc_counts': state.split_doc_counts,
+            'split_token_counts': state.split_token_counts,
+            'train_writer_state': state.train_writer.get_state_dict(),
+            'train_writer_buffer_file_path': str(train_buffer_path),
+            'val_writer_state': state.val_writer.get_state_dict(),
+            'val_writer_buffer_file_path': str(val_buffer_path),
+        }
+
+        temp_state_path = state_path.with_name(f'{state_path.name}.tmp')
+        temp_train_buffer_path = train_buffer_path.with_name(f'{train_buffer_path.stem}.tmp.npy')
+        temp_val_buffer_path = val_buffer_path.with_name(f'{val_buffer_path.stem}.tmp.npy')
+
+        try:
+            np.save(temp_train_buffer_path, state.train_writer.get_buffer_checkpoint())
+            np.save(temp_val_buffer_path, state.val_writer.get_buffer_checkpoint())
+            save_json_file(temp_state_path, state_data)
+
+            temp_train_buffer_path.replace(train_buffer_path)
+            temp_val_buffer_path.replace(val_buffer_path)
+            temp_state_path.replace(state_path)
+        except Exception as e:
+            logger.error(f'\nError saving state: {e}')
+            logger.error('Stopping processing. Need to rerun the script to resume...')
+
+            for path in [temp_state_path, temp_train_buffer_path, temp_val_buffer_path]:
+                try:
+                    if path.exists():
+                        path.unlink()
+                except OSError:
+                    pass
+
+            sys.exit(1)
+
+    def load_state(state: ShardAndTokenizeState):
+        if not (
+            state_path.exists() and
+            train_buffer_path.exists() and
+            val_buffer_path.exists()
+        ):
+            return state, False
+
+        logger.info(f'Loading state from: {state_dir}')
+        state_data = load_json_file(state_path)
+        train_buffer = np.load(train_buffer_path)
+        val_buffer = np.load(val_buffer_path)
+
+        state.status = state_data['status']
+        state.docs_seen = state_data['docs_seen']
+        state.source_doc_counts = state_data['source_doc_counts']
+        state.source_token_counts = state_data['source_token_counts']
+        state.split_doc_counts = state_data['split_doc_counts']
+        state.split_token_counts = state_data['split_token_counts']
+        state.train_writer.load_state_dict(state_data['train_writer_state'])
+        state.train_writer.load_buffer_checkpoint(train_buffer)
+        state.val_writer.load_state_dict(state_data['val_writer_state'])
+        state.val_writer.load_buffer_checkpoint(val_buffer)
+
+        return state, True
+
     shard_size = int(shard_size)
     assert shard_size > 0
 
@@ -252,12 +374,11 @@ def shard_and_tokenize(
     validation_ratio = float(validation_ratio)
     assert 0.0 <= validation_ratio < 1.0
 
+    val_target_tokens = 0
     if target_tokens is not None and validation_ratio > 0.0:
         val_target_tokens = math.ceil(
             target_tokens * validation_ratio / (1.0 - validation_ratio)
         )
-    else:
-        val_target_tokens = 0
 
     train_writer = ShardWriter(
         target_folder=train_path,
@@ -280,16 +401,37 @@ def shard_and_tokenize(
             return False
         return train_writer.is_done() and val_writer.is_done()
 
-    source_doc_counts = {}
-    source_token_counts = {}
-    split_doc_counts = {
-        'train': 0,
-        'val': 0,
-    }
-    split_token_counts = {
-        'train': 0,
-        'val': 0,
-    }
+    checkpoint_interval_docs = max(1, num_proc * chunksize) # save every time all workers complete.
+
+    state = ShardAndTokenizeState(
+        train_writer=train_writer,
+        val_writer=val_writer,
+        status='preparing',
+        docs_seen=0,
+        source_doc_counts={},
+        source_token_counts={},
+        split_doc_counts={ 'train': 0, 'val': 0 },
+        split_token_counts={ 'train': 0, 'val': 0 }
+    )
+    state, loaded = load_state(state)
+    if state.status == 'completed':
+        logger.info(f'Pretraining data preparation already completed: {state_dir}')
+        return
+
+    if not loaded:
+        for folder in [Path(train_path), Path(val_path)]:
+            existing = sorted(folder.glob(f'{shard_file_prefix}_*.npy'))
+            assert not existing, (
+                f'Output folder already contains shards but no resume state exists: {folder}'
+            )
+
+    if state.docs_seen > 0:
+        logger.info(f'Resuming from doc offset: {state.docs_seen:,}')
+        dataset = dataset.skip(state.docs_seen)
+
+        # delete stale shards...
+        train_writer.delete_shards_from_current_index()
+        val_writer.delete_shards_from_current_index()
 
     logger.info('Preparing pretraining train and val shards...')
 
@@ -306,6 +448,8 @@ def shard_and_tokenize(
             chunksize=chunksize
         )
         for source, tokens, split in iterator:
+            state.docs_seen += 1
+
             if tokens.size == 0:
                 continue
             if split == 'val':
@@ -318,10 +462,13 @@ def shard_and_tokenize(
                     break
                 continue
 
-            source_doc_counts[source] = source_doc_counts.get(source, 0) + 1
-            source_token_counts[source] = source_token_counts.get(source, 0) + written
-            split_doc_counts[split] += 1
-            split_token_counts[split] += written
+            state.source_doc_counts[source] = state.source_doc_counts.get(source, 0) + 1
+            state.source_token_counts[source] = state.source_token_counts.get(source, 0) + written
+            state.split_doc_counts[split] += 1
+            state.split_token_counts[split] += written
+
+            if state.docs_seen % checkpoint_interval_docs == 0:
+                save_state(state)
 
             if reached_target():
                 logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
@@ -331,6 +478,9 @@ def shard_and_tokenize(
     train_writer.finish()
     val_writer.finish()
 
+    state.status = 'completed'
+    save_state(state)
+
     # Workaround for occasional pool shutdown issue...
     # Without this, some streaming runs crash after successful shard writing with PyGILState_Release during finalization...
     logger.info('Ensuring pool is terminated...')
@@ -339,13 +489,13 @@ def shard_and_tokenize(
     logger.info('Pretraining shard preparation complete.')
     logger.info(f'- Train tokens: {train_writer.total_tokens:,}')
     logger.info(f'- Val tokens: {val_writer.total_tokens:,}')
-    logger.info(f'- Train docs: {split_doc_counts["train"]:,}')
-    logger.info(f'- Val docs: {split_doc_counts["val"]:,}')
+    logger.info(f'- Train docs: {state.split_doc_counts["train"]:,}')
+    logger.info(f'- Val docs: {state.split_doc_counts["val"]:,}')
 
     logger.info('Source document counts:')
-    for source, count in sorted(source_doc_counts.items()):
+    for source, count in sorted(state.source_doc_counts.items()):
         logger.info(f'- {source}: {count:,}')
 
     logger.info('Source token counts:')
-    for source, count in sorted(source_token_counts.items()):
+    for source, count in sorted(state.source_token_counts.items()):
         logger.info(f'- {source}: {count:,}')
