@@ -85,6 +85,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
   - `trainer.py` The main implementation that orchestrates the entire training process.
   - `wandb.py` A wrapper for Weights & Biases.
     - Weights & Biases [here](https://wandb.ai/site/)
+  - `workload_estimation.py` Utilities to estimate token requirements for workload.
 - `evals/` Shared evaluation loading and scoring utilities.
   - Multiple choice evals:
     - HellaSwag
@@ -207,7 +208,7 @@ python prepare_datasets.py --recipe recipes/pretraining/debug.yaml
 python train.py --recipe recipes/pretraining/debug.yaml
 ```
 
-### Running the Training
+### Running training
 - To train on **single-GPU**, run:
     ```bash
     python train.py --recipe recipes/pretraining/debug.yaml
@@ -303,6 +304,44 @@ python train.py --recipe recipes/pretraining/debug.yaml
 
 - More details on torchrun [here](https://pytorch.org/docs/stable/elastic/run.html)
 - More details on NCCL [here](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html#environment-variables)
+
+### Running generation
+- For all options: `python generate.py --help`
+- Example:
+    ```bash
+    python generate.py \
+      --checkpoint <CHECKPOINT_FILE_PATH> \
+      --prompts examples/prompts/pretraining.example.json \
+      --max-gen-len 160 \
+      --temperature 0.0 \
+      --top-p 0.9 \
+      --device cuda \
+      --dtype bf16 \
+      --seed 42 \
+      --batch-size 4 \
+      --use-kv-cache \
+      --output-file-name <OUTPUT_FILE_PATH>
+    ```
+
+### Running evals
+- For all options: `python evaluate.py --help`
+- Example:
+    ```bash
+    python evaluate.py \
+      --checkpoint  <CHECKPOINT_FILE_PATH> \
+      --validation \
+      --validation-steps 1000 \
+      --hellaswag \
+      --hellaswag-examples 100 \
+      --winogrande \
+      --winogrande-examples 100 \
+      --arc-challenge \
+      --arc-challenge-examples 100 \
+      --batch-size 4 \
+      --device cuda \
+      --dtype bf16 \
+      --output-file-name <OUTPUT_FILE_PATH>
+    ```
 
 ## Using Torch Profiler
 Torch profiler settings are configured in `config.py` under `GlobalConfig.torch_profiler`.
