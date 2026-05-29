@@ -374,11 +374,14 @@ def shard_and_tokenize(
     validation_ratio = float(validation_ratio)
     assert 0.0 <= validation_ratio < 1.0
 
-    val_target_tokens = 0
-    if target_tokens is not None and validation_ratio > 0.0:
-        val_target_tokens = math.ceil(
-            target_tokens * validation_ratio / (1.0 - validation_ratio)
-        )
+    val_target_tokens = None
+    if target_tokens is not None:
+        if validation_ratio > 0.0:
+            val_target_tokens = math.ceil(
+                target_tokens * validation_ratio / (1.0 - validation_ratio)
+            )
+        else:
+            val_target_tokens = 0
 
     train_writer = ShardWriter(
         target_folder=train_path,
