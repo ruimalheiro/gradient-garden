@@ -3,7 +3,7 @@ import argparse
 import json
 
 from logger import logger
-from config import load_config
+from config import load_config, TrainingStage
 from utils import load_json_file
 from recipes.config import load_recipe
 from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
@@ -26,16 +26,16 @@ if __name__ == '__main__':
     config_group.add_argument('--config', type=str, default=None, help='Path to the configuration definition (.yaml). If not provided, default values are used.')
     config_group.add_argument('--recipe', type=str, default=None, help='Path to a recipe YAML file.')
 
-    dataset_group = parser.add_mutually_exclusive_group()
-    dataset_group.add_argument('--hellaswag', action='store_true', help='Prepare HellaSwag eval dataset')
-    dataset_group.add_argument('--winogrande', action='store_true', help='Prepare WinoGrande eval dataset')
-    dataset_group.add_argument('--arc-challenge', action='store_true', help='Prepare ARC-Challenge eval dataset')
-    dataset_group.add_argument('--pretraining', action='store_true', help='Prepare pretraining dataset')
-    dataset_group.add_argument('--instruct', action='store_true', help='Prepare instruct (SFT) dataset')
-    dataset_group.add_argument('--dpo', action='store_true', help='Prepare DPO (Direct Preference Optimization) dataset')
+    action_group = parser.add_mutually_exclusive_group()
+    action_group.add_argument('--hellaswag', action='store_true', help='Prepare HellaSwag eval dataset')
+    action_group.add_argument('--winogrande', action='store_true', help='Prepare WinoGrande eval dataset')
+    action_group.add_argument('--arc-challenge', action='store_true', help='Prepare ARC-Challenge eval dataset')
+    action_group.add_argument('--pretraining', action='store_true', help='Prepare pretraining dataset')
+    action_group.add_argument('--instruct', action='store_true', help='Prepare instruct (SFT) dataset')
+    action_group.add_argument('--dpo', action='store_true', help='Prepare DPO (Direct Preference Optimization) dataset')
+    action_group.add_argument('--estimate-token-target', action='store_true', help='Estimates the token count required for the current model configuration')
 
     parser.add_argument('--mix-file', type=str, default=None, help='Path to custom mix file')
-    parser.add_argument('--estimate-token-target', action='store_true', help='Estimates the token count required for the current model configuration')
 
     args = parser.parse_args()
 
@@ -48,22 +48,31 @@ if __name__ == '__main__':
         args.dpo
     )
 
+    action_group_flags_set = (
+        dataset_group_flags_set or
+        args.estimate_token_target
+    )
+
     if args.recipe and (dataset_group_flags_set or args.mix_file):
-        parser.error('--recipe defines the data configuration. Cannot combine --recipe with any other flag.')
+        parser.error(
+            '--recipe defines the data configuration. Cannot combine --recipe '
+            'with dataset preparation flags or --mix-file.'
+        )
 
-    # if args.estimate_token_target and not (args.pretraining or args.instruct):
-    #     parser.error('--estimate-token-target can only be used when preparing pretraining or instruct datasets.')
+    if args.estimate_token_target and args.mix_file:
+        parser.error('--estimate-token-target cannot be combined with --mix-file.')
 
-    # estimate_workload_tokens_from_config
     if args.recipe:
         recipe = load_recipe(args.recipe)
         cfg = recipe.config
     else:
-        if not dataset_group_flags_set:
-            parser.error('Please specify one dataset flag, or use --recipe.')
+        if not action_group_flags_set:
+            parser.error('Please specify one dataset flag/action, or use --recipe.')
         cfg = load_config(args.config)
 
     if args.estimate_token_target:
+        if cfg.training.stage == TrainingStage.DPO:
+            parser.error('--estimate-token-target is not supported for DPO.')
         estimate_workload_tokens_from_config(config=cfg)
         sys.exit(0)
 
