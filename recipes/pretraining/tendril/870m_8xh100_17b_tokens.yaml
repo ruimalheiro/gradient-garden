@@ -102,13 +102,21 @@ config:
 
 data:
   seed: 42
+
   datasets_common_settings:
     shard_size: 100000000
+    target_tokens: 17383292928
+    validation_ratio: 0.01
 
   datasets:
     HuggingFaceTB/smollm-corpus:
       fineweb-edu-dedup:
-        weight: 1.0
+        weight: 0.50
+      cosmopedia-v2:
+        weight: 0.25
+    Avelina/python-edu-cleaned:
+      default:
+        weight: 0.10
 
   evals:
     hellaswag:
