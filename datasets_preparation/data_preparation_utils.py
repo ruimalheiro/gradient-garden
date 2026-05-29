@@ -167,6 +167,9 @@ class ShardWriter:
             )
             self.progress_bar.set_description(f'{self.split_name} shard {self.shard_index}')
 
+    def get_progress_bar(self):
+        return self.progress_bar
+
     def get_save_paths(self):
         current_filename = f'{self.shard_file_prefix}_{self.shard_index:06d}'
         final_path = self.cache_dir / f'{current_filename}.npy'
@@ -438,7 +441,10 @@ def shard_and_tokenize(
 
     logger.info('Preparing pretraining train and val shards...')
 
-    with mp.Pool(num_proc) as pool:
+    stopped_on_target = False
+    pool = mp.Pool(num_proc)
+
+    try:
         iterator = pool.imap(
             partial(
                 tokenize_and_route,
@@ -462,6 +468,9 @@ def shard_and_tokenize(
 
             if written == 0:
                 if reached_target():
+                    stopped_on_target = True
+                    logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}', pbar=train_writer.get_progress_bar())
+                    logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}', pbar=val_writer.get_progress_bar())
                     break
                 continue
 
@@ -474,9 +483,21 @@ def shard_and_tokenize(
                 save_state(state)
 
             if reached_target():
-                logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
-                logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}')
+                stopped_on_target = True
+                logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}', pbar=train_writer.get_progress_bar())
+                logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}', pbar=val_writer.get_progress_bar())
                 break
+
+    except Exception:
+        pool.terminate()
+        pool.join()
+        raise
+    else:
+        if stopped_on_target:
+            pool.terminate()
+        else:
+            pool.close()
+        pool.join()
 
     train_writer.finish()
     val_writer.finish()
