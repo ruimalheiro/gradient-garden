@@ -1,3 +1,4 @@
+import sys
 import argparse
 import json
 
@@ -13,6 +14,7 @@ from datasets_preparation.prepare_pretraining_dataset import prepare_pretraining
 from datasets_preparation.prepare_instruct_dataset import prepare_instruct_dataset
 from datasets_preparation.prepare_dpo_dataset import prepare_dpo_dataset
 from datasets_preparation.prepare_recipe_data import prepare_recipe_data
+from engine.workload_estimation import estimate_workload_tokens_from_config
 
 
 if __name__ == '__main__':
@@ -33,6 +35,7 @@ if __name__ == '__main__':
     dataset_group.add_argument('--dpo', action='store_true', help='Prepare DPO (Direct Preference Optimization) dataset')
 
     parser.add_argument('--mix-file', type=str, default=None, help='Path to custom mix file')
+    parser.add_argument('--estimate-token-target', action='store_true', help='Estimates the token count required for the current model configuration')
 
     args = parser.parse_args()
 
@@ -48,19 +51,27 @@ if __name__ == '__main__':
     if args.recipe and (dataset_group_flags_set or args.mix_file):
         parser.error('--recipe defines the data configuration. Cannot combine --recipe with any other flag.')
 
+    # if args.estimate_token_target and not (args.pretraining or args.instruct):
+    #     parser.error('--estimate-token-target can only be used when preparing pretraining or instruct datasets.')
+
+    # estimate_workload_tokens_from_config
     if args.recipe:
         recipe = load_recipe(args.recipe)
-        prepare_recipe_data(
-            recipe=recipe,
-            num_proc=get_max_number_of_cpu_processes(recipe.config)
-        )
+        cfg = recipe.config
     else:
         if not dataset_group_flags_set:
             parser.error('Please specify one dataset flag, or use --recipe.')
-
         cfg = load_config(args.config)
-        num_proc = get_max_number_of_cpu_processes(cfg)
 
+    if args.estimate_token_target:
+        estimate_workload_tokens_from_config(config=cfg)
+        sys.exit(0)
+
+    num_proc = get_max_number_of_cpu_processes(cfg)
+
+    if args.recipe:
+        prepare_recipe_data(recipe=recipe, num_proc=num_proc)
+    else:
         if (args.hellaswag or args.winogrande or args.arc_challenge) and args.mix_file:
             parser.error('"--mix-file" is only supported for training datasets.')
 
