@@ -121,7 +121,8 @@ def download_and_prepare_data(
     seed,
     valid_datasets,
     probabilities,
-    num_proc
+    num_proc,
+    validation_ratio
 ):
     tokenizer_kwargs = {
         'path': config.tokenizer.checkpoint_path,
@@ -155,7 +156,7 @@ def download_and_prepare_data(
             token=config.third_party.hf_token
         )
 
-        if max_datapoints:
+        if max_datapoints is not None:
             max_datapoints = int(max_datapoints)
             ds = ds.select(range(max_datapoints))
 
@@ -209,7 +210,7 @@ def download_and_prepare_data(
 
     logger.info('- Mix total len:', len(prepared_dataset))
 
-    splits = prepared_dataset.train_test_split(test_size=0.01, seed=seed)
+    splits = prepared_dataset.train_test_split(test_size=validation_ratio, seed=seed)
 
     logger.info(f'- Train len: {len(splits["train"])} Val len: {len(splits["test"])}\n')
 
@@ -225,12 +226,20 @@ def prepare_instruct_dataset(
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_INSTRUCT_MIX)
 
     #### VERIFY MIX FILE STRUCTURE
-    seed, _, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
+    seed, common_settings, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
+
+    if common_settings.get('shard_size') is not None:
+        logger.warning('datasets_common_settings.shard_size is only used for pretraining data preparation.')
+    if common_settings.get('target_tokens') is not None:
+        logger.warning('datasets_common_settings.target_tokens is only used for pretraining data preparation.')
+
+    validation_ratio = float(common_settings.get('validation_ratio', 0.01))
 
     download_and_prepare_data(
         config=config,
         seed=seed,
         valid_datasets=valid_datasets,
         probabilities=probabilities,
-        num_proc=num_proc
+        num_proc=num_proc,
+        validation_ratio=validation_ratio
     )

@@ -26,6 +26,12 @@ def adapt_fineweb_edu(batch, transforms):
 def adapt_smollm_corpus_fineweb_edu_dedup(batch, transforms):
     return {'text': batch['text']}
 
+def adapt_smollm_corpus_cosmopedia_v2(batch, transforms):
+    return {'text': batch['text']}
+
+def adapt_avelina_python_edu_cleaned(batch, transforms):
+    return {'text': batch['text']}
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceFW/fineweb-edu': {
@@ -45,8 +51,20 @@ SUPPORTED_HF_DATASETS = {
             'id': 'HuggingFaceTB/smollm-corpus',
             'split': 'train',
             'adapter': adapt_smollm_corpus_fineweb_edu_dedup
-        }
-    }
+        },
+        'cosmopedia-v2': {
+            'id': 'HuggingFaceTB/smollm-corpus',
+            'split': 'train',
+            'adapter': adapt_smollm_corpus_cosmopedia_v2,
+        },
+    },
+    'Avelina/python-edu-cleaned': {
+        'default': {
+            'id': 'Avelina/python-edu-cleaned',
+            'split': 'train',
+            'adapter': adapt_avelina_python_edu_cleaned,
+        },
+    },
 }
 
 def download_and_prepare_data(
@@ -82,7 +100,7 @@ def download_and_prepare_data(
 
         columns_to_remove = ds.column_names
 
-        if max_datapoints:
+        if max_datapoints is not None:
             max_datapoints = int(max_datapoints)
             assert max_datapoints > 0
             ds = ds.take(max_datapoints)
