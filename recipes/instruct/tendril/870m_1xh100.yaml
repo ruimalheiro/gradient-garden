@@ -16,7 +16,7 @@ config:
     stage: instruct
     seed: 42
     total_batch_size: 131072
-    max_steps: 1000
+    max_steps: 3200
     early_stopping_patience: 1000000
     early_stopping_patience_skip_steps: 0
 
@@ -61,13 +61,13 @@ config:
 
   validation:
     every_x_steps: 100
-    validation_steps: 50
+    validation_steps: 250
     run_on_first_step: true
     run_on_last_step: true
 
   generation:
     every_x_steps: 100
-    max_test_gen_len: 256
+    max_test_gen_len: 96
     run_on_first_step: true
     run_on_last_step: true
 
@@ -95,7 +95,7 @@ config:
     beta: 0.1
 
   wandb:
-    enabled: false
+    enabled: true
 
 data:
   seed: 42
@@ -108,5 +108,4 @@ data:
       default:
         weight: 1.0
         transforms:
-          max_datapoints: 50000
           max_messages: 2
