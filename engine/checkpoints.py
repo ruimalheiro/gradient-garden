@@ -113,7 +113,7 @@ def save_checkpoint(
 
         if is_best:
             best_checkpoint_dir = os.path.join(checkpoint_dir, 'best')
-            best_checkpoint_path = os.path.join(best_checkpoint_dir, f'best_model.pt')
+            best_checkpoint_path = os.path.join(best_checkpoint_dir, f'model.pt')
             os.makedirs(best_checkpoint_dir, exist_ok=True)
             torch.save(checkpoint, best_checkpoint_path)
             logger.info(f'{step:4d} | saved best checkpoint: {best_checkpoint_path}', pbar=pbar)
