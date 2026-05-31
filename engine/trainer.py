@@ -970,10 +970,7 @@ class Trainer:
         )
 
     def run_save_checkpoint(self, pbar=None):
-        if (
-            not self.config.checkpointing.save_checkpoints or
-            (self.config.checkpointing.save_best_only and self.trainer_state.num_val_runs_no_improve > 0)
-        ):
+        if not self.config.checkpointing.save_checkpoints:
             return
 
         logger.info(f'{self.trainer_state.current_step:4d} | saving checkpoint...', pbar=pbar)
@@ -994,6 +991,7 @@ class Trainer:
             },
             self.config.checkpointing.max_number_checkpoints,
             self.distributed_ctx.is_master_process,
+            is_best=(self.trainer_state.num_val_runs_no_improve == 0),
             pbar=pbar
         )
 

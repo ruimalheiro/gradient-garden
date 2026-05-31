@@ -61,6 +61,7 @@ def save_checkpoint(
     extra_metadata,
     max_number_checkpoints,
     is_master_process,
+    is_best=False,
     pbar=None
 ):
     optimizer_state = {'adamw': None, 'muon': None}
@@ -109,6 +110,13 @@ def save_checkpoint(
 
         torch.save(checkpoint, checkpoint_path)
         logger.info(f'{step:4d} | saved checkpoint: {checkpoint_path}', pbar=pbar)
+
+        if is_best:
+            best_checkpoint_dir = os.path.join(checkpoint_dir, 'best')
+            best_checkpoint_path = os.path.join(best_checkpoint_dir, f'best_model.pt')
+            os.makedirs(best_checkpoint_dir, exist_ok=True)
+            torch.save(checkpoint, best_checkpoint_path)
+            logger.info(f'{step:4d} | saved best checkpoint: {best_checkpoint_path}', pbar=pbar)
 
         manage_checkpoints(directory=checkpoint_dir, max_files=max_number_checkpoints, step=step, pbar=pbar)
 
