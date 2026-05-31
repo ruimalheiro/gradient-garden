@@ -16,7 +16,7 @@ config:
     stage: instruct
     seed: 42
     total_batch_size: 131072
-    max_steps: 3200
+    max_steps: 4000
     early_stopping_patience: 1000000
     early_stopping_patience_skip_steps: 0
 
@@ -108,4 +108,4 @@ data:
       default:
         weight: 1.0
         transforms:
-          max_messages: 2
+          max_messages: 4
