@@ -201,9 +201,9 @@ class ValidationConfig(BaseModel):
 class CheckpointingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     save_checkpoints: bool = False
-    save_best_only: bool = False
     every_x_steps: int = 50
     max_number_checkpoints: int = 5
+    max_number_best_checkpoints: int = 1
     run_on_first_step: bool = False
     run_on_last_step: bool = False
 
