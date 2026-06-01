@@ -70,6 +70,15 @@ def adapt_tulu_3_sft_personas_instruction_following(doc, transforms, seed):
         conversation.append({'role': message['role'], 'content': message['content']})
     return conversation
 
+def adapt_grammarly_coedit(doc, transforms, seed):
+    src = doc['src']
+    tgt = doc['tgt']
+    conversation = [
+        {'role': 'user', 'content': src},
+        {'role': 'assistant', 'content': tgt}
+    ]
+    return conversation
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceH4/ultrachat_200k': {
@@ -91,6 +100,13 @@ SUPPORTED_HF_DATASETS = {
             'id': 'allenai/tulu-3-sft-personas-instruction-following',
             'split': 'train',
             'adapter': adapt_tulu_3_sft_personas_instruction_following
+        }
+    },
+    'grammarly/coedit': {
+        'default': {
+            'id': 'grammarly/coedit',
+            'split': 'train',
+            'adapter': adapt_grammarly_coedit
         }
     }
 }
