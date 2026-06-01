@@ -91,7 +91,6 @@ config:
 
   checkpointing:
     save_checkpoints: true
-    save_best_only: false
     every_x_steps: 250
     max_number_checkpoints: 3
     run_on_first_step: true

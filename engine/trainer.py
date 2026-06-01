@@ -177,6 +177,9 @@ class Trainer:
     def get_checkpoints_dir_path(self):
         return self.get_run_output_dir_path() / 'checkpoints'
 
+    def get_best_checkpoints_dir_path(self):
+        return self.get_run_output_dir_path() / 'checkpoints' / 'best'
+
     def get_snapshots_dir_path(self):
         return self.get_run_output_dir_path() / 'snapshots'
 
@@ -939,6 +942,7 @@ class Trainer:
         if self.trainer_state.last_val_loss < self.trainer_state.best_val_loss:
             self.trainer_state.best_val_loss = self.trainer_state.last_val_loss
             self.trainer_state.num_val_runs_no_improve = 0
+            self.run_save_best_checkpoint(pbar)
         else:
             skip_phase = (self.trainer_state.current_step < early_stopping_patience_skip_steps)
             if not skip_phase:
@@ -969,16 +973,9 @@ class Trainer:
             pbar=pbar
         )
 
-    def run_save_checkpoint(self, pbar=None):
-        if (
-            not self.config.checkpointing.save_checkpoints or
-            (self.config.checkpointing.save_best_only and self.trainer_state.num_val_runs_no_improve > 0)
-        ):
-            return
-
-        logger.info(f'{self.trainer_state.current_step:4d} | saving checkpoint...', pbar=pbar)
+    def run_save_checkpoint(self, *, path, max_number_checkpoints, pbar):
         save_checkpoint(
-            self.get_checkpoints_dir_path(),
+            path,
             get_model(self.model),
             self.config,
             self.trainer_state.current_step,
@@ -992,8 +989,28 @@ class Trainer:
                 'lora_enabled': self.config.lora.enabled,
                 'ddp_world_size': self.distributed_ctx.ddp_world_size
             },
-            self.config.checkpointing.max_number_checkpoints,
+            max_number_checkpoints,
             self.distributed_ctx.is_master_process,
+            pbar=pbar
+        )
+
+    def run_save_common_checkpoint(self, pbar=None):
+        if not self.config.checkpointing.save_checkpoints:
+            return
+        logger.info(f'{self.trainer_state.current_step:4d} | saving checkpoint...', pbar=pbar)
+        self.run_save_checkpoint(
+            path=self.get_checkpoints_dir_path(),
+            max_number_checkpoints=self.config.checkpointing.max_number_checkpoints,
+            pbar=pbar
+        )
+
+    def run_save_best_checkpoint(self, pbar=None):
+        if not self.config.checkpointing.save_checkpoints:
+            return
+        logger.info(f'{self.trainer_state.current_step:4d} | saving best checkpoint...', pbar=pbar)
+        self.run_save_checkpoint(
+            path=self.get_best_checkpoints_dir_path(),
+            max_number_checkpoints=self.config.checkpointing.max_number_best_checkpoints,
             pbar=pbar
         )
 
@@ -1109,7 +1126,7 @@ class Trainer:
         if self.should_run(run_config=self.config.validation):
             self.run_validation(pbar)
         if self.should_run(run_config=self.config.checkpointing):
-            self.run_save_checkpoint(pbar)
+            self.run_save_common_checkpoint(pbar)
         if self.should_run(run_config=self.config.evals.hellaswag):
             self.run_hellaswag_eval(pbar)
         if self.should_run(run_config=self.config.evals.winogrande):
