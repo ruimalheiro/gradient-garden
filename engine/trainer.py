@@ -766,14 +766,26 @@ class Trainer:
         if self.optimizers.muon:
             scaler.unscale_(self.optimizers.muon)
 
+    def resolve_scheduler_step(self, current_step, scheduler_start_step):
+        return max(0, current_step - scheduler_start_step)
+
+    def resolve_scheduler_max_steps(self, max_steps, scheduler_start_step, scheduler_max_steps):
+        return scheduler_max_steps if scheduler_max_steps is not None else max_steps - scheduler_start_step
+
     def update_optimizers_lr(self):
-        step = self.trainer_state.current_step
         lrs = {}
         if self.optimizers.adamw:
             adamw_lr = cosine_scheduler(
-                step=step,
+                step=self.resolve_scheduler_step(
+                    self.trainer_state.current_step,
+                    self.config.optimizers.adamw.scheduler_start_step
+                ),
                 warmup_steps=self.config.optimizers.adamw.warmup_steps,
-                max_steps=self.trainer_state.max_steps,
+                max_steps=self.resolve_scheduler_max_steps(
+                    self.trainer_state.max_steps,
+                    self.config.optimizers.adamw.scheduler_start_step,
+                    self.config.optimizers.adamw.scheduler_max_steps
+                ),
                 max_lr=self.config.optimizers.adamw.max_lr,
                 min_lr=self.config.optimizers.adamw.min_lr,
             )
@@ -783,9 +795,16 @@ class Trainer:
             lrs['adamw_lr'] = adamw_lr
         if self.optimizers.muon:
             muon_lr = cosine_scheduler(
-                step=step,
+                step=self.resolve_scheduler_step(
+                    self.trainer_state.current_step,
+                    self.config.optimizers.muon.scheduler_start_step
+                ),
                 warmup_steps=self.config.optimizers.muon.warmup_steps,
-                max_steps=self.trainer_state.max_steps,
+                max_steps=self.resolve_scheduler_max_steps(
+                    self.trainer_state.max_steps,
+                    self.config.optimizers.muon.scheduler_start_step,
+                    self.config.optimizers.muon.scheduler_max_steps
+                ),
                 max_lr=self.config.optimizers.muon.max_lr,
                 min_lr=self.config.optimizers.muon.min_lr,
             )
