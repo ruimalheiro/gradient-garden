@@ -16,7 +16,7 @@ config:
     stage: instruct
     seed: 42
     total_batch_size: 131072
-    max_steps: 4000
+    max_steps: 3000
     early_stopping_patience: 1000000
     early_stopping_patience_skip_steps: 0
 
@@ -50,8 +50,8 @@ config:
 
   optimizers:
     adamw:
-      min_lr: 3.0e-6
-      max_lr: 3.0e-5
+      max_lr: 3.0e-6
+      min_lr: 3.0e-5
       weight_decay: 0.05
       betas: [0.9, 0.95]
       use_fused: null
@@ -61,7 +61,7 @@ config:
 
   validation:
     every_x_steps: 100
-    validation_steps: 250
+    validation_steps: 125
     run_on_first_step: true
     run_on_last_step: true
 
@@ -106,6 +106,14 @@ data:
   datasets:
     HuggingFaceH4/ultrachat_200k:
       default:
-        weight: 1.0
+        weight: 0.70
         transforms:
+          max_datapoints: null
           max_messages: 4
+
+    allenai/tulu-3-sft-personas-instruction-following:
+      default:
+        weight: 0.30
+        transforms:
+          max_datapoints: null
+          max_messages: 2
