@@ -766,34 +766,73 @@ class Trainer:
         if self.optimizers.muon:
             scaler.unscale_(self.optimizers.muon)
 
+    def resolve_scheduler_step(self, current_step, scheduler_start_step):
+        return max(0, current_step - scheduler_start_step)
+
+    def resolve_scheduler_max_steps(self, max_steps, scheduler_start_step, scheduler_max_steps):
+        resolved = scheduler_max_steps if scheduler_max_steps is not None else max_steps - scheduler_start_step
+        if resolved <= 0:
+            raise ValueError(
+                f'Invalid scheduler_max_steps: {resolved} '
+                f'max_steps: {max_steps}, '
+                f'scheduler_start_step: {scheduler_start_step}, '
+                f'configured scheduler_max_steps: {scheduler_max_steps}'
+            )
+        return resolved
+
     def update_optimizers_lr(self):
-        step = self.trainer_state.current_step
-        lrs = {}
+        scheduler_metadata = {}
         if self.optimizers.adamw:
+            adamw_scheduler_step = self.resolve_scheduler_step(
+                self.trainer_state.current_step,
+                self.config.optimizers.adamw.scheduler_start_step
+            )
+            adamw_scheduler_max_steps = self.resolve_scheduler_max_steps(
+                self.trainer_state.max_steps,
+                self.config.optimizers.adamw.scheduler_start_step,
+                self.config.optimizers.adamw.scheduler_max_steps
+            )
             adamw_lr = cosine_scheduler(
-                step=step,
+                step=adamw_scheduler_step,
                 warmup_steps=self.config.optimizers.adamw.warmup_steps,
-                max_steps=self.trainer_state.max_steps,
+                max_steps=adamw_scheduler_max_steps,
                 max_lr=self.config.optimizers.adamw.max_lr,
                 min_lr=self.config.optimizers.adamw.min_lr,
             )
             for group in self.optimizers.adamw.param_groups:
                 lr_scale = group.get('lr_scale', 1.0)
                 group['lr'] = adamw_lr * lr_scale
-            lrs['adamw_lr'] = adamw_lr
+            scheduler_metadata['adamw'] = {
+                'lr': adamw_lr,
+                'scheduler_step': adamw_scheduler_step,
+                'scheduler_max_steps': adamw_scheduler_max_steps
+            }
         if self.optimizers.muon:
+            muon_scheduler_step = self.resolve_scheduler_step(
+                self.trainer_state.current_step,
+                self.config.optimizers.muon.scheduler_start_step
+            )
+            muon_scheduler_max_steps = self.resolve_scheduler_max_steps(
+                self.trainer_state.max_steps,
+                self.config.optimizers.muon.scheduler_start_step,
+                self.config.optimizers.muon.scheduler_max_steps
+            )
             muon_lr = cosine_scheduler(
-                step=step,
+                step=muon_scheduler_step,
                 warmup_steps=self.config.optimizers.muon.warmup_steps,
-                max_steps=self.trainer_state.max_steps,
+                max_steps=muon_scheduler_max_steps,
                 max_lr=self.config.optimizers.muon.max_lr,
                 min_lr=self.config.optimizers.muon.min_lr,
             )
             for group in self.optimizers.muon.param_groups:
                 lr_scale = group.get('lr_scale', 1.0)
                 group['lr'] = muon_lr * lr_scale
-            lrs['muon_lr'] = muon_lr
-        return lrs
+            scheduler_metadata['muon'] = {
+                'lr': muon_lr,
+                'scheduler_step': muon_scheduler_step,
+                'scheduler_max_steps': muon_scheduler_max_steps
+            }
+        return scheduler_metadata
 
     def optimizers_steps(self, scaler):
         if scaler:
@@ -860,7 +899,7 @@ class Trainer:
 
         norm = self.clip_grad_norm(self.model, 1.0)
 
-        lrs = self.update_optimizers_lr()
+        scheduler_metadata = self.update_optimizers_lr()
         self.optimizers_steps(scaler)
         self.zero_grad_optimizers()
 
@@ -874,7 +913,7 @@ class Trainer:
             norm=norm,
             dt=dt,
             tokens_per_sec=tokens_per_sec,
-            lrs=lrs
+            scheduler_metadata=scheduler_metadata
         )
         aggregated_metrics = combine_weighted_metrics(
             metrics_sum_acc=metrics_sum_acc,

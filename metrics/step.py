@@ -15,5 +15,5 @@ class StepMetrics:
     norm: float = None
     dt: float = None
     tokens_per_sec: int = None
-    lrs: dict[str, float] = None
+    scheduler_metadata: dict[str, dict] = None
     accuracy: float = None
