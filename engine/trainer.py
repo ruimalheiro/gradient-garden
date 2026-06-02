@@ -770,7 +770,15 @@ class Trainer:
         return max(0, current_step - scheduler_start_step)
 
     def resolve_scheduler_max_steps(self, max_steps, scheduler_start_step, scheduler_max_steps):
-        return scheduler_max_steps if scheduler_max_steps is not None else max_steps - scheduler_start_step
+        resolved = scheduler_max_steps if scheduler_max_steps is not None else max_steps - scheduler_start_step
+        if resolved <= 0:
+            raise ValueError(
+                f'Invalid scheduler_max_steps: {resolved} '
+                f'max_steps: {max_steps}, '
+                f'scheduler_start_step: {scheduler_start_step}, '
+                f'configured scheduler_max_steps: {scheduler_max_steps}'
+            )
+        return resolved
 
     def update_optimizers_lr(self):
         lrs = {}
