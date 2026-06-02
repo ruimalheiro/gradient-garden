@@ -181,9 +181,6 @@ def load_checkpoint(file_path) -> CheckpointData:
     logger.section('Loaded config')
     logger.info(state['config'], is_json=True)
 
-    logger.section('Loaded model config')
-    logger.info(state['config'], is_json=True)
-
     if step > 0:
         logger.info(f'\nResuming from step: {step}')
     else:

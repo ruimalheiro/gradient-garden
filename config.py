@@ -161,6 +161,8 @@ class AdamWConfig(BaseModel):
     betas: tuple[float, float] = (0.9, 0.95)
     use_fused: bool | None = None
     warmup_steps: int = 20
+    scheduler_start_step: int = 0
+    scheduler_max_steps: int | None = None
 
 class MuonConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -170,6 +172,8 @@ class MuonConfig(BaseModel):
     weight_decay: float = 0.0
     momentum: float = 0.95
     warmup_steps: int = 20
+    scheduler_start_step: int = 0
+    scheduler_max_steps: int | None = None
 
 class OptimizersConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
