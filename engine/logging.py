@@ -98,11 +98,22 @@ def prepare_train_step_log(
 
     train_loss = aggregated_metrics['Train Loss']
 
-    adam_lr = step_metrics.lrs.get('adamw_lr', None)
-    muon_lr = step_metrics.lrs.get('muon_lr', None)
-    lr_console_message = f'lr (adamw): {adam_lr:.4e}'
-    if muon_lr:
-        lr_console_message = f'lr (adamw/muon): {adam_lr:.4e} / {muon_lr:.4e}'
+    adamw_metadata = step_metrics.scheduler_metadata.get('adamw', None)
+    muon_metadata = step_metrics.scheduler_metadata.get('muon', None)
+
+    adam_lr = adamw_metadata.get('lr', None)
+    adamw_scheduler_step = adamw_metadata.get('scheduler_step', None)
+    adamw_scheduler_max_steps = adamw_metadata.get('scheduler_max_steps', None)
+    scheduler_console_message = f'sched (adamw): step {adamw_scheduler_step}/{adamw_scheduler_max_steps} lr {adam_lr:.4e}'
+    muon_lr = None
+    if muon_metadata and muon_metadata.get('lr', None):
+        muon_lr = muon_metadata.get('lr', None)
+        muon_scheduler_step = muon_metadata.get('scheduler_step', None)
+        muon_scheduler_max_steps = muon_metadata.get('scheduler_max_steps', None)
+        scheduler_console_message = (
+            f'(adamw): step {adamw_scheduler_step}/{adamw_scheduler_max_steps} lr {adam_lr:.4e} | '
+            f'(muon): step {muon_scheduler_step}/{muon_scheduler_max_steps} lr {muon_lr:.4e}'
+        )
     norm = step_metrics.norm
     dt = step_metrics.dt
     tokens_per_sec = step_metrics.tokens_per_sec
@@ -117,11 +128,11 @@ def prepare_train_step_log(
     console_log = (
         f'{step:4d} | '
         f'train loss: {train_loss:.4f} | '
-        f'val (last/best): {last_val_loss:.4f} / {best_val_loss:.4f} | '
-        f'{lr_console_message} | '
+        f'val loss (last/best): {last_val_loss:.4f} / {best_val_loss:.4f} | '
         f'norm: {norm:.4f} | '
         f'dt: {dt:.2f}s | '
         f'tok/s: {int(tokens_per_sec)}'
+        f'\n       {scheduler_console_message}'
         f'\n       mem MiB current alloc/res: {current_allocated_mb:.0f} / {current_reserved_mb:.0f} | '
         f'peak alloc/res: {peak_allocated_mb:.0f} / {peak_reserved_mb:.0f}'
         f'{dpo_console_message}'
