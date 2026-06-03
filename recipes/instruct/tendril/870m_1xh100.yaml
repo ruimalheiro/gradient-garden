@@ -16,7 +16,7 @@ config:
     stage: instruct
     seed: 42
     total_batch_size: 131072
-    max_steps: 5000
+    max_steps: 3000
     early_stopping_patience: 1000000
     early_stopping_patience_skip_steps: 0
 
@@ -52,8 +52,6 @@ config:
     adamw:
       max_lr: 1.0e-5
       min_lr: 1.0e-6
-      # max_lr: 3.0e-6
-      # min_lr: 3.0e-5
       weight_decay: 0.05
       betas: [0.9, 0.95]
       use_fused: null
