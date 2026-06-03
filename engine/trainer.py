@@ -488,11 +488,15 @@ class Trainer:
                 checkpoint_data.train_loader_state = None
                 checkpoint_data.val_loader_state = None
 
-        if training_stage_changed or args.reset_optimizers or lora_mode_changed:
+        reset_optimizer_state = training_stage_changed or args.reset_optimizers or lora_mode_changed
+        if reset_optimizer_state:
             if checkpoint_data.optimizers_state is not None:
                 logger.warn('ignoring stored state of optimizer(s)...')
                 checkpoint_data.optimizers_state = None
-            if checkpoint_data.last_val_loss is not None and checkpoint_data.best_val_loss is not None:
+
+        reset_validation_history = training_stage_changed or lora_mode_changed
+        if reset_validation_history:
+            if checkpoint_data.last_val_loss is not None or checkpoint_data.best_val_loss is not None:
                 logger.warn('ignoring stored last val loss and best val loss...')
                 checkpoint_data.last_val_loss = float('inf')
                 checkpoint_data.best_val_loss = float('inf')
