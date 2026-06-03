@@ -52,7 +52,7 @@ from config import (
 )
 from tokenization.tokenizer import init_tokenizer
 from models.registry import build_model
-from engine.dataloaders import init_data_loaders
+from engine.dataloaders.dataloader import init_data_loaders
 from engine.checkpoints import (
     save_checkpoint,
     load_checkpoint,

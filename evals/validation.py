@@ -3,7 +3,7 @@ import math
 
 from inference.runtime import InferenceRuntime
 from config import GlobalConfig, TrainingStage
-from engine.dataloaders import init_data_loaders
+from engine.dataloaders.dataloader import init_data_loaders
 from tqdm.auto import tqdm
 
 
