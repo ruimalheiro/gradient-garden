@@ -32,6 +32,18 @@ def adapt_smollm_corpus_cosmopedia_v2(batch, transforms):
 def adapt_avelina_python_edu_cleaned(batch, transforms):
     return {'text': batch['text']}
 
+def adapt_huggingfacefw_dclm_100bt(batch, transforms):
+    return {'text': batch['text']}
+
+def adapt_huggingfacefw_dclm_100bt_shuffled(batch, transforms):
+    return {'text': batch['text']}
+
+def adapt_open_web_math(batch, transforms):
+    return {'text': batch['text']}
+
+def adapt_huggingfacetb_finemath(batch, transforms):
+    return {'text': batch['text']}
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceFW/fineweb-edu': {
@@ -55,16 +67,59 @@ SUPPORTED_HF_DATASETS = {
         'cosmopedia-v2': {
             'id': 'HuggingFaceTB/smollm-corpus',
             'split': 'train',
-            'adapter': adapt_smollm_corpus_cosmopedia_v2,
+            'adapter': adapt_smollm_corpus_cosmopedia_v2
         },
     },
     'Avelina/python-edu-cleaned': {
         'default': {
             'id': 'Avelina/python-edu-cleaned',
             'split': 'train',
-            'adapter': adapt_avelina_python_edu_cleaned,
+            'adapter': adapt_avelina_python_edu_cleaned
         },
     },
+    'HuggingFaceFW/dclm_100BT': {
+        'default': {
+            'id': 'HuggingFaceFW/dclm_100BT',
+            'split': 'train',
+            'adapter': adapt_huggingfacefw_dclm_100bt
+        },
+    },
+    'HuggingFaceFW/dclm_100BT-shuffled': {
+        'default': {
+            'id': 'HuggingFaceFW/dclm_100BT-shuffled',
+            'split': 'train',
+            'adapter': adapt_huggingfacefw_dclm_100bt_shuffled
+        },
+    },
+    'HuggingFaceTB/finemath': {
+        'finemath-4plus': {
+            'id': 'HuggingFaceTB/finemath',
+            'split': 'train',
+            'adapter': adapt_huggingfacetb_finemath
+        },
+        'finemath-3plus': {
+            'id': 'HuggingFaceTB/finemath',
+            'split': 'train',
+            'adapter': adapt_huggingfacetb_finemath
+        },
+        'infiwebmath-4plus': {
+            'id': 'HuggingFaceTB/finemath',
+            'split': 'train',
+            'adapter': adapt_huggingfacetb_finemath
+        },
+        'infiwebmath-3plus': {
+            'id': 'HuggingFaceTB/finemath',
+            'split': 'train',
+            'adapter': adapt_huggingfacetb_finemath
+        }
+    },
+    'open-web-math/open-web-math': {
+        'default': {
+            'id': 'open-web-math/open-web-math',
+            'split': 'train',
+            'adapter': adapt_open_web_math
+        },
+    }
 }
 
 def download_and_prepare_data(
@@ -150,8 +205,8 @@ def tokenize(tokenizer_kwargs, doc):
         tokenizer = init_tokenizer(**tokenizer_kwargs)
     input_ids = tokenizer.encode(doc['text'])
     tokens_np = np.empty(len(input_ids) + 1, dtype=np.uint32)
-    tokens_np[0] = tokenizer.eos_id
-    tokens_np[1:] = input_ids
+    tokens_np[:-1] = input_ids
+    tokens_np[-1] = tokenizer.eos_id
     return tokens_np
 
 def prepare_pretraining_dataset(
