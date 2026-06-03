@@ -276,11 +276,13 @@ class RMSNorm(nn.Module):
         self.eps = eps
         self.weight = nn.Parameter(torch.ones(dim))
 
-    def _norm(self, x):
-        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
-
     def forward(self, x):
-        return self._norm(x) * self.weight
+        input_dtype = x.dtype
+        x_float = x.float()
+        normed = x_float * torch.rsqrt(
+            x_float.pow(2).mean(-1, keepdim=True) + self.eps
+        )
+        return (normed * self.weight.float()).to(input_dtype)
 
 class TransformerBlock(nn.Module):
     def __init__(self, config):
