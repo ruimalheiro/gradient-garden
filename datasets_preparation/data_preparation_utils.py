@@ -96,9 +96,6 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
 
     return seed, common_settings, valid_datasets, probabilities
 
-def get_progress_bar(shard_index, shard_size, initial_tokens=0):
-    return tqdm(total=shard_size, initial=initial_tokens, unit='tokens', desc=f'Shard {shard_index}')
-
 class ShardWriter:
     def __init__(self,
         *,
@@ -106,7 +103,9 @@ class ShardWriter:
         shard_file_prefix,
         shard_size,
         split_name,
-        target_tokens=None
+        target_tokens=None,
+        shard_bar_position=0,
+        target_bar_position=2,
     ):
         self.cache_dir = Path(target_folder)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -121,6 +120,9 @@ class ShardWriter:
         self.total_tokens = 0
         self.buffer = np.empty((self.shard_size,), dtype=np.uint32)
         self.progress_bar = None
+        self.target_progress_bar = None
+        self.shard_bar_position = shard_bar_position
+        self.target_bar_position = target_bar_position
 
     def get_state_dict(self):
         return {
@@ -160,15 +162,33 @@ class ShardWriter:
 
     def init_progress_bar(self):
         if self.progress_bar is None:
-            self.progress_bar = get_progress_bar(
-                shard_index=self.shard_index,
-                shard_size=self.shard_size,
-                initial_tokens=self.token_count
+            self.progress_bar = tqdm(
+                total=self.shard_size,
+                initial=self.token_count,
+                unit='tokens',
+                desc=f'{self.split_name} shard {self.shard_index}',
+                leave=False,
+                position=self.shard_bar_position
             )
-            self.progress_bar.set_description(f'{self.split_name} shard {self.shard_index}')
+
+    def init_target_progress_bar(self):
+        if self.target_tokens is None or self.target_progress_bar is not None:
+            return
+        self.target_progress_bar = tqdm(
+            total=self.target_tokens,
+            initial=self.total_tokens,
+            unit='tokens',
+            desc=f'{self.split_name} target',
+            dynamic_ncols=True,
+            leave=True,
+            position=self.target_bar_position
+        )
 
     def get_progress_bar(self):
         return self.progress_bar
+
+    def get_target_progress_bar(self):
+        return self.target_progress_bar
 
     def get_save_paths(self):
         current_filename = f'{self.shard_file_prefix}_{self.shard_index:06d}'
@@ -205,6 +225,9 @@ class ShardWriter:
         if self.progress_bar is not None:
             self.progress_bar.close()
             self.progress_bar = None
+        if self.target_progress_bar is not None:
+            self.target_progress_bar.close()
+            self.target_progress_bar = None
         self.save_shard()
 
     def write(self, tokens):
@@ -221,6 +244,7 @@ class ShardWriter:
         offset = 0
 
         while offset < tokens.size:
+            self.init_target_progress_bar()
             self.init_progress_bar()
 
             remaining_space = self.shard_size - self.token_count
@@ -236,6 +260,8 @@ class ShardWriter:
             offset += slice_length
 
             self.progress_bar.update(slice_length)
+            if self.target_progress_bar is not None:
+                self.target_progress_bar.update(slice_length)
 
             if self.token_count == self.shard_size:
                 self.progress_bar.close()
@@ -391,7 +417,9 @@ def shard_and_tokenize(
         shard_file_prefix=shard_file_prefix,
         shard_size=shard_size,
         target_tokens=target_tokens,
-        split_name='train'
+        split_name='train',
+        shard_bar_position=0,
+        target_bar_position=2
     )
 
     val_writer = ShardWriter(
@@ -399,7 +427,9 @@ def shard_and_tokenize(
         shard_file_prefix=shard_file_prefix,
         shard_size=shard_size,
         target_tokens=val_target_tokens,
-        split_name='val'
+        split_name='val',
+        shard_bar_position=1,
+        target_bar_position=3
     )
 
     def reached_target():
@@ -469,8 +499,6 @@ def shard_and_tokenize(
             if written == 0:
                 if reached_target():
                     stopped_on_target = True
-                    logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}', pbar=train_writer.get_progress_bar())
-                    logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}', pbar=val_writer.get_progress_bar())
                     break
                 continue
 
@@ -484,8 +512,6 @@ def shard_and_tokenize(
 
             if reached_target():
                 stopped_on_target = True
-                logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}', pbar=train_writer.get_progress_bar())
-                logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}', pbar=val_writer.get_progress_bar())
                 break
 
     except Exception:
@@ -504,6 +530,10 @@ def shard_and_tokenize(
 
     state.status = 'completed'
     save_state(state)
+
+    if stopped_on_target:
+        logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
+        logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}')
 
     # Workaround for occasional pool shutdown issue...
     # Without this, some streaming runs crash after successful shard writing with PyGILState_Release during finalization...
