@@ -71,14 +71,14 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - `cli/` Common cli related logic.
 - `datasets_preparation/` Components used for downloading, preparing, and tokenizing datasets.
 - `engine/` Trainer and runtime core components. The main ones are:
+  - `dataloaders/` Dataloader logic for sampling and distributing data.
   - `checkpoints.py` Logic to handle checkpointing.
   - `context.py` Defines context transport classes.
   - `core.py` Defines state object used by the trainer.
-  - `dataloaders.py` Dataloader logic for sampling and distributing data.
   - `distributed.py` Contains the main logic to set up the PyTorch DDP (Distributed Data Parallel) and FSDP2 (Fully Sharded Data Parallel).
     - PyTorch DDP [here](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)
   - `logging.py` Handles different logging tasks used in the trainer.
-  - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine scheduler.
+  - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine and WSD schedulers.
   - `optim.py` Defines and controls the optimizer(s) setup. Also has the necessary logic to build the parameter groups.
   - `snapshot.py` Implements the logic to create and store the setup snapshot.
   - `torch_profiler.py` Adds torch profiler logic and context manager.

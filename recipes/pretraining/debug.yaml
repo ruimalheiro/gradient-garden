@@ -16,7 +16,7 @@ config:
     stage: pretraining
     seed: 42
     total_batch_size: 32768
-    max_steps: 10
+    max_steps: 20
     early_stopping_patience: 5
     early_stopping_patience_skip_steps: 0
 
@@ -56,7 +56,10 @@ config:
       weight_decay: 0.1
       betas: [0.9, 0.95]
       use_fused: null
-      warmup_steps: 2
+      schedulers:
+        active: cosine
+        cosine:
+          warmup_steps: 2
     muon:
       enabled: false
 

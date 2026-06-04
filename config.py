@@ -5,7 +5,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic_settings import BaseSettings
 from enum import Enum
-from typing import Any, Annotated
+from typing import Any, Annotated, Literal
 from logger import logger
 
 
@@ -153,6 +153,26 @@ class DPOConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     beta: float = 0.1
 
+class CosineSchedulerConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    start_step: int = 0
+    warmup_steps: int = 20
+    max_steps: int | None = None
+
+class WSDSchedulerConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    start_step: int = 0
+    warmup_steps: int = 20
+    stable_steps: int = 20
+    decay_steps: int | None = None
+    max_steps: int | None = None
+
+class SchedulersConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    active: Literal['cosine', 'wsd'] = 'cosine'
+    cosine: CosineSchedulerConfig = Field(default_factory=CosineSchedulerConfig)
+    wsd: WSDSchedulerConfig = Field(default_factory=WSDSchedulerConfig)
+
 class AdamWConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     min_lr: float = 3e-5
@@ -160,9 +180,7 @@ class AdamWConfig(BaseModel):
     weight_decay: float = 0.1
     betas: tuple[float, float] = (0.9, 0.95)
     use_fused: bool | None = None
-    warmup_steps: int = 20
-    scheduler_start_step: int = 0
-    scheduler_max_steps: int | None = None
+    schedulers: SchedulersConfig = Field(default_factory=SchedulersConfig)
 
 class MuonConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -171,9 +189,7 @@ class MuonConfig(BaseModel):
     max_lr: float = 3e-4
     weight_decay: float = 0.0
     momentum: float = 0.95
-    warmup_steps: int = 20
-    scheduler_start_step: int = 0
-    scheduler_max_steps: int | None = None
+    schedulers: SchedulersConfig = Field(default_factory=SchedulersConfig)
 
 class OptimizersConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
