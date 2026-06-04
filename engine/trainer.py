@@ -65,7 +65,10 @@ from models.adapters.lora import (
 )
 from tasks.factory import get_task
 from engine.wandb import WandbWrapper
-from engine.lr_schedulers import cosine_scheduler
+from engine.lr_schedulers import (
+    cosine_scheduler,
+    wsd_scheduler
+)
 from tqdm.auto import tqdm
 from metrics.memory import (
     reset_memory_usage_metrics,
@@ -771,7 +774,13 @@ class Trainer:
             scaler.unscale_(self.optimizers.muon)
 
     def resolve_scheduler_step(self, current_step, scheduler_start_step):
-        return max(0, current_step - scheduler_start_step)
+        if current_step < scheduler_start_step:
+            raise ValueError(
+                f'Scheduler cannot start in the future: '
+                f'current_step = {current_step}, '
+                f'scheduler_start_step = {scheduler_start_step}'
+            )
+        return current_step - scheduler_start_step
 
     def resolve_scheduler_max_steps(self, max_steps, scheduler_start_step, scheduler_max_steps):
         resolved = scheduler_max_steps if scheduler_max_steps is not None else max_steps - scheduler_start_step
@@ -784,55 +793,124 @@ class Trainer:
             )
         return resolved
 
+    def resolve_scheduler_decay_steps(self, decay_steps, max_steps, warmup_steps, stable_steps):
+        if decay_steps is None:
+            decay_steps = max_steps - warmup_steps - stable_steps
+        if decay_steps < 0:
+            raise ValueError(
+                'Invalid WSD scheduler config: '
+                'warmup_steps + stable_steps must be <= max_steps. '
+                f'warmup_steps = {warmup_steps}, '
+                f'stable_steps = {stable_steps}, '
+                f'max_steps = {max_steps}'
+            )
+        if warmup_steps + stable_steps + decay_steps > max_steps:
+            raise ValueError(
+                'Invalid WSD scheduler config: '
+                'warmup_steps + stable_steps + decay_steps must be <= max_steps. '
+                f'warmup_steps = {warmup_steps}, '
+                f'stable_steps = {stable_steps}, '
+                f'decay_steps = {decay_steps}, '
+                f'max_steps = {max_steps}'
+            )
+        return decay_steps
+
+    def resolve_cosine_scheduler_metadata(self, scheduler_config, step, max_steps, min_lr, max_lr):
+        scheduler_step = self.resolve_scheduler_step(step, scheduler_config.start_step)
+        scheduler_max_steps = self.resolve_scheduler_max_steps(
+            max_steps,
+            scheduler_config.start_step,
+            scheduler_config.max_steps
+        )
+        lr = cosine_scheduler(
+            step=scheduler_step,
+            min_lr=min_lr,
+            max_lr=max_lr,
+            warmup_steps=scheduler_config.warmup_steps,
+            max_steps=scheduler_max_steps
+        )
+        return scheduler_step, scheduler_max_steps, lr
+
+    def resolve_wsd_scheduler_metadata(self, scheduler_config, step, max_steps, min_lr, max_lr):
+        scheduler_step = self.resolve_scheduler_step(step, scheduler_config.start_step)
+        scheduler_max_steps = self.resolve_scheduler_max_steps(
+            max_steps,
+            scheduler_config.start_step,
+            scheduler_config.max_steps
+        )
+        decay_steps = self.resolve_scheduler_decay_steps(
+            scheduler_config.decay_steps,
+            scheduler_max_steps,
+            scheduler_config.warmup_steps,
+            scheduler_config.stable_steps
+        )
+        lr = wsd_scheduler(
+            step=scheduler_step,
+            min_lr=min_lr,
+            max_lr=max_lr,
+            warmup_steps=scheduler_config.warmup_steps,
+            stable_steps=scheduler_config.stable_steps,
+            decay_steps=decay_steps
+        )
+        return scheduler_step, scheduler_max_steps, lr
+
+    def resolve_scheduler_metadata(self, scheduler_config, min_lr, max_lr):
+        if scheduler_config.active == 'cosine':
+            return self.resolve_cosine_scheduler_metadata(
+                scheduler_config.cosine,
+                self.trainer_state.current_step,
+                self.trainer_state.max_steps,
+                min_lr,
+                max_lr
+            )
+        elif scheduler_config.active == 'wsd':
+            return self.resolve_wsd_scheduler_metadata(
+                scheduler_config.wsd,
+                self.trainer_state.current_step,
+                self.trainer_state.max_steps,
+                min_lr,
+                max_lr
+            )
+        else:
+            raise ValueError('Invalid active scheduler')
+
     def update_optimizers_lr(self):
         scheduler_metadata = {}
         if self.optimizers.adamw:
-            adamw_scheduler_step = self.resolve_scheduler_step(
-                self.trainer_state.current_step,
-                self.config.optimizers.adamw.scheduler_start_step
-            )
-            adamw_scheduler_max_steps = self.resolve_scheduler_max_steps(
-                self.trainer_state.max_steps,
-                self.config.optimizers.adamw.scheduler_start_step,
-                self.config.optimizers.adamw.scheduler_max_steps
-            )
-            adamw_lr = cosine_scheduler(
-                step=adamw_scheduler_step,
-                warmup_steps=self.config.optimizers.adamw.warmup_steps,
-                max_steps=adamw_scheduler_max_steps,
-                max_lr=self.config.optimizers.adamw.max_lr,
-                min_lr=self.config.optimizers.adamw.min_lr,
+            (
+                adamw_scheduler_step,
+                adamw_scheduler_max_steps,
+                adamw_lr
+            ) = self.resolve_scheduler_metadata(
+                self.config.optimizers.adamw.schedulers,
+                self.config.optimizers.adamw.min_lr,
+                self.config.optimizers.adamw.max_lr
             )
             for group in self.optimizers.adamw.param_groups:
                 lr_scale = group.get('lr_scale', 1.0)
                 group['lr'] = adamw_lr * lr_scale
             scheduler_metadata['adamw'] = {
                 'lr': adamw_lr,
+                'scheduler': self.config.optimizers.adamw.schedulers.active,
                 'scheduler_step': adamw_scheduler_step,
                 'scheduler_max_steps': adamw_scheduler_max_steps
             }
         if self.optimizers.muon:
-            muon_scheduler_step = self.resolve_scheduler_step(
-                self.trainer_state.current_step,
-                self.config.optimizers.muon.scheduler_start_step
-            )
-            muon_scheduler_max_steps = self.resolve_scheduler_max_steps(
-                self.trainer_state.max_steps,
-                self.config.optimizers.muon.scheduler_start_step,
-                self.config.optimizers.muon.scheduler_max_steps
-            )
-            muon_lr = cosine_scheduler(
-                step=muon_scheduler_step,
-                warmup_steps=self.config.optimizers.muon.warmup_steps,
-                max_steps=muon_scheduler_max_steps,
-                max_lr=self.config.optimizers.muon.max_lr,
-                min_lr=self.config.optimizers.muon.min_lr,
+            (
+                muon_scheduler_step,
+                muon_scheduler_max_steps,
+                muon_lr
+            ) = self.resolve_scheduler_metadata(
+                self.config.optimizers.muon.schedulers,
+                self.config.optimizers.muon.min_lr,
+                self.config.optimizers.muon.max_lr
             )
             for group in self.optimizers.muon.param_groups:
                 lr_scale = group.get('lr_scale', 1.0)
                 group['lr'] = muon_lr * lr_scale
             scheduler_metadata['muon'] = {
                 'lr': muon_lr,
+                'scheduler': self.config.optimizers.muon.schedulers.active,
                 'scheduler_step': muon_scheduler_step,
                 'scheduler_max_steps': muon_scheduler_max_steps
             }
