@@ -102,17 +102,19 @@ def prepare_train_step_log(
     muon_metadata = step_metrics.scheduler_metadata.get('muon', None)
 
     adam_lr = adamw_metadata.get('lr', None)
+    adamw_scheduler = adamw_metadata.get('scheduler', None)
     adamw_scheduler_step = adamw_metadata.get('scheduler_step', None)
     adamw_scheduler_max_steps = adamw_metadata.get('scheduler_max_steps', None)
-    scheduler_console_message = f'sched (adamw): step {adamw_scheduler_step}/{adamw_scheduler_max_steps} lr {adam_lr:.4e}'
+    scheduler_console_message = f'(adamw): ({adamw_scheduler} scheduler) step {adamw_scheduler_step}/{adamw_scheduler_max_steps} lr {adam_lr:.4e}'
     muon_lr = None
     if muon_metadata and muon_metadata.get('lr', None):
         muon_lr = muon_metadata.get('lr', None)
+        muon_scheduler = muon_metadata.get('scheduler', None)
         muon_scheduler_step = muon_metadata.get('scheduler_step', None)
         muon_scheduler_max_steps = muon_metadata.get('scheduler_max_steps', None)
         scheduler_console_message = (
-            f'(adamw): step {adamw_scheduler_step}/{adamw_scheduler_max_steps} lr {adam_lr:.4e} | '
-            f'(muon): step {muon_scheduler_step}/{muon_scheduler_max_steps} lr {muon_lr:.4e}'
+            f'(adamw): scheduler ({adamw_scheduler} scheduler) step {adamw_scheduler_step}/{adamw_scheduler_max_steps} lr {adam_lr:.4e} | '
+            f'(muon): scheduler ({muon_scheduler} scheduler) step {muon_scheduler_step}/{muon_scheduler_max_steps} lr {muon_lr:.4e}'
         )
     norm = step_metrics.norm
     dt = step_metrics.dt

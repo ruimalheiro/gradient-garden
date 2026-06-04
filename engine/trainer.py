@@ -804,6 +804,15 @@ class Trainer:
                 f'stable_steps = {stable_steps}, '
                 f'max_steps = {max_steps}'
             )
+        if warmup_steps + stable_steps + decay_steps > max_steps:
+            raise ValueError(
+                'Invalid WSD scheduler config: '
+                'warmup_steps + stable_steps + decay_steps must be <= max_steps. '
+                f'warmup_steps = {warmup_steps}, '
+                f'stable_steps = {stable_steps}, '
+                f'decay_steps = {decay_steps}, '
+                f'max_steps = {max_steps}'
+            )
         return decay_steps
 
     def resolve_cosine_scheduler_metadata(self, scheduler_config, step, max_steps, min_lr, max_lr):
@@ -882,6 +891,7 @@ class Trainer:
                 group['lr'] = adamw_lr * lr_scale
             scheduler_metadata['adamw'] = {
                 'lr': adamw_lr,
+                'scheduler': self.config.optimizers.adamw.schedulers.active,
                 'scheduler_step': adamw_scheduler_step,
                 'scheduler_max_steps': adamw_scheduler_max_steps
             }
@@ -900,6 +910,7 @@ class Trainer:
                 group['lr'] = muon_lr * lr_scale
             scheduler_metadata['muon'] = {
                 'lr': muon_lr,
+                'scheduler': self.config.optimizers.muon.schedulers.active,
                 'scheduler_step': muon_scheduler_step,
                 'scheduler_max_steps': muon_scheduler_max_steps
             }
