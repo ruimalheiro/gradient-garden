@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn.functional as F
 
@@ -225,6 +226,26 @@ class TendrilTransformer(BaseModel):
         )
 
         self.register_buffer('rope_freqs', rope_freqs, persistent=False)
+
+        self.init_model_weights()
+
+    def init_model_weights(self):
+        default_std = 0.02
+        residual_std = default_std / math.sqrt(2 * self.config.n_layers)
+
+        for name, module in self.named_modules():
+            if isinstance(module, nn.Embedding):
+                nn.init.normal_(module.weight, mean=0.0, std=default_std)
+                if module.padding_idx is not None:
+                    with torch.no_grad():
+                        module.weight[module.padding_idx].zero_()
+
+            elif isinstance(module, nn.Linear):
+                std = default_std
+                if name.endswith('attention.wo') or name.endswith('feed_forward.w2'):
+                    std = residual_std
+
+                nn.init.normal_(module.weight, mean=0.0, std=std)
 
     @classmethod
     def validate_config(cls, config: ModelConfig):
