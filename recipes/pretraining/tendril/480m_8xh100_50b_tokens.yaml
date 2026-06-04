@@ -56,7 +56,10 @@ config:
       weight_decay: 0.1
       betas: [0.9, 0.95]
       use_fused: null
-      warmup_steps: 1000
+      schedulers:
+        active: cosine
+        cosine:
+          warmup_steps: 1000
     muon:
       enabled: false
 
@@ -110,27 +113,27 @@ data:
   datasets:
     HuggingFaceTB/smollm-corpus:
       fineweb-edu-dedup:
-        weight: 0.42
+        weight: 0.443
       cosmopedia-v2:
-        weight: 0.08
+        weight: 0.088
 
     HuggingFaceFW/dclm_100BT-shuffled:
       default:
-        weight: 0.25
-
-    HuggingFaceTB/finemath:
-      finemath-4plus:
-        weight: 0.08
-      infiwebmath-4plus:
-        weight: 0.04
+        weight: 0.237
 
     Avelina/python-edu-cleaned:
       default:
-        weight: 0.08
+        weight: 0.168
+
+    HuggingFaceTB/finemath:
+      finemath-4plus:
+        weight: 0.026
+      infiwebmath-4plus:
+        weight: 0.014
 
     open-web-math/open-web-math:
       default:
-        weight: 0.05
+        weight: 0.024
 
   evals:
     hellaswag:
