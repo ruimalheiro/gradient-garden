@@ -154,7 +154,7 @@ class ShardWriter:
                 continue
 
             if shard_index >= self.shard_index:
-                logger.warning(f'Removing stale shard created after resume checkpoint: {path}')
+                logger.warn(f'Removing stale shard created after resume checkpoint: {path}')
                 path.unlink()
 
     def is_done(self):
