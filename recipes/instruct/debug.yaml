@@ -55,7 +55,10 @@ config:
       weight_decay: 0.1
       betas: [0.9, 0.95]
       use_fused: null
-      warmup_steps: 2
+      schedulers:
+        active: cosine
+        cosine:
+          warmup_steps: 2
     muon:
       enabled: false
 
