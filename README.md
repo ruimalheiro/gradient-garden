@@ -77,6 +77,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
   - `core.py` Defines state object used by the trainer.
   - `distributed.py` Contains the main logic to set up the PyTorch DDP (Distributed Data Parallel) and FSDP2 (Fully Sharded Data Parallel).
     - PyTorch DDP [here](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)
+  - `generation_prompts.py` Default lists of input prompts to try during training. `config.generation.test_prompts` overrides these defaults.
   - `logging.py` Handles different logging tasks used in the trainer.
   - `lr_schedulers.py` Stores learning rate schedulers. At the moment, it includes a cosine and WSD schedulers.
   - `optim.py` Defines and controls the optimizer(s) setup. Also has the necessary logic to build the parameter groups.
@@ -125,7 +126,6 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - `generate` CLI / entry point for inference against prompts.
 - `logger.py` Simple reusable logger.
 - `prepare_datasets.py` Entry point for data downloading and preparation.
-- `test_prompts.json` JSON with the list of input prompts to try during training. The expected keys in the JSON (as provided in the file) are "pretraining", "instruct", "dpo".
 - `train.py` CLI / entry point for training runs.
 - `utils.py` Common generic logic that can be reused in different components.
 
