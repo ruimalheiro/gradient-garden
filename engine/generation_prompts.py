@@ -47,7 +47,7 @@ def resolve_generation_test_prompts(config: GlobalConfig) -> list[str]:
         return DEFAULT_PRETRAINING_GENERATION_TEST_PROMPTS
     elif config.training.stage == TrainingStage.INSTRUCT:
         return DEFAULT_INSTRUCT_GENERATION_TEST_PROMPTS
-    elif config.training.state == TrainingStage.DPO:
+    elif config.training.stage == TrainingStage.DPO:
         return DEFAULT_DPO_GENERATION_TEST_PROMPTS
     else:
         raise ValueError(
