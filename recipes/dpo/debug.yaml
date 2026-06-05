@@ -46,7 +46,6 @@ config:
       dpo_path: ./datasets/debug/dpo
     runs:
       output_dir_path: ./runs
-    test_prompts_path: ./test_prompts.json
 
   optimizers:
     adamw:

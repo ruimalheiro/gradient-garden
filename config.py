@@ -120,7 +120,6 @@ class PathsConfig(BaseModel):
     datasets: DatasetPathsConfig = Field(default_factory=DatasetPathsConfig)
     evals: EvalPathsConfig = Field(default_factory=EvalPathsConfig)
     runs: RunPathsConfig = Field(default_factory=RunPathsConfig)
-    test_prompts_path: str = './test_prompts.json'
 
 class GenerationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -128,6 +127,7 @@ class GenerationConfig(BaseModel):
     max_test_gen_len: int = 256
     run_on_first_step: bool = False
     run_on_last_step: bool = False
+    test_prompts: list[str] | None = None
 
 class TokenizerConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

@@ -23,7 +23,8 @@ def prepare_workload_summary(
     trainer_state: TrainerState,
     model_params_count: int,
     model_trainable_params_count: int,
-    total_tokens: int
+    total_tokens: int,
+    test_generation_prompts: list[str]
 ):
     derived = estimate_workload_tokens(
         stage=config.training.stage,
@@ -40,7 +41,8 @@ def prepare_workload_summary(
         'trainer_ctx': trainer_ctx.to_dict(),
         'optimizer_plan': optimizer_plan.to_dict(),
         'derived_properties': derived,
-        'trainer_state': trainer_state.to_dict()
+        'trainer_state': trainer_state.to_dict(),
+        'test_generation_prompts': test_generation_prompts
     }
 
     return summary
