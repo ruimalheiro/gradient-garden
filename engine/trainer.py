@@ -1,4 +1,3 @@
-import json
 import math
 import torch
 import torch.distributed as dist
@@ -10,8 +9,14 @@ from torch.distributed import (
 from torch.distributed.tensor import DTensor
 from torch.distributed.fsdp import MixedPrecisionPolicy
 from torch.nn.utils import clip_grad_norm_
+from tqdm.auto import tqdm
 from pathlib import Path
 from logger import logger
+from config import (
+    DeviceType,
+    TrainingStage,
+    TrainingPrecision
+)
 from engine.context import (
     DistributedContext,
     DeviceContext,
@@ -45,13 +50,6 @@ from engine.distributed import (
     prepare_model_for_fsdp,
     get_model
 )
-from config import (
-    DeviceType,
-    TrainingStage,
-    TrainingPrecision
-)
-from tokenization.tokenizer import init_tokenizer
-from models.registry import build_model
 from engine.dataloaders.dataloader import init_data_loaders
 from engine.checkpoints import (
     save_checkpoint,
@@ -59,17 +57,19 @@ from engine.checkpoints import (
     load_model_state,
     load_optimizer_state
 )
-from models.adapters.lora import (
-    apply_lora,
-    freeze_non_lora_parameters
-)
-from tasks.factory import get_task
 from engine.wandb import WandbWrapper
 from engine.lr_schedulers import (
     cosine_scheduler,
     wsd_scheduler
 )
-from tqdm.auto import tqdm
+from engine.generation_prompts import resolve_generation_test_prompts
+from tokenization.tokenizer import init_tokenizer
+from models.registry import build_model
+from models.adapters.lora import (
+    apply_lora,
+    freeze_non_lora_parameters
+)
+from tasks.factory import get_task
 from metrics.memory import (
     reset_memory_usage_metrics,
     compute_memory_usage_metrics
@@ -339,11 +339,7 @@ class Trainer:
     def load_test_generation_prompts(self):
         if not self.can_run_scheduled_action(self.config.generation):
             return
-        test_prompts_data=json.loads(Path(self.config.paths.test_prompts_path).read_text())
-        stage = self.config.training.stage.value
-        if stage not in test_prompts_data:
-            raise ValueError(f'Missing test prompts for training stage: {stage}')
-        self.test_generation_prompts = test_prompts_data[stage]
+        self.test_generation_prompts = resolve_generation_test_prompts(self.config)
 
     def can_run_scheduled_action(self, schedule):
         return (
@@ -645,12 +641,13 @@ class Trainer:
                 trainer_state=self.trainer_state,
                 model_params_count=get_model(self.model).get_total_parameters_count(),
                 model_trainable_params_count=get_model(self.model).get_trainable_parameters_count(),
-                total_tokens=train_loader_max_tokens
+                total_tokens=train_loader_max_tokens,
+                test_generation_prompts=self.test_generation_prompts
             )
 
     def log_workload_summary(self):
         if self.distributed_ctx.is_master_process:
-            logger.section(f'{self.config.training.stage.value.upper()} WORKLOAD SUMMARY')
+            logger.section(f'Workload summary for stage: {self.config.training.stage.value}')
             logger.info(self.workload_summary, is_json=True)
             logger.separator()
 
