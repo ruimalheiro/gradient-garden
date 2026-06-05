@@ -2,7 +2,7 @@ import yaml
 
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Any
+from typing import Any, Literal
 from config import GlobalConfig
 from logger import logger
 
@@ -12,6 +12,7 @@ class DatasetsCommonSettings(BaseModel):
     shard_size: int | None = None
     target_tokens: int | None = None
     validation_ratio: float = 0.01
+    interleave_stopping_strategy: Literal['first_exhausted', 'all_exhausted', 'all_exhausted_without_replacement'] = 'first_exhausted'
 
 class DatasetEntryConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
