@@ -127,7 +127,8 @@ def download_and_prepare_data(
     config,
     seed,
     valid_datasets,
-    probabilities
+    probabilities,
+    interleave_stopping_strategy
 ):
     prepared_datasets = []
     for dataset in valid_datasets:
@@ -185,11 +186,12 @@ def download_and_prepare_data(
         prepared_datasets.append(ds)
 
     if len(prepared_datasets) > 1:
-        logger.info('Preparing Interleaving iterator... This operation can take a few minutes...')
+        logger.info(f'Preparing Interleaving iterator... This operation can take a few minutes... Using strategy: {interleave_stopping_strategy}')
         prepared_dataset = interleave_datasets(
             prepared_datasets,
             probabilities=probabilities,
-            seed=seed
+            seed=seed,
+            stopping_strategy=interleave_stopping_strategy
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
         logger.info('Interleaving datasets complete')
@@ -235,7 +237,8 @@ def prepare_pretraining_dataset(
         config=config,
         seed=seed,
         valid_datasets=valid_datasets,
-        probabilities=probabilities
+        probabilities=probabilities,
+        interleave_stopping_strategy=common_settings['interleave_stopping_strategy']
     )
 
     tokenizer_kwargs = {
