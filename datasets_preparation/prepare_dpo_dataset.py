@@ -106,7 +106,8 @@ def download_and_prepare_data(
     valid_datasets,
     probabilities,
     num_proc,
-    validation_ratio
+    validation_ratio,
+    interleave_stopping_strategy
 ):
     tokenizer_kwargs = {
         'path': config.tokenizer.checkpoint_path,
@@ -171,7 +172,8 @@ def download_and_prepare_data(
         prepared_dataset = interleave_datasets(
             prepared_datasets,
             probabilities=probabilities,
-            seed=seed
+            seed=seed,
+            stopping_strategy=interleave_stopping_strategy
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
         logger.info('Interleaving datasets complete')
@@ -216,5 +218,6 @@ def prepare_dpo_dataset(
         valid_datasets=valid_datasets,
         probabilities=probabilities,
         num_proc=num_proc,
-        validation_ratio=validation_ratio
+        validation_ratio=validation_ratio,
+        interleave_stopping_strategy=common_settings['interleave_stopping_strategy']
     )
