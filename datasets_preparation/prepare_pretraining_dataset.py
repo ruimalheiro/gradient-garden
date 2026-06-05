@@ -189,7 +189,8 @@ def download_and_prepare_data(
         prepared_dataset = interleave_datasets(
             prepared_datasets,
             probabilities=probabilities,
-            seed=seed
+            seed=seed,
+            stopping_strategy='all_exhausted'
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
         logger.info('Interleaving datasets complete')

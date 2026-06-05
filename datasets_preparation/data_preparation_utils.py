@@ -525,6 +525,15 @@ def shard_and_tokenize(
             pool.close()
         pool.join()
 
+    if target_tokens is not None and not reached_target():
+        state.status = 'exhausted_before_target'
+        save_state(state)
+        raise RuntimeError(
+            'Pretraining dataset exhausted before reaching target tokens. '
+            f'train_tokens={train_writer.total_tokens:,}/{target_tokens:,}, '
+            f'val_tokens={val_writer.total_tokens:,}/{val_target_tokens:,}'
+        )
+
     train_writer.finish()
     val_writer.finish()
 
