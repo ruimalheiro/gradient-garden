@@ -1,5 +1,5 @@
 name: tendril_480m_8xh100_pretraining
-description: A validated 8xH100 pretraining recipe for Tendril 480M over ~45B tokens.
+description: 8xH100 pretraining recipe for Tendril 480M over ~45B tokens.
 
 config:
   run:
@@ -47,7 +47,6 @@ config:
       arc_challenge_path: ./datasets/arc_challenge
     runs:
       output_dir_path: ./runs
-    test_prompts_path: ./test_prompts.json
 
   optimizers:
     adamw:
