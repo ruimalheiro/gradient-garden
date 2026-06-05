@@ -57,6 +57,7 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
     if 'validation_ratio' in common_settings:
         validation_ratio = common_settings['validation_ratio']
         assert validation_ratio is None or isinstance(validation_ratio, float), 'datasets_common_settings.validation_ratio must be a float'
+    assert 'interleave_stopping_strategy' in common_settings, 'common_settings.interleave_stopping_strategy is required'
 
     assert 'datasets' in datasets_mix
     datasets = datasets_mix['datasets']

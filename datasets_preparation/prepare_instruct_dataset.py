@@ -224,7 +224,7 @@ def download_and_prepare_data(
         prepared_datasets.append(tokenized_ds)
 
     if len(prepared_datasets) > 1:
-        logger.info('Preparing Interleaving iterator... This operation can take a few minutes...')
+        logger.info(f'Preparing Interleaving iterator... This operation can take a few minutes... Using strategy: {interleave_stopping_strategy}')
         prepared_dataset = interleave_datasets(
             prepared_datasets,
             probabilities=probabilities,
