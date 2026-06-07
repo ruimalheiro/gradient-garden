@@ -1,9 +1,9 @@
-name: tendril_870m_1xh100_instruct_full
-description: Tendril 870m 1xH100 full instruct finetuning.
+name: tendril_480m_1xGPU_80GB_instruct_full
+description: Tendril 480m 1xGPU_80GB full instruct finetuning.
 
 config:
   run:
-    name: tendril_870m_1xh100_instruct_full
+    name: tendril_480m_1xGPU_80GB_instruct_full
 
   runtime:
     device_type: cuda
@@ -22,10 +22,10 @@ config:
 
   model:
     architecture: tendril
-    dim: 1280
-    n_layers: 36
-    n_heads: 10
-    n_kv_heads: 5
+    dim: 1024
+    n_layers: 30
+    n_heads: 8
+    n_kv_heads: 4
     multiple_of: 1024
     ffn_dim_multiplier: 1.0
     norm_eps: 1.0e-5
@@ -46,16 +46,23 @@ config:
       instruct_path: ./datasets/instruct
     runs:
       output_dir_path: ./runs
-    test_prompts_path: ./test_prompts.json
 
   optimizers:
     adamw:
-      max_lr: 1.0e-5
+      max_lr: 7.0e-6
       min_lr: 1.0e-6
       weight_decay: 0.05
       betas: [0.9, 0.95]
       use_fused: null
-      warmup_steps: 50
+      schedulers:
+        active: wsd
+        cosine:
+          warmup_steps: 50
+        wsd:
+          start_step: 0
+          warmup_steps: 50
+          stable_steps: 1450
+          decay_steps: 1500
     muon:
       enabled: false
 
@@ -105,7 +112,7 @@ data:
   datasets:
     HuggingFaceH4/ultrachat_200k:
       default:
-        weight: 0.40
+        weight: 0.35
         transforms:
           max_datapoints: null
           max_messages: 4
@@ -119,7 +126,14 @@ data:
 
     grammarly/coedit:
       default:
-        weight: 0.30
+        weight: 0.27
         transforms:
           max_datapoints: null
           max_messages: 2
+
+    HuggingFaceH4/no_robots:
+      default:
+        weight: 0.08
+        transforms:
+          max_datapoints: null
+          max_messages: 4
