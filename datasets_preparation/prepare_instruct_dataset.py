@@ -79,6 +79,13 @@ def adapt_grammarly_coedit(doc, transforms, seed):
     ]
     return conversation
 
+def adapt_no_robots(doc, transforms, seed):
+    messages = doc['messages']
+    conversation = []
+    for message in messages:
+        conversation.append({'role': message['role'], 'content': message['content']})
+    return conversation
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceH4/ultrachat_200k': {
@@ -108,15 +115,27 @@ SUPPORTED_HF_DATASETS = {
             'split': 'train',
             'adapter': adapt_grammarly_coedit
         }
+    },
+    'HuggingFaceH4/no_robots': {
+        'default': {
+            'id': 'HuggingFaceH4/no_robots',
+            'split': 'train',
+            'adapter': adapt_no_robots
+        }
     }
 }
 
+def remove_system_messages(conversation):
+    return [
+        message for message in conversation
+        if message['role'] != 'system'
+    ]
+
 def ensure_user_first(conversation):
     if not conversation:
-        return conversation
+        return []
     if conversation[0]['role'] != 'user':
-        # add default empty user conversation if it is missing (If it starts with assistant)
-        return [{'role': 'user', 'content': ''}] + conversation
+        return []
     return conversation
 
 def trim_to_last_assistant(conversation):
@@ -193,6 +212,7 @@ def download_and_prepare_data(
 
         def normalize(doc):
             conversation = adapter(doc, transforms, seed)
+            conversation = remove_system_messages(conversation)
             conversation = ensure_user_first(conversation)
             conversation = conversation[:max_messages]
             conversation = trim_to_last_assistant(conversation)
