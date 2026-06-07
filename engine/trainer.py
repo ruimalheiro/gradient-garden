@@ -647,7 +647,7 @@ class Trainer:
 
     def log_workload_summary(self):
         if self.distributed_ctx.is_master_process:
-            logger.section(f'Workload summary for stage: {self.config.training.stage.value}')
+            logger.section(f'Workload summary for stage "{self.config.training.stage.value}"')
             logger.info(self.workload_summary, is_json=True)
             logger.separator()
 
@@ -1234,7 +1234,7 @@ class Trainer:
         if not self.trainer_ctx.distributed.is_master_process:
             return
 
-        logger.section(f'{self.trainer_state.current_step:4d} | Generation testing:', pbar=pbar)
+        logger.section(f'{self.trainer_state.current_step:4d} | Generation testing', pbar=pbar)
         for output in outputs:
             logger.info(output['result_decoded'], pbar=pbar)
         logger.separator(pbar=pbar)

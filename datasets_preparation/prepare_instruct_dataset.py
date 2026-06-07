@@ -79,6 +79,13 @@ def adapt_grammarly_coedit(doc, transforms, seed):
     ]
     return conversation
 
+def adapt_no_robots(doc, transforms, seed):
+    messages = doc['messages']
+    conversation = []
+    for message in messages:
+        conversation.append({'role': message['role'], 'content': message['content']})
+    return conversation
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceH4/ultrachat_200k': {
@@ -107,6 +114,13 @@ SUPPORTED_HF_DATASETS = {
             'id': 'grammarly/coedit',
             'split': 'train',
             'adapter': adapt_grammarly_coedit
+        }
+    },
+    'HuggingFaceH4/no_robots': {
+        'default': {
+            'id': 'HuggingFaceH4/no_robots',
+            'split': 'train',
+            'adapter': adapt_no_robots
         }
     }
 }
