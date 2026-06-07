@@ -1,9 +1,9 @@
-name: tendril_480m_8xh100_pretraining
-description: 8xH100 pretraining recipe for Tendril 480M over ~45B tokens.
+name: tendril_480m_8xGPU_80GB_pretraining
+description: 8xGPU_80GB pretraining recipe for Tendril 480M with over ~45B tokens.
 
 config:
   run:
-    name: tendril_480m_8xh100_pretraining
+    name: tendril_480m_8xGPU_80GB_pretraining
 
   runtime:
     device_type: cuda
