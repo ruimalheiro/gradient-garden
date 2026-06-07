@@ -49,7 +49,7 @@ config:
 
   optimizers:
     adamw:
-      max_lr: 7.0e-6
+      max_lr: 1.0e-5
       min_lr: 1.0e-6
       weight_decay: 0.05
       betas: [0.9, 0.95]
