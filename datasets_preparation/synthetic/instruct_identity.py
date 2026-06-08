@@ -20,6 +20,7 @@ def build_identity_dataset(*, config, ds_id, seed, count, transforms):
 
     rng = random.Random(seed)
 
+    transforms = transforms or {}
     custom_identity_message = transforms.get('identity_message', None)
     custom_example_count = transforms.get('count', None)
 
