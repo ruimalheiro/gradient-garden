@@ -125,7 +125,7 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
 
     # exactly three items sepparated by comma
     for _ in range(800):
-        chosen = random.sample(fruits, 3)
+        chosen = rng.sample(fruits, 3)
         prompt = 'List exactly three fruits, separated by commas.'
         answer = ', '.join(chosen)
         examples.append({
@@ -137,8 +137,8 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
 
     # one-sentence answers
     for _ in range(800):
-        topic = random.choice(list(topics.keys()))
-        answer = random.choice(topics[topic])
+        topic = rng.choice(list(topics.keys()))
+        answer = rng.choice(topics[topic])
         prompt = f'Write exactly one sentence about {topic}.'
         examples.append({
             'messages': [
@@ -149,7 +149,7 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
 
     # rewriting in a cleaner way
     for _ in range(800):
-        bad, good = random.choice(rewrites)
+        bad, good = rng.choice(rewrites)
         prompt = (
             f'Rewrite this sentence to be clearer:\n'
             f'{bad}\n'
@@ -164,7 +164,7 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
 
     # grammar-only
     for _ in range(800):
-        bad, good = random.choice(grammar)
+        bad, good = rng.choice(grammar)
         prompt = (
             f'Correct the grammar of this sentence:\n'
             f'{bad}\n'
@@ -179,7 +179,7 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
 
     # exactly three numbered steps
     for _ in range(800):
-        task, steps = random.choice(procedures)
+        task, steps = rng.choice(procedures)
         answer = '\n'.join(f'{i + 1}. {step}' for i, step in enumerate(steps))
         prompt = f'Give exactly three numbered steps for {task}.'
         examples.append({
@@ -189,7 +189,7 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
             ]
         })
 
-    random.shuffle(examples)
+    rng.shuffle(examples)
 
     save_jsonl_file(data_filename, examples)
     logger.info(f'Synthetic constraints dataset completed and stored at: {data_filename}')
