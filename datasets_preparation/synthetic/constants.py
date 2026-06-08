@@ -1,3 +1,8 @@
+"""
+synthetic/constants.py: This file is a compilation of generated/sourced examples that can be used for synthetic control datasets.
+"""
+
+
 LIST_CATEGORIES = {
     'fruits': [
         'apple',
@@ -1020,4 +1025,220 @@ PROCEDURE_PROMPTS = [
     'Provide exactly three numbered steps for {task}. Do not add extra text.',
     'List exactly three numbered steps for {task}.',
     'Describe how to do {task} in exactly three numbered steps.',
+]
+
+ANCHOR_CONSTRAINT_EXAMPLES = [
+    (
+        'Who are you? Answer in one short sentence.',
+        'I am Tendril, a helpful AI assistant.'
+    ),
+    (
+        'What is the capital of France? Answer in one short sentence.',
+        'The capital of France is Paris.'
+    ),
+    (
+        'Give exactly three numbered steps for cooking a boiled egg.',
+        '1. Place the egg in a pot and cover it with water.\n'
+        '2. Bring the water to a boil, then simmer for 9 to 12 minutes.\n'
+        '3. Cool the egg in cold water, then peel it.'
+    ),
+    (
+        'Write exactly one sentence about rain.',
+        'Rain falls from clouds and helps plants grow.'
+    ),
+    (
+        'Rewrite this sentence to be clearer:\n'
+        'The thing was bad because it was not good.\n'
+        'Only provide the rewritten sentence.',
+        'The item was poor quality.'
+    ),
+    (
+        'List exactly three fruits, separated by commas.',
+        'apple, banana, orange'
+    ),
+    (
+        'Explain what a GPU is in simple words. Use at most two short sentences.',
+        'A GPU is a computer chip that handles many calculations at once. It is useful for graphics and AI.'
+    ),
+    (
+        'Write one short friendly reply to this message:\n'
+        'Can we meet tomorrow?',
+        'Sure, tomorrow works for me.'
+    ),
+    (
+        'Summarize this in one sentence:\n'
+        'Penguins are birds that cannot fly but are excellent swimmers.',
+        'Penguins are flightless birds that swim very well.'
+    ),
+    (
+        'Correct the grammar of this sentence:\n'
+        "He don't like apples.\n"
+        'Only provide the corrected sentence.',
+        "He doesn't like apples."
+    ),
+]
+
+FRIENDLY_REPLIES = [
+    (
+        'Can we meet tomorrow?',
+        'Sure, tomorrow works for me.'
+    ),
+    (
+        'Thanks for your help!',
+        "You're welcome, happy to help!"
+    ),
+    (
+        'I might be a few minutes late.',
+        'No worries, thanks for letting me know.'
+    ),
+    (
+        'Can you send me the notes later?',
+        'Sure, I can send them later.'
+    ),
+    (
+        'I finished the task.',
+        'Great work, thanks for finishing it.'
+    ),
+    (
+        'Sorry, I forgot to reply earlier.',
+        'No problem, thanks for getting back to me.'
+    ),
+    (
+        'Do you want to grab coffee this afternoon?',
+        'Sure, coffee this afternoon sounds good.'
+    ),
+    (
+        'I am feeling nervous about the meeting.',
+        "You've got this, and I hope it goes well."
+    ),
+    (
+        'Can we move the call to Friday?',
+        'Sure, Friday works for me.'
+    ),
+    (
+        'Happy birthday!',
+        'Thank you, that is very kind of you.'
+    ),
+    (
+        'I passed the exam!',
+        "That's wonderful news, congratulations!"
+    ),
+    (
+        'Can you check this when you have time?',
+        'Of course, I will take a look when I can.'
+    ),
+    (
+        'I need to cancel today.',
+        'No problem, we can find another time.'
+    ),
+    (
+        'Good luck with your presentation.',
+        'Thank you, I really appreciate it.'
+    ),
+    (
+        'Are you free this weekend?',
+        'Yes, I should be free this weekend.'
+    ),
+]
+
+ONE_SENTENCE_SUMMARIES = [
+    (
+        'Penguins are birds that cannot fly but are excellent swimmers.',
+        'Penguins are flightless birds that swim very well.'
+    ),
+    (
+        'The library closes at six, so we need to return the books before then.',
+        'We need to return the books before the library closes at six.'
+    ),
+    (
+        'Solar panels turn sunlight into electricity that people can use in homes and buildings.',
+        'Solar panels convert sunlight into usable electricity.'
+    ),
+    (
+        'Maria missed the bus, so she walked to school and arrived ten minutes late.',
+        'Maria walked to school and arrived late after missing the bus.'
+    ),
+    (
+        'Plants need sunlight, water, and nutrients from the soil to grow.',
+        'Plants need sunlight, water, and soil nutrients to grow.'
+    ),
+    (
+        'The team practiced every day and improved enough to win the final match.',
+        'Daily practice helped the team improve and win the final match.'
+    ),
+    (
+        'A password manager stores your passwords securely so you do not have to remember each one.',
+        'A password manager securely stores passwords for you.'
+    ),
+    (
+        'The storm brought heavy rain and strong winds, causing several roads to flood.',
+        'The storm caused flooding with heavy rain and strong winds.'
+    ),
+    (
+        'Exercise can strengthen muscles, improve mood, and support long-term health.',
+        'Exercise supports health by strengthening the body and improving mood.'
+    ),
+    (
+        'The new train route will make travel between the two cities faster and easier.',
+        'The new train route will make city-to-city travel faster and easier.'
+    ),
+    (
+        'The recipe uses flour, eggs, milk, and butter to make soft pancakes.',
+        'The recipe combines simple ingredients to make soft pancakes.'
+    ),
+    (
+        'The company delayed the product launch because it found a bug during final testing.',
+        'The company delayed the launch after finding a final testing bug.'
+    ),
+]
+
+SIMPLE_EXPLANATIONS = [
+    (
+        'Explain what a GPU is in simple words. Use at most two short sentences.',
+        'A GPU is a computer chip that handles many calculations at once. It is useful for graphics and AI.'
+    ),
+    (
+        'Explain what a CPU is in simple words. Use at most two short sentences.',
+        'A CPU is the main chip that runs instructions in a computer. It helps control what the computer does.'
+    ),
+    (
+        'Explain what RAM is in simple words. Use at most two short sentences.',
+        'RAM is short-term memory a computer uses while it is working. It helps programs run quickly.'
+    ),
+    (
+        'Explain what the internet is in simple words. Use at most two short sentences.',
+        'The internet is a huge network that connects computers around the world. It lets people share information.'
+    ),
+    (
+        'Explain what a database is in simple words. Use at most two short sentences.',
+        'A database is an organized place to store information. It helps people find and update data easily.'
+    ),
+    (
+        'Explain what an algorithm is in simple words. Use at most two short sentences.',
+        'An algorithm is a set of steps for solving a problem. A computer can follow those steps to do a task.'
+    ),
+    (
+        'Explain what a token is in simple words. Use at most two short sentences.',
+        'A token is a small piece of text, like a word or part of a word. Language models read and write tokens.'
+    ),
+    (
+        'Explain what a neural network is in simple words. Use at most two short sentences.',
+        'A neural network is a computer system that learns patterns from data. It can use those patterns to make predictions.'
+    ),
+    (
+        'Explain what machine learning is in simple words. Use at most two short sentences.',
+        'Machine learning teaches computers to learn patterns from examples. It helps them make predictions or decisions.'
+    ),
+    (
+        'Explain what an app is in simple words. Use at most two short sentences.',
+        'An app is a program you use on a phone or computer. It helps you do a specific task.'
+    ),
+    (
+        'Explain what cloud storage is in simple words. Use at most two short sentences.',
+        'Cloud storage keeps your files on remote computers. You can access them through the internet.'
+    ),
+    (
+        'Explain what electricity is in simple words. Use at most two short sentences.',
+        'Electricity is energy that moves through wires. It powers lights, machines, and devices.'
+    ),
 ]
