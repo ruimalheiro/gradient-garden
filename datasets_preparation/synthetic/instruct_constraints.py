@@ -2,6 +2,18 @@ import random
 
 from pathlib import Path
 from utils import save_jsonl_file
+from datasets_preparation.synthetic.constants import (
+    LIST_CATEGORIES,
+    COMMA_LIST_PROMPTS,
+    ONE_SENTENCE_TOPICS,
+    ONE_SENTENCE_PROMPTS,
+    REWRITES,
+    REWRITE_PROMPTS,
+    GRAMMAR_CORRECTIONS,
+    GRAMMAR_PROMPTS,
+    PROCEDURES,
+    PROCEDURE_PROMPTS
+)
 from logger import logger
 
 
@@ -36,158 +48,69 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
 
     examples = []
 
-    fruits = [
-        'apple',
-        'banana',
-        'orange',
-        'pear',
-        'grape',
-        'mango',
-        'peach',
-        'plum',
-        'kiwi',
-        'pineapple',
-        'melon',
-        'cherry'
-    ]
+    def generate_comma_list_with_three_items():
+        category = rng.choice(list(LIST_CATEGORIES.keys()))
+        items = rng.sample(LIST_CATEGORIES[category], 3)
 
-    topics = {
-        'rain': [
-            'Rain falls from clouds and helps plants grow.',
-            'Rain brings water to rivers, lakes, and soil.',
-            'Rain is water that falls from clouds to the ground.',
-        ],
-        'snow': [
-            'Snow is frozen water that falls from clouds in cold weather.',
-            'Snow can cover the ground when the air is cold enough.',
-        ],
-        'sleep': [
-            'Sleep helps the body rest, recover, and store memories.',
-            'Sleep gives the brain and body time to recharge.',
-        ],
-    }
+        user_content = rng.choice(COMMA_LIST_PROMPTS['three']).format(category=category)
+        assistant_content = ', '.join(items)
 
-    rewrites = [
-        (
-            'The thing was bad because it was not good.',
-            'The item was poor quality.',
-        ),
-        (
-            'He went to the place where the thing happened.',
-            'He went to the location where the event occurred.',
-        ),
-        (
-            'The food was nice and I liked it a lot.',
-            'I really enjoyed the food.',
-        ),
-        (
-            'This is a thing that people use to do work.',
-            'This is a tool people use for work.',
-        ),
-    ]
+        return row(user_content, assistant_content)
 
-    grammar = [
-        ("He don't like apples.", "He doesn't like apples."),
-        ('She go to school every day.', 'She goes to school every day.'),
-        ('They was happy.', 'They were happy.'),
-        ('I has a book.', 'I have a book.'),
-        ('The cats is sleeping.', 'The cats are sleeping.'),
-    ]
+    def generate_one_sentence_answer():
+        topic = rng.choice(list(ONE_SENTENCE_TOPICS.keys()))
+        answer = rng.choice(ONE_SENTENCE_TOPICS[topic])
 
-    procedures = [
-        (
-            'cooking a boiled egg',
-            [
-                'Place the egg in a pot and cover it with water.',
-                'Bring the water to a boil, then simmer for 9 to 12 minutes.',
-                'Cool the egg in cold water, then peel it.',
-            ],
-        ),
-        (
-            'brushing your teeth',
-            [
-                'Put toothpaste on a toothbrush.',
-                'Brush all sides of your teeth for about two minutes.',
-                'Rinse your mouth and toothbrush with water.',
-            ],
-        ),
-        (
-            'making toast',
-            [
-                'Place a slice of bread in the toaster.',
-                'Toast it until it is golden brown.',
-                'Remove it carefully and add butter or another topping.',
-            ],
-        ),
-    ]
+        user_content = rng.choice(ONE_SENTENCE_PROMPTS).format(topic=topic)
+        assistant_content = answer
 
-    examples = []
+        return row(user_content, assistant_content)
 
-    # exactly three items sepparated by comma
-    for _ in range(800):
-        chosen = rng.sample(fruits, 3)
-        prompt = 'List exactly three fruits, separated by commas.'
-        answer = ', '.join(chosen)
-        examples.append({
-            'messages': [
-                {'role': 'user', 'content': prompt},
-                {'role': 'assistant', 'content': answer},
-            ]
-        })
+    def generate_rewrite():
+        bad, good = rng.choice(REWRITES)
 
-    # one-sentence answers
-    for _ in range(800):
-        topic = rng.choice(list(topics.keys()))
-        answer = rng.choice(topics[topic])
-        prompt = f'Write exactly one sentence about {topic}.'
-        examples.append({
-            'messages': [
-                {'role': 'user', 'content': prompt},
-                {'role': 'assistant', 'content': answer},
-            ]
-        })
+        user_content = rng.choice(REWRITE_PROMPTS).format(bad=bad)
+        assistant_content = good
 
-    # rewriting in a cleaner way
-    for _ in range(800):
-        bad, good = rng.choice(rewrites)
-        prompt = (
-            f'Rewrite this sentence to be clearer:\n'
-            f'{bad}\n'
-            f'Only provide the rewritten sentence.'
+        return row(user_content, assistant_content)
+
+    def generate_grammar_correction():
+        bad, good = rng.choice(GRAMMAR_CORRECTIONS)
+
+        user_content = rng.choice(GRAMMAR_PROMPTS).format(bad=bad)
+        assistant_content = good
+
+        return row(user_content, assistant_content)
+
+    def generate_three_step_procedure():
+        task, steps = rng.choice(PROCEDURES)
+
+        user_content = rng.choice(PROCEDURE_PROMPTS).format(task=task)
+        assistant_content = '\n'.join(
+            f'{i + 1}. {step}' for i, step in enumerate(steps)
         )
-        examples.append({
-            'messages': [
-                {'role': 'user', 'content': prompt},
-                {'role': 'assistant', 'content': good},
-            ]
-        })
 
-    # grammar-only
-    for _ in range(800):
-        bad, good = rng.choice(grammar)
-        prompt = (
-            f'Correct the grammar of this sentence:\n'
-            f'{bad}\n'
-            f'Only provide the corrected sentence.'
-        )
-        examples.append({
-            'messages': [
-                {'role': 'user', 'content': prompt},
-                {'role': 'assistant', 'content': good},
-            ]
-        })
+        return row(user_content, assistant_content)
 
-    # exactly three numbered steps
-    for _ in range(800):
-        task, steps = rng.choice(procedures)
-        answer = '\n'.join(f'{i + 1}. {step}' for i, step in enumerate(steps))
-        prompt = f'Give exactly three numbered steps for {task}.'
-        examples.append({
-            'messages': [
-                {'role': 'user', 'content': prompt},
-                {'role': 'assistant', 'content': answer},
-            ]
-        })
+    groups = [
+        (generate_comma_list_with_three_items, 0.20),
+        (generate_one_sentence_answer, 0.20),
+        (generate_rewrite, 0.20),
+        (generate_grammar_correction, 0.20),
+        (generate_three_step_procedure, 0.20)
+    ]
+
+    remaining = count
+
+    for group_idx, (generator_fn, weight) in enumerate(groups):
+        if group_idx == len(groups) - 1:
+            group_count = remaining
+        else:
+            group_count = round(count * weight)
+            remaining -= group_count
+
+        for _ in range(group_count):
+            examples.append(generator_fn())
 
     rng.shuffle(examples)
 
