@@ -27,7 +27,7 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
     data_filename = target_dir / 'constraints.jsonl'
 
     if data_filename.exists():
-        logger.warn(f'Synthetic constraints dataset raw source already exists: {data_filename}')
+        logger.warning(f'Synthetic constraints dataset raw source already exists: {data_filename} \nDelete this file manually to regenerate it.')
         return
 
     rng = random.Random(seed)

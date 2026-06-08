@@ -15,7 +15,7 @@ def build_identity_dataset(*, config, ds_id, seed, count, transforms):
     data_filename = target_dir / 'identity.jsonl'
 
     if data_filename.exists():
-        logger.warn(f'Synthetic identity dataset raw source already exists: {data_filename}')
+        logger.warning(f'Synthetic identity dataset raw source already exists: {data_filename} \nDelete this file manually to regenerate it.')
         return
 
     rng = random.Random(seed)
@@ -23,13 +23,17 @@ def build_identity_dataset(*, config, ds_id, seed, count, transforms):
     custom_identity_message = transforms.get('identity_message', None)
     custom_example_count = transforms.get('count', None)
 
-    identity_message = (
-         custom_identity_message if custom_identity_message
-         else 'I am a helpful AI assistant created with the gradient-garden project.'
+    model_name = transforms.get(
+        'model_name',
+        config.model.architecture.value.capitalize()
     )
-    count = custom_example_count if custom_example_count else count
 
-    model_name = config.model.architecture.value.capitalize()
+    identity_message = (
+        custom_identity_message if custom_identity_message
+        else f'I am {model_name}, a helpful AI assistant.'
+    )
+
+    count = custom_example_count if custom_example_count is not None else count
 
     logger.info(f'generating {count} examples...')
 
@@ -54,8 +58,7 @@ def build_identity_dataset(*, config, ds_id, seed, count, transforms):
         'Say who you are in one sentence.'
     ]
     direct_identity_answers = [
-        identity_message,
-        f'My name is {model_name}'
+        identity_message
     ]
 
     human_prompts = [
@@ -67,9 +70,9 @@ def build_identity_dataset(*, config, ds_id, seed, count, transforms):
         'Should I think of you as a human?'
     ]
     human_answers = [
-        f'No, I am {model_name}. {identity_message}',
-        f'No, I am an AI assistant called: {model_name}',
-        f'I am not human. {identity_message}'
+        f'No, I am {model_name}, a helpful AI assistant.',
+        f'No, I am an AI assistant called {model_name}.',
+        f'I am not human; I am {model_name}, a helpful AI assistant.',
     ]
 
     capability_prompts = [

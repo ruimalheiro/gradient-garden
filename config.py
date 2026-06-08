@@ -267,7 +267,7 @@ class GlobalConfig(BaseModel):
 
 def load_config(config_path) -> GlobalConfig:
     if config_path is None:
-        logger.warn('Configuration not provided... using defaults.')
+        logger.warning('Configuration not provided... using defaults.')
         return GlobalConfig()
 
     config_path = Path(config_path)
