@@ -60,6 +60,11 @@ def save_json_file(file_path, data):
     with open(file_path, 'w', encoding='utf-8') as file:
         json.dump(data, file, ensure_ascii=False)
 
+def save_jsonl_file(file_path, items):
+    with open(file_path, 'w', encoding='utf-8') as file:
+        for item in items:
+            file.write(json.dumps(item, ensure_ascii=False) + '\n')
+
 def set_seed(seed: int, *, deterministic: bool = False):
     random.seed(seed)
     np.random.seed(seed)

@@ -5,6 +5,7 @@ import random
 import copy
 import time
 
+from pathlib import Path
 from functools import partial
 from tokenization.tokenizer import init_tokenizer
 from datasets import (
@@ -17,6 +18,8 @@ from datasets_preparation.data_preparation_utils import (
     make_source_key
 )
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
+from datasets_preparation.synthetic.instruct_identity import build_identity_dataset
+from datasets_preparation.synthetic.instruct_constraints import build_constraints_dataset
 from logger import logger
 
 
@@ -125,6 +128,43 @@ SUPPORTED_HF_DATASETS = {
     }
 }
 
+def adapt_local_synthetic_identity(doc, transforms, seed):
+    messages = doc['messages']
+    conversation = []
+    for message in messages:
+        conversation.append({'role': message['role'], 'content': message['content']})
+    return conversation
+
+def adapt_local_synthetic_constraints(doc, transforms, seed):
+    messages = doc['messages']
+    conversation = []
+    for message in messages:
+        conversation.append({'role': message['role'], 'content': message['content']})
+    return conversation
+
+SUPPORTED_LOCAL_DATASETS = {
+    'synthetic_identity': {
+        'default': {
+            'id': 'synthetic_identity',
+            'split': 'train',
+            'adapter': adapt_local_synthetic_identity,
+            'synthetic': True,
+            'synthetic_generator': build_identity_dataset,
+            'synthetic_count': 1000
+        }
+    },
+    'synthetic_constraints': {
+        'default': {
+            'id': 'synthetic_constraints',
+            'split': 'train',
+            'adapter': adapt_local_synthetic_constraints,
+            'synthetic': True,
+            'synthetic_generator': build_constraints_dataset,
+            'synthetic_count': 5000
+        }
+    }
+}
+
 def remove_system_messages(conversation):
     return [
         message for message in conversation
@@ -164,6 +204,20 @@ def tokenize(tokenizer_kwargs, ignore_index, doc):
         'labels': np.array(labels, dtype=np.int32)
     }
 
+def get_dataset_metadata(config, dataset):
+    ds_id = dataset['id']
+    name = dataset.get('name', None)
+    transforms = dataset.get('transforms', {})
+
+    if ds_id in SUPPORTED_HF_DATASETS:
+        return ds_id, name, transforms, SUPPORTED_HF_DATASETS[ds_id][name]
+    elif ds_id in SUPPORTED_LOCAL_DATASETS:
+        dataset_config = SUPPORTED_LOCAL_DATASETS[ds_id][name]
+        ds_id = str(Path(config.paths.dataset_sources.local_path) / ds_id)
+        return ds_id, name, transforms, dataset_config
+    else:
+        raise ValueError(f'Invalid dataset id: {ds_id}')
+
 def download_and_prepare_data(
     *,
     config,
@@ -183,14 +237,19 @@ def download_and_prepare_data(
 
     prepared_datasets = []
     for dataset in valid_datasets:
-        ds_id = dataset['id']
-        name = dataset.get('name', None)
+        ds_id, name, transforms, dataset_config = get_dataset_metadata(config, dataset)
 
-        dataset_config = SUPPORTED_HF_DATASETS[ds_id][name]
+        if dataset_config.get('synthetic', False):
+            dataset_config['synthetic_generator'](
+                config=config,
+                ds_id=ds_id,
+                seed=seed,
+                count=dataset_config['synthetic_count'],
+                transforms=transforms
+            )
+
         split = dataset_config['split']
         adapter = dataset_config['adapter']
-
-        transforms = dataset.get('transforms', {})
 
         max_datapoints = transforms.get('max_datapoints', None)
         max_messages = transforms.get('max_messages', 8)
@@ -278,7 +337,10 @@ def prepare_instruct_dataset(
     datasets_mix = copy.deepcopy(datasets_mix) if datasets_mix else copy.deepcopy(DEFAULT_INSTRUCT_MIX)
 
     #### VERIFY MIX FILE STRUCTURE
-    seed, common_settings, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
+    seed, common_settings, valid_datasets, probabilities = assert_common_structure_and_extract(
+        datasets_mix,
+        SUPPORTED_HF_DATASETS | SUPPORTED_LOCAL_DATASETS
+    )
 
     if common_settings.get('shard_size') is not None:
         logger.warning('datasets_common_settings.shard_size is only used for pretraining data preparation.')

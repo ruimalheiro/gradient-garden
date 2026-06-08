@@ -30,7 +30,7 @@ class CausalTask(BaseTask):
         logger.info(f'Loading teacher model on gpu: {ddp_rank}...', True)
         teacher_model = AutoModelForCausalLM.from_pretrained(config.distillation.teacher_model_checkpoint, token=config.third_party.hf_token)
         if teacher_model.vocab_size != tokenizer.vocab_size:
-            logger.warn(f'The sizes of the vocabularies for the teacher model and the tokenizer do not match: {teacher_model.vocab_size} != {tokenizer.vocab_size}\nResizing the vocab of the teacher model to match the tokenizer... NOTE: This can potentially cause issues.')
+            logger.warning(f'The sizes of the vocabularies for the teacher model and the tokenizer do not match: {teacher_model.vocab_size} != {tokenizer.vocab_size}\nResizing the vocab of the teacher model to match the tokenizer... NOTE: This can potentially cause issues.')
             teacher_model.resize_token_embeddings(tokenizer.vocab_size)
         logger.info(f'Finished loading teacher model on gpu: {ddp_rank}...', True)
         return CausalTaskAssets(teacher_model=teacher_model)

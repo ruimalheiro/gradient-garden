@@ -12,6 +12,7 @@ env/
 
 # Large/generated artifacts
 *.pth
+dataset_sources/
 datasets/
 checkpoints/
 snapshots/
