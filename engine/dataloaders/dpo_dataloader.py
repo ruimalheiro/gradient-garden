@@ -190,7 +190,7 @@ class DirectPreferenceOptimizationDataLoader:
     def load_state_dict(self, state):
         if 'epoch' not in state:
             if self.is_master_process:
-                logger.warn('"epoch" not present, starting fresh dataloader (most likely transition from pretraining to DPO).')
+                logger.warning('"epoch" not present, starting fresh dataloader (most likely transition from pretraining to DPO).')
             return
         epoch = state['epoch']
         self.sampler.set_epoch(epoch)

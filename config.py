@@ -99,6 +99,10 @@ class EvalsConfig(BaseModel):
     winogrande: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
     arc_challenge: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
 
+class DatasetSourcePathsConfig(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    local_path: str = './dataset_sources'
+
 class DatasetPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     pretraining_path: str = './datasets/pretraining'
@@ -117,6 +121,7 @@ class RunPathsConfig(BaseModel):
 
 class PathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    dataset_sources: DatasetSourcePathsConfig = Field(default_factory=DatasetSourcePathsConfig)
     datasets: DatasetPathsConfig = Field(default_factory=DatasetPathsConfig)
     evals: EvalPathsConfig = Field(default_factory=EvalPathsConfig)
     runs: RunPathsConfig = Field(default_factory=RunPathsConfig)
@@ -262,7 +267,7 @@ class GlobalConfig(BaseModel):
 
 def load_config(config_path) -> GlobalConfig:
     if config_path is None:
-        logger.warn('Configuration not provided... using defaults.')
+        logger.warning('Configuration not provided... using defaults.')
         return GlobalConfig()
 
     config_path = Path(config_path)

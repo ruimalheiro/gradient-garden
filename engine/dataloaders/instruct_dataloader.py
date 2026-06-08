@@ -151,7 +151,7 @@ class InstructDataLoader:
 
     def load_state_dict(self, state):
         if 'epoch' not in state:
-            logger.warn('"epoch" not present, starting fresh dataloader (most likely transition from pretraining to SFT).')
+            logger.warning('"epoch" not present, starting fresh dataloader (most likely transition from pretraining to SFT).')
             return
         epoch = state['epoch']
         self.sampler.set_epoch(epoch)

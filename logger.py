@@ -47,7 +47,7 @@ class ConsoleLogger:
         reset = '\033[0m'
         return f'{yellow}WARNING: {content}{reset}'
 
-    def warn(self, content, force=False, pbar=None, is_json=False):
+    def warning(self, content, force=False, pbar=None, is_json=False):
         self.info(self.warning_wrapper(content), force=force, pbar=pbar, is_json=is_json)
 
     def error_wrapper(self, content):

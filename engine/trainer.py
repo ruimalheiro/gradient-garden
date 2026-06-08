@@ -459,16 +459,16 @@ class Trainer:
             checkpoint_data.metadata.get('training_stage', None) != self.config.training.stage.value
         )
         if training_stage_changed:
-            logger.warn('Training stage has changed')
+            logger.warning('Training stage has changed')
             if checkpoint_data.resume_step:
-                logger.warn('ignoring stored resume step...')
+                logger.warning('ignoring stored resume step...')
                 checkpoint_data.resume_step = 0
 
         ddp_world_size_changed = (
             checkpoint_data.metadata.get('ddp_world_size', None) != self.distributed_ctx.ddp_world_size
         )
         if ddp_world_size_changed:
-            logger.warn('DDP world size has changed')
+            logger.warning('DDP world size has changed')
 
         lora_mode_changed = (
             self.config.lora.enabled and
@@ -476,27 +476,27 @@ class Trainer:
             not checkpoint_data.is_lora_checkpoint
         )
         if lora_mode_changed:
-            logger.warn('LoRA enabled for non LoRA checkpoint')
+            logger.warning('LoRA enabled for non LoRA checkpoint')
 
         if args.reset_optimizers:
-            logger.warn('Reset optimizers flag was set')
+            logger.warning('Reset optimizers flag was set')
 
         if ddp_world_size_changed or training_stage_changed:
             if checkpoint_data.train_loader_state is not None and checkpoint_data.val_loader_state is not None:
-                logger.warn('ignoring stored metadata for dataloaders...')
+                logger.warning('ignoring stored metadata for dataloaders...')
                 checkpoint_data.train_loader_state = None
                 checkpoint_data.val_loader_state = None
 
         reset_optimizer_state = training_stage_changed or args.reset_optimizers or lora_mode_changed
         if reset_optimizer_state:
             if checkpoint_data.optimizers_state is not None:
-                logger.warn('ignoring stored state of optimizer(s)...')
+                logger.warning('ignoring stored state of optimizer(s)...')
                 checkpoint_data.optimizers_state = None
 
         reset_validation_history = training_stage_changed or lora_mode_changed
         if reset_validation_history:
             if checkpoint_data.last_val_loss is not None or checkpoint_data.best_val_loss is not None:
-                logger.warn('ignoring stored last val loss and best val loss...')
+                logger.warning('ignoring stored last val loss and best val loss...')
                 checkpoint_data.last_val_loss = float('inf')
                 checkpoint_data.best_val_loss = float('inf')
         
@@ -512,7 +512,7 @@ class Trainer:
         logger.section('LoRA Configuration')
         if self.config.lora.target_modules is None:
             target_modules = supported
-            logger.warn(f'LoRA "target_modules" was not specified in the config. Using all supported: {supported}')
+            logger.warning(f'LoRA "target_modules" was not specified in the config. Using all supported: {supported}')
         elif len(self.config.lora.target_modules) == 0:
             raise ValueError('"lora.target_modules" cannot be empty.')
         else:
@@ -1285,7 +1285,7 @@ class Trainer:
                 if self.distributed_ctx.ddp:
                     broadcast(abort_signal, src=0)
             if abort_signal.item() == 1:
-                logger.warn(f'Rank {ddp_rank} received stop signal.', True)
+                logger.warning(f'Rank {ddp_rank} received stop signal.', True)
 
     def cleanup(self):
         if self.wandb:
