@@ -1,8 +1,3 @@
-"""
-synthetic/constants.py: This file is a compilation of generated/sourced examples that can be used for synthetic control datasets.
-"""
-
-
 LIST_CATEGORIES = {
     'fruits': [
         'apple',

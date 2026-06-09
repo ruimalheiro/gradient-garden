@@ -2,7 +2,9 @@ import random
 
 from pathlib import Path
 from utils import save_jsonl_file
-from datasets_preparation.synthetic.constants import (
+from logger import logger
+from datasets_preparation.synthetic.group_utils import generate_weighted_group_examples
+from datasets_preparation.synthetic.instruct.fixtures.constraints import (
     LIST_CATEGORIES,
     COMMA_LIST_PROMPTS,
     ONE_SENTENCE_TOPICS,
@@ -18,13 +20,12 @@ from datasets_preparation.synthetic.constants import (
     ONE_SENTENCE_SUMMARIES,
     SIMPLE_EXPLANATIONS
 )
-from logger import logger
 
 
 def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
     logger.info(f'Generating synthetic constraints dataset...')
 
-    current_dir = Path(__file__).resolve().parent.parent.parent
+    current_dir = Path(__file__).resolve().parent.parent.parent.parent
 
     target_dir = current_dir / ds_id
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -49,8 +50,6 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
                 {'role': 'assistant', 'content': assistant_content.strip()}
             ]
         }
-
-    examples = []
 
     def generate_comma_list_with_three_items():
         category = rng.choice(list(LIST_CATEGORIES.keys()))
@@ -96,6 +95,17 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
 
         return row(user_content, assistant_content)
 
+    anchor_idx = 0 # cycle anchors to improve coverage deterministically...
+    def generate_anchor_constraint():
+        nonlocal anchor_idx
+
+        user_content, assistant_content = ANCHOR_CONSTRAINT_EXAMPLES[
+            anchor_idx % len(ANCHOR_CONSTRAINT_EXAMPLES)
+        ]
+        anchor_idx += 1
+
+        return row(user_content, assistant_content)
+
     def generate_friendly_reply():
         message, reply = rng.choice(FRIENDLY_REPLIES)
 
@@ -124,34 +134,21 @@ def build_constraints_dataset(*, config, ds_id, seed, count, transforms):
         prompt, answer = rng.choice(SIMPLE_EXPLANATIONS)
         return row(prompt, answer)
 
-    groups = [
-        (generate_rewrite, 0.20),
-        (generate_grammar_correction, 0.15),
-        (generate_three_step_procedure, 0.15),
-        (generate_comma_list_with_three_items, 0.125),
-        (generate_one_sentence_answer, 0.125),
-        (generate_friendly_reply, 0.10),
-        (generate_one_sentence_summary, 0.075),
-        (generate_simple_explanation, 0.075)
-    ]
-
-    for user_content, assistant_content in ANCHOR_CONSTRAINT_EXAMPLES:
-        if len(examples) >= count:
-            break
-        examples.append(row(user_content, assistant_content))
-
-    remaining_to_generate = max(count - len(examples), 0)
-    remaining = remaining_to_generate
-
-    for group_idx, (generator_fn, weight) in enumerate(groups):
-        if group_idx == len(groups) - 1:
-            group_count = remaining
-        else:
-            group_count = round(remaining_to_generate * weight)
-            remaining -= group_count
-
-        for _ in range(group_count):
-            examples.append(generator_fn())
+    examples = generate_weighted_group_examples(
+        groups={
+            'lists': (generate_comma_list_with_three_items, 0.10),
+            'one_sentence_answers': (generate_one_sentence_answer, 0.10),
+            'rewrites': (generate_rewrite, 0.30),
+            'grammar': (generate_grammar_correction, 0.125),
+            'procedures': (generate_three_step_procedure, 0.19),
+            'anchors': (generate_anchor_constraint, 0.01),
+            'friendly_replies': (generate_friendly_reply, 0.075),
+            'one_sentence_summaries': (generate_one_sentence_summary, 0.05),
+            'simple_explanations': (generate_simple_explanation, 0.05)
+        },
+        transforms=transforms,
+        count=count
+    )
 
     rng.shuffle(examples)
 
