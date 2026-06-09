@@ -112,7 +112,7 @@ data:
   datasets:
     HuggingFaceH4/ultrachat_200k:
       default:
-        weight: 0.25
+        weight: 0.26
         transforms:
           max_datapoints: null
           max_messages: 4
@@ -140,19 +140,19 @@ data:
 
     synthetic_constraints:
       default:
-        weight: 0.10
+        weight: 0.11
         transforms:
           count: 10000
 
     synthetic_control_tasks:
       default:
-        weight: 0.11
+        weight: 0.10
         transforms:
           count: 10000
 
     synthetic_general_tasks:
       default:
-        weight: 0.06
+        weight: 0.05
         transforms:
           count: 10000
 
