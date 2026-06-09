@@ -20,6 +20,7 @@ from datasets_preparation.data_preparation_utils import (
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
 from datasets_preparation.synthetic.instruct.identity_generator import build_identity_dataset
 from datasets_preparation.synthetic.instruct.constraints_generator import build_constraints_dataset
+from datasets_preparation.synthetic.instruct.control_tasks_generator import build_control_tasks_dataset
 from logger import logger
 
 
@@ -142,6 +143,13 @@ def adapt_local_synthetic_constraints(doc, transforms, seed):
         conversation.append({'role': message['role'], 'content': message['content']})
     return conversation
 
+def adapt_local_synthetic_control_tasks(doc, transforms, seed):
+    messages = doc['messages']
+    conversation = []
+    for message in messages:
+        conversation.append({'role': message['role'], 'content': message['content']})
+    return conversation
+
 SUPPORTED_LOCAL_DATASETS = {
     'synthetic_identity': {
         'default': {
@@ -150,7 +158,7 @@ SUPPORTED_LOCAL_DATASETS = {
             'adapter': adapt_local_synthetic_identity,
             'synthetic': True,
             'synthetic_generator': build_identity_dataset,
-            'synthetic_count': 1000
+            'synthetic_count': 100
         }
     },
     'synthetic_constraints': {
@@ -160,7 +168,17 @@ SUPPORTED_LOCAL_DATASETS = {
             'adapter': adapt_local_synthetic_constraints,
             'synthetic': True,
             'synthetic_generator': build_constraints_dataset,
-            'synthetic_count': 5000
+            'synthetic_count': 10000
+        }
+    },
+    'synthetic_control_tasks': {
+        'default': {
+            'id': 'synthetic_control_tasks',
+            'split': 'train',
+            'adapter': adapt_local_synthetic_control_tasks,
+            'synthetic': True,
+            'synthetic_generator': build_control_tasks_dataset,
+            'synthetic_count': 10000
         }
     }
 }
