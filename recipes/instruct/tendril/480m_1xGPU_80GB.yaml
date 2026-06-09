@@ -16,7 +16,7 @@ config:
     stage: instruct
     seed: 42
     total_batch_size: 131072
-    max_steps: 3000
+    max_steps: 2000
     early_stopping_patience: 1000000
     early_stopping_patience_skip_steps: 0
 
@@ -61,7 +61,7 @@ config:
         wsd:
           start_step: 0
           warmup_steps: 50
-          stable_steps: 2450
+          stable_steps: 1450
           decay_steps: 500
     muon:
       enabled: false
@@ -112,21 +112,21 @@ data:
   datasets:
     HuggingFaceH4/ultrachat_200k:
       default:
-        weight: 0.32
+        weight: 0.30
         transforms:
           max_datapoints: null
           max_messages: 4
 
     allenai/tulu-3-sft-personas-instruction-following:
       default:
-        weight: 0.28
+        weight: 0.25
         transforms:
           max_datapoints: null
           max_messages: 2
 
     grammarly/coedit:
       default:
-        weight: 0.25
+        weight: 0.22
         transforms:
           max_datapoints: null
           max_messages: 2
@@ -140,9 +140,9 @@ data:
 
     synthetic_constraints:
       default:
-        weight: 0.06
+        weight: 0.14
         transforms:
-          count: 5000
+          count: 10000
 
     synthetic_identity:
       default:
