@@ -158,7 +158,7 @@ SUPPORTED_LOCAL_DATASETS = {
             'adapter': adapt_local_synthetic_identity,
             'synthetic': True,
             'synthetic_generator': build_identity_dataset,
-            'synthetic_count': 100
+            'synthetic_count': 1000
         }
     },
     'synthetic_constraints': {
