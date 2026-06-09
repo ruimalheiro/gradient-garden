@@ -18,8 +18,8 @@ from datasets_preparation.data_preparation_utils import (
     make_source_key
 )
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
-from datasets_preparation.synthetic.instruct_identity import build_identity_dataset
-from datasets_preparation.synthetic.instruct_constraints import build_constraints_dataset
+from datasets_preparation.synthetic.instruct.identity_generator import build_identity_dataset
+from datasets_preparation.synthetic.instruct.constraints_generator import build_constraints_dataset
 from logger import logger
 
 
