@@ -481,7 +481,10 @@ class Trainer:
         if args.reset_optimizers:
             logger.warning('Reset optimizers flag was set')
 
-        if ddp_world_size_changed or training_stage_changed:
+        if args.reset_dataloaders:
+            logger.warning('Reset dataloaders flag was set')
+
+        if ddp_world_size_changed or training_stage_changed or args.reset_dataloaders:
             if checkpoint_data.train_loader_state is not None and checkpoint_data.val_loader_state is not None:
                 logger.warning('ignoring stored metadata for dataloaders...')
                 checkpoint_data.train_loader_state = None

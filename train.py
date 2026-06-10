@@ -21,6 +21,7 @@ if __name__ == '__main__':
     checkpoint_group.add_argument('--checkpoint', type=str, default=None, help='Checkpoint file path to load.')
 
     parser.add_argument('--reset-optimizers', action='store_true', help='Reset the optimizers state when loading a checkpoint.')
+    parser.add_argument('--reset-dataloaders', action='store_true', help='Reset the dataloaders state when loading a checkpoint.')
     parser.add_argument('--start-step', type=int, default=None, help='Starting step number for training.')
 
     args = parser.parse_args()
