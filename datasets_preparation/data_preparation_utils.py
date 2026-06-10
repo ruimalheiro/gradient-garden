@@ -515,6 +515,21 @@ def shard_and_tokenize(
                 stopped_on_target = True
                 break
 
+        train_writer.finish()
+        val_writer.finish()
+
+        if target_tokens is not None and not reached_target():
+            state.status = 'exhausted_before_target'
+            save_state(state)
+            raise RuntimeError(
+                'Pretraining dataset exhausted before reaching target tokens. '
+                f'train_tokens={train_writer.total_tokens:,}/{target_tokens:,}, '
+                f'val_tokens={val_writer.total_tokens:,}/{val_target_tokens:,}'
+            )
+
+        state.status = 'completed'
+        save_state(state)
+
     except Exception:
         pool.terminate()
         pool.join()
@@ -525,21 +540,6 @@ def shard_and_tokenize(
         else:
             pool.close()
         pool.join()
-
-    if target_tokens is not None and not reached_target():
-        state.status = 'exhausted_before_target'
-        save_state(state)
-        raise RuntimeError(
-            'Pretraining dataset exhausted before reaching target tokens. '
-            f'train_tokens={train_writer.total_tokens:,}/{target_tokens:,}, '
-            f'val_tokens={val_writer.total_tokens:,}/{val_target_tokens:,}'
-        )
-
-    train_writer.finish()
-    val_writer.finish()
-
-    state.status = 'completed'
-    save_state(state)
 
     if stopped_on_target:
         logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
