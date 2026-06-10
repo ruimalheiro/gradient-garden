@@ -56,9 +56,14 @@ config:
       betas: [0.9, 0.95]
       use_fused: null
       schedulers:
-        active: cosine
+        active: wsd
         cosine:
           warmup_steps: 1000
+        wsd:
+          start_step: 0
+          warmup_steps: 1000
+          stable_steps: 34000
+          decay_steps: 7915
     muon:
       enabled: false
 
