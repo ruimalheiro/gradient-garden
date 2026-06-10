@@ -24,6 +24,7 @@ class CheckpointInspector:
         self.model = self.inference_runtime.model
         self.tokenizer = self.inference_runtime.tokenizer
         self.device = self.inference_runtime.device
+        self.device_type = self.device.type if isinstance(self.device, torch.device) else str(self.device).split(':')[0]
         self.dtype = self.inference_runtime.dtype
         self.autocast_enabled = (self.dtype != torch.float32)
         self.text_width = text_width
@@ -44,7 +45,7 @@ class CheckpointInspector:
         print_text=True
     ):
         with torch.autocast(
-            device_type=self.device,
+            device_type=self.device_type,
             dtype=self.dtype,
             enabled=self.autocast_enabled
         ):
