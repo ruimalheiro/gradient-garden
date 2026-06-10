@@ -196,7 +196,7 @@ HF_HOME='./cache'
   --dpo                             # Automatically sets DPO stage.
   --checkpoint <file>               # Resume training from a specific checkpoint
   --reset-optimizers                # Ignore stored optimizer(s) state
-  --reset-dataloaders               # Ignore stored optimizer(s) state
+  --reset-dataloaders               # Ignore stored dataloaders state
   --start-step <N>                  # Override internal step counter
 ```
 **NOTES:**
