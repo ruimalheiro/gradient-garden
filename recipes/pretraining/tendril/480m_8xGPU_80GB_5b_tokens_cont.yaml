@@ -99,7 +99,7 @@ config:
 
     arc_challenge:
       every_x_steps: 1000
-      number_of_examples: 1000
+      number_of_examples: 299
       run_on_first_step: true
       run_on_last_step: true
 
