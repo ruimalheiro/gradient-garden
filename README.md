@@ -33,7 +33,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
   - Separate max LR, min LR, and warmup settings from AdamW
   - Applied to matrix parameters
   - AdamW is applied to the remaining trainable parameters
-- Cosine LR scheduling
+- Cosine and WSD LR schedulers
 
 ### Training workflows
 - Pretraining
