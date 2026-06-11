@@ -53,9 +53,9 @@ def validate_generation_args(args: argparse.Namespace, parser: argparse.Argument
         parser.error('--top-p must be in (0, 1].')
     if args.max_gen_len <= 0:
         parser.error('--max-gen-len must be > 0.')
-    if args.repetition_penalty and args.repetition_penalty <= 1.0:
+    if args.repetition_penalty is not None and args.repetition_penalty <= 1.0:
         parser.error('--repetition-penalty must be > 1.0')
-    if args.no_repeat_ngram_size and args.no_repeat_ngram_size <= 1:
+    if args.no_repeat_ngram_size is not None and args.no_repeat_ngram_size <= 1:
         parser.error('--no-repeat-ngram-size must be >= 2')
 
 def add_runtime_args(parser: argparse.ArgumentParser):
