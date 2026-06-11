@@ -35,7 +35,7 @@ def apply_repetition_penalty(current_tokens, logits, penalty):
     ''' Applies the repetition penalty to reduce the probability of the same exact tokens appear multiple times even if they have strong logit.
         Modification is in-place.
     '''
-    if penalty == 1.0:
+    if penalty is None:
         return
 
     # (for each batch index) look at all the token logits that already were generated and apply the penalty:
@@ -55,7 +55,7 @@ def apply_no_repeat_ngram(current_tokens, logits, ngram_size):
     tokens "ngram_size" for the prefix "ngram_size - 1" (Tokens that would complete an ngram).
         Modification is in-place.
     '''
-    if ngram_size <= 1 or current_tokens.size(1) < ngram_size - 1:
+    if ngram_size is None or current_tokens.size(1) < ngram_size - 1:
         return
 
     for batch_index in range(logits.size(0)):
@@ -127,12 +127,20 @@ def generate(
     repetition_penalty,
     no_repeat_ngram_size,
     device,
-    dtype=torch.float32,
-    use_kv_cache=False
+    dtype,
+    use_kv_cache
 ):
+    if temperature < 0.0:
+        raise ValueError(f'temperature must be >= 0.0, got {temperature}')
+    if top_p <= 0.0 or top_p > 1.0:
+        raise ValueError(f'top_p must be in (0, 1], got {top_p}')
+    if repetition_penalty is not None and repetition_penalty <= 1.0:
+        raise ValueError(f'repetition_penalty must be null or > 1.0, got {repetition_penalty}') 
+    if no_repeat_ngram_size is not None and no_repeat_ngram_size <= 1:
+        raise ValueError(f'no_repeat_ngram_size must be null or >= 2, got {no_repeat_ngram_size}')
+
     batch_size = len(prompt_tokens)
 
-    vocab_size = tokenizer.vocab_size
     pad_token_id = tokenizer.pad_id
     stop_tokens = tokenizer.stop_tokens
     eos_id = tokenizer.eos_id
@@ -232,18 +240,18 @@ def generate_and_decode(
         prompts,
         model,
         tokenizer,
-        max_gen_len=256,
-        temperature=0.6,
-        top_p=0.9,
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=1,
-        full_seq=False,
-        device='cpu',
-        dtype=torch.float32,
-        is_instruct=False,
-        skip_encoding=False,
-        use_kv_cache=False,
-        batch_size=None
+        max_gen_len,
+        temperature,
+        top_p,
+        repetition_penalty,
+        no_repeat_ngram_size,
+        full_seq,
+        device,
+        dtype,
+        is_instruct,
+        use_kv_cache,
+        batch_size,
+        skip_encoding=False
     ):
         vocab_size = tokenizer.vocab_size
         pad_token_id = tokenizer.pad_id
