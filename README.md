@@ -198,6 +198,7 @@ HF_HOME='./cache'
   --reset-optimizers                # Ignore stored optimizer(s) state
   --reset-dataloaders               # Ignore stored dataloaders state
   --start-step <N>                  # Override internal step counter
+  --micro-batch-size <N>            # Override config.training.micro_batch_size
 ```
 **NOTES:**
   - The project output path can be configured in `config.py` under `GlobalConfig.paths.runs`. By default it will use `./runs`

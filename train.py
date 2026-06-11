@@ -23,11 +23,15 @@ if __name__ == '__main__':
     parser.add_argument('--reset-optimizers', action='store_true', help='Reset the optimizers state when loading a checkpoint.')
     parser.add_argument('--reset-dataloaders', action='store_true', help='Reset the dataloaders state when loading a checkpoint.')
     parser.add_argument('--start-step', type=int, default=None, help='Starting step number for training.')
+    parser.add_argument('--micro-batch-size', type=int, default=None, help='Overrides the micro-batch-size set in config.training.micro_batch_size')
 
     args = parser.parse_args()
 
     if args.recipe and (args.pretraining or args.instruct or args.dpo):
         parser.error('--recipe defines the training stage. Cannot combine --recipe with --pretraining, --instruct, or --dpo.')
+
+    if args.micro_batch_size is not None and args.micro_batch_size <= 0:
+        parser.error('--micro-batch-size must be >= 1')
 
     if args.recipe:
         cfg = load_recipe(args.recipe).config

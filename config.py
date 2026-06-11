@@ -69,7 +69,6 @@ class ModelConfig(BaseModel):
     ffn_dim_multiplier: float = 1.0
     norm_eps: float = 1e-5
     rope_theta: float = 500000.0
-    max_batch_size: int = 4
     max_seq_len: int = 1024
     moe: MoEConfig | None = None
 
@@ -82,6 +81,7 @@ class TrainingConfig(BaseModel):
     stage: TrainingStage = TrainingStage.PRETRAINING
     seed: int = 42
     total_batch_size: int = 524288
+    micro_batch_size: int = 4
     max_steps: int = 200
     early_stopping_patience: int = 100
     early_stopping_patience_skip_steps: int = 0
