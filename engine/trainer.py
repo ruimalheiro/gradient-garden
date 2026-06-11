@@ -132,6 +132,7 @@ class Trainer:
 
     def setup(self):
         self.set_seed()
+        self.resolve_config_overrides()
         self.setup_global_torch_optimizations()
         self.build_contexts()
         self.setup_local_logging()
@@ -156,6 +157,21 @@ class Trainer:
 
     def set_seed(self):
         set_seed(self.config.training.seed)
+
+    def resolve_config_overrides(self):
+        override_messages = []
+        if self.args.micro_batch_size is not None:
+            override_messages.append(
+                f'Overriding config.training.micro_batch_size "{self.config.training.micro_batch_size}" '
+                f'with "{self.args.micro_batch_size}".'
+            )
+            self.config.training.micro_batch_size = self.args.micro_batch_size
+
+        if override_messages:
+            logger.section('Config overrides', force=True)
+            for message in override_messages:
+                logger.warning(message, force=True)
+            logger.info('\n', force=True)
 
     def setup_global_torch_optimizations(self):
         torch.backends.cuda.matmul.fp32_precision = 'tf32'
