@@ -33,15 +33,16 @@ class CheckpointInspector:
         self,
         prompts,
         *,
-        max_gen_len=256,
+        max_gen_len=128,
         temperature=0.0,
         top_p=1.0,
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=1,
+        repetition_penalty=None,
+        no_repeat_ngram_size=None,
         full_seq=False,
         instruct=False,
-        use_kv_cache=True,
-        batch_size=2,
+        use_kv_cache=False,
+        batch_size=1,
+        skip_encoding=False,
         print_text=True
     ):
         with torch.autocast(
@@ -63,7 +64,8 @@ class CheckpointInspector:
                 dtype=self.dtype,
                 is_instruct=instruct,
                 use_kv_cache=use_kv_cache,
-                batch_size=batch_size
+                batch_size=batch_size,
+                skip_encoding=skip_encoding
             )
 
         results = [
