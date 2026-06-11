@@ -44,9 +44,6 @@ if __name__ == '__main__':
     checkpoint_data = load_checkpoint_for_inference(args.checkpoint)
     prompts = validate_input_prompts_list(load_json_file(args.prompts), parser)
 
-    if args.batch_size > checkpoint_data.config.model.max_batch_size:
-        parser.error(f'--batch-size ({args.batch_size}) cannot exceed model.max_batch_size ({checkpoint_data.config.model.max_batch_size})')
-
     set_seed(args.seed)
 
     output_path, name, timestamp = build_output_path_for_run(

@@ -41,7 +41,6 @@ def model(device, tokenizer):
         ffn_dim_multiplier=1.0,
         norm_eps=1e-05,
         rope_theta=500000.0,
-        max_batch_size=2,
         max_seq_len=32
     )
 
