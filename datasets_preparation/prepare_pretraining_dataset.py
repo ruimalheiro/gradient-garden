@@ -44,6 +44,12 @@ def adapt_open_web_math(batch, transforms):
 def adapt_huggingfacetb_finemath(batch, transforms):
     return {'text': batch['text']}
 
+def adapt_wikipedia(batch, transforms):
+    return {'text': batch['text']}
+
+def adapt_common_pile_stack_exchange(batch, transforms):
+    return {'text': batch['text']}
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceFW/fineweb-edu': {
@@ -119,6 +125,20 @@ SUPPORTED_HF_DATASETS = {
             'split': 'train',
             'adapter': adapt_open_web_math
         },
+    },
+    'wikimedia/wikipedia': {
+        '20231101.en': {
+            'id': 'wikimedia/wikipedia',
+            'split': 'train',
+            'adapter': adapt_wikipedia
+        }
+    },
+    'common-pile/stackexchange': {
+        'default': {
+            'id': 'common-pile/stackexchange',
+            'split': 'train',
+            'adapter': adapt_common_pile_stack_exchange
+        }
     }
 }
 
