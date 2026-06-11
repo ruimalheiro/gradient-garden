@@ -295,18 +295,19 @@ class Trainer:
             raise ValueError('Invalid training precision')
 
     def compute_grad_accum_steps(self, ddp_world_size):
+        micro_batch_size = self.config.training.micro_batch_size
         #### BATCH SIZE CHECKS (For now assumes token based autoregressive training...)
-        # NOTE: total_batch_size is the total batch size in tokens. The model max_batch_size is the number of sequences per device during forward pass (micro batches).
-        # The total batch size must be a multiple of (max_batch_size * max_seq_len * ddp_world_size). This is needed for the gradient accumulation steps to be calculated correctly.
-        if self.config.training.total_batch_size % (self.config.model.max_batch_size * self.config.model.max_seq_len * ddp_world_size) != 0:
-            raise ValueError('total_batch_size must be divisible by (max_batch_size * max_seq_len * ddp_world_size)')
+        # NOTE: total_batch_size is the total batch size in tokens. The micro_batch_size is the number of sequences per device during forward pass (micro batches).
+        # The total batch size must be a multiple of (micro_batch_size * max_seq_len * ddp_world_size). This is needed for the gradient accumulation steps to be calculated correctly.
+        if self.config.training.total_batch_size % (micro_batch_size * self.config.model.max_seq_len * ddp_world_size) != 0:
+            raise ValueError('total_batch_size must be divisible by (micro_batch_size * max_seq_len * ddp_world_size)')
 
         # Gradient accumulation steps
-        grad_accum_steps = self.config.training.total_batch_size // (self.config.model.max_batch_size * self.config.model.max_seq_len * ddp_world_size)
+        grad_accum_steps = self.config.training.total_batch_size // (micro_batch_size * self.config.model.max_seq_len * ddp_world_size)
 
         # Final check to validate previous calculations.
-        if self.config.training.total_batch_size != (self.config.model.max_batch_size * self.config.model.max_seq_len * ddp_world_size * grad_accum_steps):
-            raise ValueError('total batch size MUST EQUAL (max_batch_size * max_seq_len * ddp_world_size * grad_accum_steps)')
+        if self.config.training.total_batch_size != (micro_batch_size * self.config.model.max_seq_len * ddp_world_size * grad_accum_steps):
+            raise ValueError('total batch size MUST EQUAL (micro_batch_size * max_seq_len * ddp_world_size * grad_accum_steps)')
 
         return grad_accum_steps
 
@@ -425,7 +426,7 @@ class Trainer:
 
     def build_data_loaders(self):
         self.train_loader, self.val_loader = init_data_loaders(
-            batch_size=self.config.model.max_batch_size,
+            batch_size=self.config.training.micro_batch_size,
             sequence_length=self.config.model.max_seq_len,
             is_master_process=self.distributed_ctx.is_master_process,
             ddp_rank=self.distributed_ctx.ddp_rank,
@@ -1234,7 +1235,7 @@ class Trainer:
                 dtype=self.trainer_ctx.precision.autocast_dtype,
                 is_instruct=self.is_instruct(),
                 use_kv_cache=True,
-                batch_size=self.config.model.max_batch_size
+                batch_size=self.config.training.micro_batch_size
             )
 
         if not self.trainer_ctx.distributed.is_master_process:

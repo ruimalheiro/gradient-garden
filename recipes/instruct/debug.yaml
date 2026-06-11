@@ -16,6 +16,7 @@ config:
     stage: instruct
     seed: 42
     total_batch_size: 8192
+    micro_batch_size: 2
     max_steps: 10
     early_stopping_patience: 100
     early_stopping_patience_skip_steps: 0
@@ -30,7 +31,6 @@ config:
     ffn_dim_multiplier: 1.0
     norm_eps: 1.0e-5
     rope_theta: 500000.0
-    max_batch_size: 2
     max_seq_len: 512
 
   prompts:
