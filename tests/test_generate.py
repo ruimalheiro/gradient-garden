@@ -20,10 +20,11 @@ def test_generate_kv_cache_matches_no_cache_greedy(model, tokenizer, device):
         prompt_tokens=prompts,
         max_gen_len=16,
         temperature=0.0,
-        top_p=0.9, # ignored when temperature=0
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=1,
-        device=device
+        top_p=1.0,
+        repetition_penalty=None,
+        no_repeat_ngram_size=None,
+        device=device,
+        dtype=torch.float32
     )
 
     out_no_cache = generate(**kwargs, use_kv_cache=False)
@@ -49,10 +50,11 @@ def test_generate_batched_variable_lengths_smoke(model, tokenizer, device):
         prompt_tokens=prompts,
         max_gen_len=max_gen_len,
         temperature=0.0,
-        top_p=0.9,
-        repetition_penalty=1.0,
-        no_repeat_ngram_size=1,
+        top_p=1.0,
+        repetition_penalty=None,
+        no_repeat_ngram_size=None,
         device=device,
+        dtype=torch.float32,
         use_kv_cache=True,
     )
 
@@ -73,11 +75,12 @@ def test_generate_empty_prompt_raises(model, tokenizer, device):
                 prompt_tokens=[[1, 2, 3], []], # one empty prompt
                 max_gen_len=8,
                 temperature=0.0,
-                top_p=0.9,
-                repetition_penalty=1.0,
-                no_repeat_ngram_size=1,
+                top_p=1.0,
+                repetition_penalty=None,
+                no_repeat_ngram_size=None,
                 device=device,
-                use_kv_cache=True,
+                dtype=torch.float32,
+                use_kv_cache=True
             )
             assert False, 'Expected ValueError for empty prompt'
         except ValueError as e:

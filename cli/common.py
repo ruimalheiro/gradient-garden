@@ -36,27 +36,27 @@ def add_generation_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         '--repetition-penalty',
         type=float,
-        default=1.0,
-        help='Penalty for already generated tokens. 1.0 means disabled. Common values: ~1.05 to ~1.2.',
+        default=None,
+        help='Penalty for already generated tokens. Must be > 1.0. Common values: ~1.05 to ~1.2.',
     )
     parser.add_argument(
         '--no-repeat-ngram-size',
         type=int,
-        default=1,
-        help='Block repeated ngrams of this size. 1 means disabled. Common values: ~3 to ~5.',
+        default=None,
+        help='Block repeated ngrams of this size. Must be > 2. Common values: ~3 to ~5.',
     )
 
 def validate_generation_args(args: argparse.Namespace, parser: argparse.ArgumentParser):
     if args.temperature < 0:
-        parser.error('--temperature must be >= 0.')
+        parser.error('--temperature must be >= 0.0.')
     if not (0.0 < args.top_p <= 1.0):
-        parser.error('--top-p must be between 0.0 and 1.0.')
+        parser.error('--top-p must be in (0, 1].')
     if args.max_gen_len <= 0:
         parser.error('--max-gen-len must be > 0.')
-    if args.repetition_penalty <= 0:
-        parser.error('--repetition-penalty must be > 0')
-    if args.no_repeat_ngram_size < 1:
-        parser.error('--no-repeat-ngram-size must be >= 1')
+    if args.repetition_penalty is not None and args.repetition_penalty <= 1.0:
+        parser.error('--repetition-penalty must be > 1.0')
+    if args.no_repeat_ngram_size is not None and args.no_repeat_ngram_size <= 1:
+        parser.error('--no-repeat-ngram-size must be >= 2')
 
 def add_runtime_args(parser: argparse.ArgumentParser):
     parser.add_argument(

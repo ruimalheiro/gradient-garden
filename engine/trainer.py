@@ -1225,13 +1225,16 @@ class Trainer:
                 model=get_model(self.model),
                 tokenizer=self.tokenizer,
                 max_gen_len=self.config.generation.max_test_gen_len,
+                temperature=0.0,
+                top_p=1.0,
+                repetition_penalty=None,
+                no_repeat_ngram_size=None,
                 full_seq=True,
                 device=self.trainer_ctx.device.device,
                 dtype=self.trainer_ctx.precision.autocast_dtype,
                 is_instruct=self.is_instruct(),
-                temperature=0.0,
-                top_p=1.0,
-                use_kv_cache=True
+                use_kv_cache=True,
+                batch_size=self.config.model.max_batch_size
             )
 
         if not self.trainer_ctx.distributed.is_master_process:
