@@ -113,7 +113,6 @@ data:
     shard_size: 100_000_000
     # pilot
     # target_tokens: 1_000_000_000
-    # validation_ratio: 0.002
     target_tokens: 100_500_000_000
     validation_ratio: 0.002
     interleave_stopping_strategy: first_exhausted
@@ -121,40 +120,40 @@ data:
   datasets:
     HuggingFaceTB/smollm-corpus:
       fineweb-edu-dedup:
-        weight: 0.2558
+        weight: 0.2509
       cosmopedia-v2:
-        weight: 0.0985
+        weight: 0.1044
 
     HuggingFaceFW/dclm_100BT-shuffled:
       default:
-        weight: 0.1515
+        weight: 0.1595
 
     wikimedia/wikipedia:
       20231101.en:
-        weight: 0.1216
+        weight: 0.1047
 
     common-pile/stackexchange:
       default:
-        weight: 0.1390
+        weight: 0.1404
 
     common-pile/project_gutenberg_filtered:
       default:
-        weight: 0.0058
+        weight: 0.00052
 
     Avelina/python-edu-cleaned:
       default:
-        weight: 0.1593
+        weight: 0.1679
 
     HuggingFaceTB/finemath:
       finemath-4plus:
-        weight: 0.0309
+        weight: 0.0329
       infiwebmath-4plus:
-        weight: 0.0135
+        weight: 0.0140
 
     open-web-math/open-web-math:
       default:
-        weight: 0.0241
-
+        weight: 0.0247
+    
   evals:
     hellaswag:
       enabled: true
