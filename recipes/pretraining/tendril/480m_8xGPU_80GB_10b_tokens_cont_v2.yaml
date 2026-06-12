@@ -125,35 +125,35 @@ data:
   datasets:
     HuggingFaceTB/smollm-corpus:
       fineweb-edu-dedup:
-        weight: 0.31
+        weight: 0.1957
       cosmopedia-v2:
-        weight: 0.15
+        weight: 0.1301
 
     HuggingFaceFW/dclm_100BT-shuffled:
       default:
-        weight: 0.20
+        weight: 0.1001
 
     Avelina/python-edu-cleaned:
       default:
-        weight: 0.07
+        weight: 0.0877
 
     HuggingFaceTB/finemath:
       finemath-4plus:
-        weight: 0.05
+        weight: 0.0188
       infiwebmath-4plus:
-        weight: 0.02
+        weight: 0.0081
 
     open-web-math/open-web-math:
       default:
-        weight: 0.04
+        weight: 0.0119
 
     wikimedia/structured-wikipedia:
       enwiki_namespace_0:
-        weight: 0.12
+        weight: 0.4107
 
     common-pile/stackexchange:
       default:
-        weight: 0.04
+        weight: 0.0369
 
   evals:
     hellaswag:
