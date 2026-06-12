@@ -57,6 +57,9 @@ def adapt_structured_wikipedia(batch, transforms):
 def adapt_common_pile_stack_exchange(batch, transforms):
     return {'text': batch['text']}
 
+def adapt_project_gutenberg_filtered(batch, transforms):
+    return {'text': batch['text']}
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceFW/fineweb-edu': {
@@ -152,6 +155,13 @@ SUPPORTED_HF_DATASETS = {
             'id': 'common-pile/stackexchange',
             'split': 'train',
             'adapter': adapt_common_pile_stack_exchange
+        }
+    },
+    'common-pile/project_gutenberg_filtered': {
+        'default': {
+            'id': 'common-pile/project_gutenberg_filtered',
+            'split': 'train',
+            'adapter': adapt_project_gutenberg_filtered
         }
     }
 }
