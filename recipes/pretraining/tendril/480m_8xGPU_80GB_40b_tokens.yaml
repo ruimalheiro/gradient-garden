@@ -10,7 +10,7 @@ config:
     training_precision: bf16
     use_torch_compile: true
     use_fsdp: false
-    number_of_cpu_processes: 28
+    number_of_cpu_processes: 16
 
   training:
     stage: pretraining
