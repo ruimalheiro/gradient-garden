@@ -1,5 +1,5 @@
 name: tendril_480m_8xGPU_80GB_pretraining
-description: 8xGPU_80GB pretraining recipe for Tendril 480M with over ~100B tokens.
+description: 8xGPU_80GB pretraining recipe for Tendril 480M with over ~40B tokens.
 
 config:
   run:
@@ -10,14 +10,14 @@ config:
     training_precision: bf16
     use_torch_compile: true
     use_fsdp: false
-    number_of_cpu_processes: 16
+    number_of_cpu_processes: 28
 
   training:
     stage: pretraining
     seed: 42
     total_batch_size: 1048576
     micro_batch_size: 8
-    max_steps: 95367
+    max_steps: 38147
     early_stopping_patience: 1000000
     early_stopping_patience_skip_steps: 0
 
@@ -58,12 +58,12 @@ config:
       schedulers:
         active: wsd
         cosine:
-          warmup_steps: 2000
+          warmup_steps: 1000
         wsd:
           start_step: 0
-          warmup_steps: 2000
-          stable_steps: 83000
-          decay_steps: 10367
+          warmup_steps: 1000
+          stable_steps: 30000
+          decay_steps: 7147
     muon:
       enabled: false
 
@@ -98,8 +98,8 @@ config:
 
   checkpointing:
     save_checkpoints: true
-    every_x_steps: 2500
-    max_number_checkpoints: 10
+    every_x_steps: 2000
+    max_number_checkpoints: 30
     run_on_first_step: true
     run_on_last_step: true
 
@@ -111,9 +111,7 @@ data:
 
   datasets_common_settings:
     shard_size: 100_000_000
-    # pilot
-    # target_tokens: 1_000_000_000
-    target_tokens: 100_500_000_000
+    target_tokens: 40_500_000_000
     validation_ratio: 0.002
     interleave_stopping_strategy: first_exhausted
 
