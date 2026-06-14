@@ -60,7 +60,7 @@ def adapt_common_pile_stack_exchange(batch, transforms):
 def adapt_project_gutenberg_filtered(batch, transforms):
     return {'text': batch['text']}
 
-def adapt_optimal_scale_climb_mix(batch, transforms):
+def adapt_karpathy_climbmix_400b_shuffle(batch, transforms):
     return {'text': batch['text']}
 
 #### SUPPORTED DATASETS
@@ -167,11 +167,11 @@ SUPPORTED_HF_DATASETS = {
             'adapter': adapt_project_gutenberg_filtered
         }
     },
-    'OptimalScale/ClimbMix': {
+    'karpathy/climbmix-400b-shuffle': {
         'default': {
-            'id': 'OptimalScale/ClimbMix',
+            'id': 'karpathy/climbmix-400b-shuffle',
             'split': 'train',
-            'adapter': adapt_optimal_scale_climb_mix
+            'adapter': adapt_karpathy_climbmix_400b_shuffle
         }
     }
 }
