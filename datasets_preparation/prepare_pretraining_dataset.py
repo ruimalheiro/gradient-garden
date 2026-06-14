@@ -60,6 +60,9 @@ def adapt_common_pile_stack_exchange(batch, transforms):
 def adapt_project_gutenberg_filtered(batch, transforms):
     return {'text': batch['text']}
 
+def adapt_optimal_scale_climb_mix(batch, transforms):
+    return {'text': batch['text']}
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceFW/fineweb-edu': {
@@ -162,6 +165,13 @@ SUPPORTED_HF_DATASETS = {
             'id': 'common-pile/project_gutenberg_filtered',
             'split': 'train',
             'adapter': adapt_project_gutenberg_filtered
+        }
+    },
+    'OptimalScale/ClimbMix': {
+        'default': {
+            'id': 'OptimalScale/ClimbMix',
+            'split': 'train',
+            'adapter': adapt_optimal_scale_climb_mix
         }
     }
 }
