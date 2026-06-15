@@ -542,7 +542,7 @@ def shard_and_tokenize(
         logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
         logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}')
 
-    logger.info('Terminating pool...')
+    logger.info('\nTerminating pool...')
     pool.close()
     pool.join()
 
