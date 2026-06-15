@@ -3,7 +3,6 @@ import numpy as np
 import sys
 import multiprocessing as mp
 import hashlib
-import time
 import math
 
 from tqdm.auto import tqdm
@@ -474,81 +473,78 @@ def shard_and_tokenize(
 
     stopped_on_target = False
     pool = mp.Pool(num_proc)
+    stop_event = mp.Event()
 
-    try:
-        iterator = pool.imap(
-            partial(
-                tokenize_and_route,
-                tokenizer_kwargs,
-                tokenize_function,
-                seed,
-                validation_ratio
-            ),
-            dataset,
-            chunksize=chunksize
-        )
-        for source, tokens, split in iterator:
-            state.docs_seen += 1
+    def stoppable_dataset(ds, stop_event):
+        for doc in ds:
+            if stop_event.is_set():
+                return
+            yield doc
 
-            if tokens.size == 0:
-                continue
-            if split == 'val':
-                written = val_writer.write(tokens)
-            else:
-                written = train_writer.write(tokens)
+    iterator = pool.imap(
+        partial(
+            tokenize_and_route,
+            tokenizer_kwargs,
+            tokenize_function,
+            seed,
+            validation_ratio
+        ),
+        # dataset,
+        stoppable_dataset(dataset, stop_event),
+        chunksize=chunksize
+    )
+    for source, tokens, split in iterator:
+        state.docs_seen += 1
 
-            if written == 0:
-                if reached_target():
-                    stopped_on_target = True
-                    break
-                continue
+        if tokens.size == 0:
+            continue
+        if split == 'val':
+            written = val_writer.write(tokens)
+        else:
+            written = train_writer.write(tokens)
 
-            state.source_doc_counts[source] = state.source_doc_counts.get(source, 0) + 1
-            state.source_token_counts[source] = state.source_token_counts.get(source, 0) + written
-            state.split_doc_counts[split] += 1
-            state.split_token_counts[split] += written
-
-            if state.docs_seen % checkpoint_interval_docs == 0:
-                save_state(state)
-
+        if written == 0:
             if reached_target():
+                stop_event.set()
                 stopped_on_target = True
                 break
+            continue
 
-        train_writer.finish()
-        val_writer.finish()
+        state.source_doc_counts[source] = state.source_doc_counts.get(source, 0) + 1
+        state.source_token_counts[source] = state.source_token_counts.get(source, 0) + written
+        state.split_doc_counts[split] += 1
+        state.split_token_counts[split] += written
 
-        if target_tokens is not None and not reached_target():
-            state.status = 'exhausted_before_target'
+        if state.docs_seen % checkpoint_interval_docs == 0:
             save_state(state)
-            raise RuntimeError(
-                'Pretraining dataset exhausted before reaching target tokens. '
-                f'train_tokens={train_writer.total_tokens:,}/{target_tokens:,}, '
-                f'val_tokens={val_writer.total_tokens:,}/{val_target_tokens:,}'
-            )
 
-        state.status = 'completed'
+        if reached_target():
+            stop_event.set()
+            stopped_on_target = True
+            break
+
+    train_writer.finish()
+    val_writer.finish()
+
+    if target_tokens is not None and not reached_target():
+        state.status = 'exhausted_before_target'
         save_state(state)
+        raise RuntimeError(
+            'Pretraining dataset exhausted before reaching target tokens. '
+            f'train_tokens={train_writer.total_tokens:,}/{target_tokens:,}, '
+            f'val_tokens={val_writer.total_tokens:,}/{val_target_tokens:,}'
+        )
 
-    except Exception:
-        pool.terminate()
-        pool.join()
-        raise
-    else:
-        if stopped_on_target:
-            pool.terminate()
-        else:
-            pool.close()
-        pool.join()
+    state.status = 'completed'
+    save_state(state)
 
     if stopped_on_target:
         logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
         logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}')
 
-    # Workaround for occasional pool shutdown issue...
-    # Without this, some streaming runs crash after successful shard writing with PyGILState_Release during finalization...
-    logger.info('Ensuring pool is terminated...')
-    time.sleep(5)
+    logger.info('\nTerminating pool...')
+    pool.close()
+    pool.join()
 
     logger.info('Pretraining shard preparation complete.')
     logger.info(f'- Train tokens: {train_writer.total_tokens:,}')
