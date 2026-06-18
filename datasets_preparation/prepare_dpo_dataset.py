@@ -56,7 +56,6 @@ def adapt_anthropic_hh_rlhf(doc, transforms):
 SUPPORTED_HF_DATASETS = {
     'Anthropic/hh-rlhf': {
         'default': {
-            'id': 'Anthropic/hh-rlhf',
             'split': 'train',
             'adapter': adapt_anthropic_hh_rlhf
         }
