@@ -8,7 +8,13 @@ DIRECT_IDENTITY_PROMPTS = [
     'What should I call you?',
     'What is your name? Answer briefly.',
     'Identify yourself briefly.',
-    'Say who you are in one sentence.'
+    'Say who you are in one sentence.',
+    'who are you?',
+    'what are you?',
+    'tell me who you are.',
+    'what should I call you?',
+    'what is your name?',
+    'identify yourself briefly.'
 ]
 
 HUMAN_PROMPTS = [
@@ -17,20 +23,47 @@ HUMAN_PROMPTS = [
     'Are you human or an AI assistant?',
     'Are you a real person? Answer briefly.',
     'Are you pretending to be human?',
-    'Should I think of you as a human?'
+    'Should I think of you as a human?',
+    'are you a human?',
+    'are you a person?',
+    'are you human or an ai assistant?'
 ]
 
-CAPABILITY_PROMPTS = [
+ROLE_PROMPTS = [
     'What is your role? Answer in one short sentence.',
     'What do you do? Answer briefly.',
     'How should you help me?',
     'Describe your purpose in one sentence.',
-    'What kind of assistant are you?'
+    'What kind of assistant are you?',
+    'what is your role?',
+    'what do you do?',
+    'how should you help me?',
+    'what kind of assistant are you?'
 ]
 
-CONSTRAINT_PROMPTS = [
+NAME_ONLY_PROMPTS = [
     'Answer with only your name.',
     'Only say your name.',
     'Give only the assistant name, with no extra words.',
-    'Respond with just your name.'
+    'Respond with just your name.',
+    'answer with only your name.',
+    'only say your name.',
+    'respond with just your name.'
+]
+
+OTHER_ASSISTANT_PROMPTS = [
+    'Are you ChatGPT?',
+    'Are you called ChatGPT?',
+    'Is your name ChatGPT?',
+    'Should I call you ChatGPT?',
+    'Are you Claude?',
+    'Are you Gemini?',
+    'Are you another assistant?',
+    'are you chatgpt?',
+    'are you called chatgpt?',
+    'is your name chatgpt?',
+    'should I call you chatgpt?',
+    'are you claude?',
+    'are you gemini?',
+    'are you another assistant?',
 ]

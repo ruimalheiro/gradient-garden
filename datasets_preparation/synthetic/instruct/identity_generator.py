@@ -4,8 +4,9 @@ from datasets_preparation.synthetic.group_utils import generate_weighted_group_e
 from datasets_preparation.synthetic.instruct.fixtures.identity import (
     DIRECT_IDENTITY_PROMPTS,
     HUMAN_PROMPTS,
-    CAPABILITY_PROMPTS,
-    CONSTRAINT_PROMPTS
+    ROLE_PROMPTS,
+    NAME_ONLY_PROMPTS,
+    OTHER_ASSISTANT_PROMPTS
 )
 
 
@@ -24,9 +25,18 @@ def generator_fn(*, config, rng, count, transforms):
 
     def generate_direct_identity():
         prompt = rng.choice(DIRECT_IDENTITY_PROMPTS)
-        templates = [
-            identity_message
-        ]
+
+        if custom_identity_message:
+            templates = [
+                identity_message,
+            ]
+        else:
+            templates = [
+                identity_message,
+                f'I am {model_name}, an AI assistant.',
+                f'My name is {model_name}, and I am a helpful AI assistant.',
+            ]
+
         return row(prompt, rng.choice(templates))
 
     def generate_human_answer():
@@ -38,8 +48,8 @@ def generator_fn(*, config, rng, count, transforms):
         ]
         return row(prompt, rng.choice(templates))
 
-    def generate_capabilities_answer():
-        prompt = rng.choice(CAPABILITY_PROMPTS)
+    def generate_role_answer():
+        prompt = rng.choice(ROLE_PROMPTS)
         templates = [
             f'I am {model_name}, and I help answer questions clearly and usefully.',
             identity_message,
@@ -47,19 +57,29 @@ def generator_fn(*, config, rng, count, transforms):
         ]
         return row(prompt, rng.choice(templates))
 
-    def generate_identity_constraint_answer():
-        prompt = rng.choice(CONSTRAINT_PROMPTS)
+    def generate_name_only_answer():
+        prompt = rng.choice(NAME_ONLY_PROMPTS)
         templates = [
             model_name
         ]
         return row(prompt, rng.choice(templates))
 
+    def generate_other_assistant_answer():
+        prompt = rng.choice(OTHER_ASSISTANT_PROMPTS)
+        templates = [
+            f'No, my name is {model_name}.',
+            identity_message,
+            f'You can call me {model_name}.',
+        ]
+        return row(prompt, rng.choice(templates))
+
     return generate_weighted_group_examples(
         groups={
-            'identity': (generate_direct_identity, 0.45),
-            'human': (generate_human_answer, 0.25),
-            'capability': (generate_capabilities_answer, 0.20),
-            'constraint': (generate_identity_constraint_answer, 0.10)
+            'identity': (generate_direct_identity, 0.40),
+            'human': (generate_human_answer, 0.20),
+            'role': (generate_role_answer, 0.20),
+            'name_only': (generate_name_only_answer, 0.10),
+            'other_assistant': (generate_other_assistant_answer, 0.10)
         },
         transforms=transforms,
         count=count
