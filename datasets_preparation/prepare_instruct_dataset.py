@@ -26,7 +26,7 @@ from logger import logger
 
 
 #### ADAPTERS
-def adapt_ultrachat_200k(doc, transforms, seed):
+def common_adapter(doc, transforms, seed):
     messages = doc['messages']
     conversation = []
     for message in messages:
@@ -68,13 +68,6 @@ def adapt_lmsys_chat_1m(doc, transforms, seed):
         conversation.append({'role': message['role'], 'content': content})
     return conversation
 
-def adapt_tulu_3_sft_personas_instruction_following(doc, transforms, seed):
-    messages = doc['messages']
-    conversation = []
-    for message in messages:
-        conversation.append({'role': message['role'], 'content': message['content']})
-    return conversation
-
 def adapt_grammarly_coedit(doc, transforms, seed):
     src = doc['src']
     tgt = doc['tgt']
@@ -84,120 +77,55 @@ def adapt_grammarly_coedit(doc, transforms, seed):
     ]
     return conversation
 
-def adapt_no_robots(doc, transforms, seed):
-    messages = doc['messages']
-    conversation = []
-    for message in messages:
-        conversation.append({'role': message['role'], 'content': message['content']})
-    return conversation
-
 #### SUPPORTED DATASETS
+def hf_dataset(*, split='train', adapter=common_adapter):
+    return {
+        'split': split,
+        'adapter': adapter
+    }
+
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceH4/ultrachat_200k': {
-        'default': {
-            'id': 'HuggingFaceH4/ultrachat_200k',
-            'split': 'train_sft',
-            'adapter': adapt_ultrachat_200k
-        }
+        'default': hf_dataset(split='train_sft')
     },
     'lmsys/lmsys-chat-1m': {
-        'default': {
-            'id': 'lmsys/lmsys-chat-1m',
-            'split': 'train',
-            'adapter': adapt_lmsys_chat_1m
-        }
+        'default': hf_dataset(adapter=adapt_lmsys_chat_1m)
     },
     'allenai/tulu-3-sft-personas-instruction-following': {
-        'default': {
-            'id': 'allenai/tulu-3-sft-personas-instruction-following',
-            'split': 'train',
-            'adapter': adapt_tulu_3_sft_personas_instruction_following
-        }
+        'default': hf_dataset()
     },
     'grammarly/coedit': {
-        'default': {
-            'id': 'grammarly/coedit',
-            'split': 'train',
-            'adapter': adapt_grammarly_coedit
-        }
+        'default': hf_dataset(adapter=adapt_grammarly_coedit)
     },
     'HuggingFaceH4/no_robots': {
-        'default': {
-            'id': 'HuggingFaceH4/no_robots',
-            'split': 'train',
-            'adapter': adapt_no_robots
-        }
+        'default': hf_dataset()
+    },
+    'HuggingFaceTB/smol-smoltalk': {
+        'default': hf_dataset()
     }
 }
 
-def adapt_local_synthetic_identity(doc, transforms, seed):
-    messages = doc['messages']
-    conversation = []
-    for message in messages:
-        conversation.append({'role': message['role'], 'content': message['content']})
-    return conversation
-
-def adapt_local_synthetic_constraints(doc, transforms, seed):
-    messages = doc['messages']
-    conversation = []
-    for message in messages:
-        conversation.append({'role': message['role'], 'content': message['content']})
-    return conversation
-
-def adapt_local_synthetic_control_tasks(doc, transforms, seed):
-    messages = doc['messages']
-    conversation = []
-    for message in messages:
-        conversation.append({'role': message['role'], 'content': message['content']})
-    return conversation
-
-def adapt_local_synthetic_general_tasks(doc, transforms, seed):
-    messages = doc['messages']
-    conversation = []
-    for message in messages:
-        conversation.append({'role': message['role'], 'content': message['content']})
-    return conversation
+def synthetic_dataset(*, count, generator, split='train', adapter=common_adapter):
+    return {
+        'split': split,
+        'adapter': adapter,
+        'synthetic': True,
+        'synthetic_generator': generator,
+        'synthetic_count': count
+    }
 
 SUPPORTED_LOCAL_DATASETS = {
     'synthetic_identity': {
-        'default': {
-            'id': 'synthetic_identity',
-            'split': 'train',
-            'adapter': adapt_local_synthetic_identity,
-            'synthetic': True,
-            'synthetic_generator': build_identity_dataset,
-            'synthetic_count': 1000
-        }
+        'default': synthetic_dataset(count=1000, generator=build_identity_dataset)
     },
     'synthetic_constraints': {
-        'default': {
-            'id': 'synthetic_constraints',
-            'split': 'train',
-            'adapter': adapt_local_synthetic_constraints,
-            'synthetic': True,
-            'synthetic_generator': build_constraints_dataset,
-            'synthetic_count': 10000
-        }
+        'default': synthetic_dataset(count=10000, generator=build_constraints_dataset)
     },
     'synthetic_control_tasks': {
-        'default': {
-            'id': 'synthetic_control_tasks',
-            'split': 'train',
-            'adapter': adapt_local_synthetic_control_tasks,
-            'synthetic': True,
-            'synthetic_generator': build_control_tasks_dataset,
-            'synthetic_count': 10000
-        }
+        'default': synthetic_dataset(count=10000, generator=build_control_tasks_dataset)
     },
     'synthetic_general_tasks': {
-        'default': {
-            'id': 'synthetic_general_tasks',
-            'split': 'train',
-            'adapter': adapt_local_synthetic_general_tasks,
-            'synthetic': True,
-            'synthetic_generator': build_general_tasks_dataset,
-            'synthetic_count': 10000
-        }
+        'default': synthetic_dataset(count=10000, generator=build_general_tasks_dataset)
     }
 }
 

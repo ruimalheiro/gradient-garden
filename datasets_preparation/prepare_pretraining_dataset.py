@@ -20,159 +20,64 @@ from logger import logger
 os.environ.setdefault('TOKENIZERS_PARALLELISM', 'false') # HF to not use parallelism in tokenizer
 
 #### ADAPTERS
-def adapt_fineweb_edu(batch, transforms):
+def common_adapter(batch, transforms):
     return {'text': batch['text']}
 
-def adapt_smollm_corpus_fineweb_edu_dedup(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_smollm_corpus_cosmopedia_v2(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_avelina_python_edu_cleaned(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_huggingfacefw_dclm_100bt(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_huggingfacefw_dclm_100bt_shuffled(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_open_web_math(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_huggingfacetb_finemath(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_wikipedia(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_structured_wikipedia(batch, transforms):
+def structured_wikipedia_adapter(batch, transforms):
     texts = []
     for name, description, abstract in zip(batch['name'], batch['description'], batch['abstract']):
-        text = '\n\n'.join([x.strip() for x in [name, description, abstract] if x])
+        text = '\n\n'.join([x.strip() for x in [name, description, abstract] if x and x.strip()])
         texts.append(text)
     return {'text': texts}
 
-def adapt_common_pile_stack_exchange(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_project_gutenberg_filtered(batch, transforms):
-    return {'text': batch['text']}
-
-def adapt_karpathy_climbmix_400b_shuffle(batch, transforms):
-    return {'text': batch['text']}
-
 #### SUPPORTED DATASETS
+def hf_dataset(*, split='train', adapter=common_adapter):
+    return {
+        'split': split,
+        'adapter': adapter
+    }
+
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceFW/fineweb-edu': {
-        'sample-10BT': {
-            'id': 'HuggingFaceFW/fineweb-edu',
-            'split': 'train',
-            'adapter': adapt_fineweb_edu
-        },
-        'sample-100BT': {
-            'id': 'HuggingFaceFW/fineweb-edu',
-            'split': 'train',
-            'adapter': adapt_fineweb_edu
-        }
+        'sample-10BT': hf_dataset(),
+        'sample-100BT': hf_dataset()
     },
     'HuggingFaceTB/smollm-corpus': {
-        'fineweb-edu-dedup': {
-            'id': 'HuggingFaceTB/smollm-corpus',
-            'split': 'train',
-            'adapter': adapt_smollm_corpus_fineweb_edu_dedup
-        },
-        'cosmopedia-v2': {
-            'id': 'HuggingFaceTB/smollm-corpus',
-            'split': 'train',
-            'adapter': adapt_smollm_corpus_cosmopedia_v2
-        },
+        'fineweb-edu-dedup': hf_dataset(),
+        'cosmopedia-v2': hf_dataset(),
     },
     'Avelina/python-edu-cleaned': {
-        'default': {
-            'id': 'Avelina/python-edu-cleaned',
-            'split': 'train',
-            'adapter': adapt_avelina_python_edu_cleaned
-        },
+        'default': hf_dataset(),
     },
     'HuggingFaceFW/dclm_100BT': {
-        'default': {
-            'id': 'HuggingFaceFW/dclm_100BT',
-            'split': 'train',
-            'adapter': adapt_huggingfacefw_dclm_100bt
-        },
+        'default': hf_dataset(),
     },
     'HuggingFaceFW/dclm_100BT-shuffled': {
-        'default': {
-            'id': 'HuggingFaceFW/dclm_100BT-shuffled',
-            'split': 'train',
-            'adapter': adapt_huggingfacefw_dclm_100bt_shuffled
-        },
+        'default': hf_dataset(),
     },
     'HuggingFaceTB/finemath': {
-        'finemath-4plus': {
-            'id': 'HuggingFaceTB/finemath',
-            'split': 'train',
-            'adapter': adapt_huggingfacetb_finemath
-        },
-        'finemath-3plus': {
-            'id': 'HuggingFaceTB/finemath',
-            'split': 'train',
-            'adapter': adapt_huggingfacetb_finemath
-        },
-        'infiwebmath-4plus': {
-            'id': 'HuggingFaceTB/finemath',
-            'split': 'train',
-            'adapter': adapt_huggingfacetb_finemath
-        },
-        'infiwebmath-3plus': {
-            'id': 'HuggingFaceTB/finemath',
-            'split': 'train',
-            'adapter': adapt_huggingfacetb_finemath
-        }
+        'finemath-4plus': hf_dataset(),
+        'finemath-3plus': hf_dataset(),
+        'infiwebmath-4plus': hf_dataset(),
+        'infiwebmath-3plus': hf_dataset()
     },
     'open-web-math/open-web-math': {
-        'default': {
-            'id': 'open-web-math/open-web-math',
-            'split': 'train',
-            'adapter': adapt_open_web_math
-        },
+        'default': hf_dataset(),
     },
     'wikimedia/wikipedia': {
-        '20231101.en': {
-            'id': 'wikimedia/wikipedia',
-            'split': 'train',
-            'adapter': adapt_wikipedia
-        }
+        '20231101.en': hf_dataset()
     },
     'wikimedia/structured-wikipedia': {
-        'enwiki_namespace_0': {
-            'id': 'wikimedia/structured-wikipedia',
-            'split': 'train',
-            'adapter': adapt_structured_wikipedia
-        }
+        'enwiki_namespace_0': hf_dataset(adapter=structured_wikipedia_adapter)
     },
     'common-pile/stackexchange': {
-        'default': {
-            'id': 'common-pile/stackexchange',
-            'split': 'train',
-            'adapter': adapt_common_pile_stack_exchange
-        }
+        'default': hf_dataset()
     },
     'common-pile/project_gutenberg_filtered': {
-        'default': {
-            'id': 'common-pile/project_gutenberg_filtered',
-            'split': 'train',
-            'adapter': adapt_project_gutenberg_filtered
-        }
+        'default': hf_dataset()
     },
     'karpathy/climbmix-400b-shuffle': {
-        'default': {
-            'id': 'karpathy/climbmix-400b-shuffle',
-            'split': 'train',
-            'adapter': adapt_karpathy_climbmix_400b_shuffle
-        }
+        'default': hf_dataset()
     }
 }
 
