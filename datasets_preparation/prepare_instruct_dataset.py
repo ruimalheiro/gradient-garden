@@ -91,6 +91,13 @@ def adapt_no_robots(doc, transforms, seed):
         conversation.append({'role': message['role'], 'content': message['content']})
     return conversation
 
+def adapt_smoltalk(doc, transforms, seed):
+    messages = doc['messages']
+    conversation = []
+    for message in messages:
+        conversation.append({'role': message['role'], 'content': message['content']})
+    return conversation
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'HuggingFaceH4/ultrachat_200k': {
@@ -126,6 +133,14 @@ SUPPORTED_HF_DATASETS = {
             'id': 'HuggingFaceH4/no_robots',
             'split': 'train',
             'adapter': adapt_no_robots
+        }
+    },
+    'HuggingFaceTB/smol-smoltalk': {
+        'default': {
+            'id': 'HuggingFaceTB/smol-smoltalk',
+            'split': 'train',
+            'adapter': adapt_smoltalk
+
         }
     }
 }
