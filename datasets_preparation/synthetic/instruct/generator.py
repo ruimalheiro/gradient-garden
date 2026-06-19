@@ -121,7 +121,8 @@ def generator_fn(*, config, rng, count, transforms):
         groups=dict(groups),
         transforms=transforms,
         count=count,
-        dedupe_key_fn=instruct_dedupe_key
+        dedupe_key_fn=instruct_dedupe_key,
+        rng=rng
     )
 
 def build_instruct_dataset(*, config, ds_id, seed, count, transforms):

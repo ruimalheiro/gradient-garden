@@ -76,9 +76,33 @@ def limit_duplicate_examples(examples, dedupe_key_fn, max_duplicates_per_example
 
     return limited
 
-def generate_weighted_group_examples(*, groups, transforms, count, dedupe_key_fn=None):
+def allocate_group_counts(*, groups, weights, count):
+    resolved = []
+    remaining = count
+
+    group_items = list(groups.items())
+
+    for group_idx, (group_name, _) in enumerate(group_items):
+        if group_idx == len(group_items) - 1:
+            group_count = remaining
+        else:
+            group_count = round(count * weights[group_name])
+            remaining -= group_count
+
+        resolved.append((group_name, group_count))
+
+    return resolved
+
+def generate_weighted_group_examples(
+    *,
+    groups,
+    transforms,
+    count,
+    dedupe_key_fn=None,
+    rng=None,
+):
     oversample_factor = transforms.get('oversample_factor', 1.0)
-    generation_count = round(count * oversample_factor)
+    max_duplicates_per_example = transforms.get('max_duplicates_per_example')
 
     default_weights = {
         group_name: default_weight
@@ -91,46 +115,62 @@ def generate_weighted_group_examples(*, groups, transforms, count, dedupe_key_fn
     for group_name, weight in weights.items():
         logger.info(f'{group_name}: {weight:.2f}')
 
-    resolved_groups = [
-        (group_name, generator_fn, weights[group_name])
-        for group_name, (generator_fn, _) in groups.items()
-    ]
-
-    remaining_to_generate = generation_count
-    remaining = remaining_to_generate
-
-    logger.section('Generation')
-    examples = []
-
-    for group_idx, (group_name, generator_fn, weight) in enumerate(resolved_groups):
-        if group_idx == len(resolved_groups) - 1:
-            group_count = remaining
-        else:
-            group_count = round(generation_count * weight)
-            remaining -= group_count
-
-        logger.info(f'generating {group_count} examples for group: {group_name}')
-
-        for _ in range(group_count):
-            examples.append(generator_fn())
-
-    max_duplicates_per_example = transforms.get('max_duplicates_per_example')
-    deduped = limit_duplicate_examples(
-        examples,
-        dedupe_key_fn,
-        max_duplicates_per_example,
+    group_counts = allocate_group_counts(
+        groups=groups,
+        weights=weights,
+        count=count,
     )
 
-    if len(deduped) != len(examples):
-        logger.info(f'removed {len(examples) - len(deduped)} examples above duplicate limit')
+    logger.section('Generation')
 
-    if len(deduped) < count:
+    examples = []
+
+    for group_name, group_target_count in group_counts:
+        generator_fn, _ = groups[group_name]
+        group_generation_count = round(group_target_count * oversample_factor)
+
         logger.info(
-            f'warning: requested {count} examples but only '
-            f'{len(deduped)} examples were generated after duplicate limiting. '
-            'Increase oversample_factor, increase max_duplicates_per_example, '
-            'or add more fixture variety.'
+            f'generating {group_generation_count} examples for group: '
+            f'{group_name} target: {group_target_count}'
         )
 
+        group_examples = [
+            generator_fn()
+            for _ in range(group_generation_count)
+        ]
+
+        limited_group_examples = limit_duplicate_examples(
+            group_examples,
+            dedupe_key_fn,
+            max_duplicates_per_example,
+        )
+
+        if len(limited_group_examples) != len(group_examples):
+            logger.info(
+                f'{group_name}: removed '
+                f'{len(group_examples) - len(limited_group_examples)} '
+                'examples above duplicate limit'
+            )
+
+        if len(limited_group_examples) < group_target_count:
+            logger.info(
+                f'warning: group {group_name} requested '
+                f'{group_target_count} examples but only '
+                f'{len(limited_group_examples)} were available after '
+                'duplicate limiting.'
+            )
+
+        examples.extend(limited_group_examples[:group_target_count])
+
+    if len(examples) < count:
+        logger.info(
+            f'warning: requested {count} examples but only '
+            f'{len(examples)} examples were generated after group-level '
+            'duplicate limiting.'
+        )
+
+    if rng is not None:
+        rng.shuffle(examples)
+
     logger.info('\n')
-    return deduped[:count]
+    return examples[:count]
