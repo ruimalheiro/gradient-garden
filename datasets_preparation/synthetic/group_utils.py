@@ -36,6 +36,25 @@ def resolve_group_weights(default_weights, transforms):
         for group_name, weight in weights.items()
     }
 
+def choose_weighted_group(*, rng, groups, transforms=None):
+    default_weights = {
+        group_name: default_weight
+        for group_name, default_weight in groups.items()
+    }
+
+    weights = resolve_group_weights(default_weights, transforms or {})
+
+    value = rng.random()
+    cumulative = 0.0
+
+    for group_name, weight in weights.items():
+        cumulative += weight
+
+        if value <= cumulative:
+            return group_name
+
+    return next(reversed(weights))
+
 def generate_weighted_group_examples(*, groups, transforms, count):
     default_weights = {
         group_name: default_weight

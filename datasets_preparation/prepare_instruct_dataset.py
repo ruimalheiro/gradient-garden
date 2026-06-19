@@ -18,10 +18,7 @@ from datasets_preparation.data_preparation_utils import (
     make_source_key
 )
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
-from datasets_preparation.synthetic.instruct.identity_generator import build_identity_dataset
-from datasets_preparation.synthetic.instruct.constraints_generator import build_constraints_dataset
-from datasets_preparation.synthetic.instruct.control_tasks_generator import build_control_tasks_dataset
-from datasets_preparation.synthetic.instruct.general_tasks_generator import build_general_tasks_dataset
+from datasets_preparation.synthetic.instruct.generator import build_instruct_dataset
 from logger import logger
 
 
@@ -115,17 +112,8 @@ def synthetic_dataset(*, count, generator, split='train', adapter=common_adapter
     }
 
 SUPPORTED_LOCAL_DATASETS = {
-    'synthetic_identity': {
-        'default': synthetic_dataset(count=1000, generator=build_identity_dataset)
-    },
-    'synthetic_constraints': {
-        'default': synthetic_dataset(count=10000, generator=build_constraints_dataset)
-    },
-    'synthetic_control_tasks': {
-        'default': synthetic_dataset(count=10000, generator=build_control_tasks_dataset)
-    },
-    'synthetic_general_tasks': {
-        'default': synthetic_dataset(count=10000, generator=build_general_tasks_dataset)
+    'synthetic_instruct': {
+        'default': synthetic_dataset(count=20000, generator=build_instruct_dataset)
     }
 }
 

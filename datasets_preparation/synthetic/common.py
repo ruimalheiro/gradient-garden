@@ -5,7 +5,50 @@ from pathlib import Path
 from utils import save_jsonl_file
 from config import GlobalConfig
 from logger import logger
+from datasets_preparation.synthetic.group_utils import choose_weighted_group
 
+
+def make_fixture_dataset_generator(
+    *,
+    fixtures,
+    rng,
+    render_example,
+    transforms=None,
+    default_weights=None,
+    variables=None,
+    prompt_transforms=None,
+    answer_selector=None,
+    answer_transform=None,
+    override_group_answer=None,
+):
+    variables = variables or {}
+    override_group_answer = override_group_answer or {}
+
+    default_weights = (
+        default_weights
+        if default_weights is not None
+        else {group_name: 1.0 for group_name in fixtures.keys()}
+    )
+
+    def generate_example():
+        group_name = choose_weighted_group(
+            rng=rng,
+            groups=default_weights,
+            transforms=transforms or {},
+        )
+
+        return render_example(
+            fixtures,
+            group_name,
+            rng=rng,
+            variables=dict(variables),
+            prompt_transforms=prompt_transforms,
+            answer_selector=answer_selector,
+            answer_transform=answer_transform,
+            override_group_answer=override_group_answer,
+        )
+
+    return generate_example
 
 class GeneratorFn(Protocol):
     def __call__(
