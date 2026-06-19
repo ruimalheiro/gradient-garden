@@ -4,7 +4,10 @@ from datasets_preparation.synthetic.common import (
     generate_dataset
 )
 from datasets_preparation.synthetic.group_utils import generate_weighted_group_examples
-from datasets_preparation.synthetic.instruct.common import render_fixture_example
+from datasets_preparation.synthetic.instruct.common import (
+    render_fixture_example,
+    instruct_dedupe_key
+)
 from datasets_preparation.synthetic.instruct.fixtures.identity import IDENTITY_FIXTURES
 from datasets_preparation.synthetic.instruct.fixtures.factual_qa import FACTUAL_QA_FIXTURES
 from datasets_preparation.synthetic.instruct.fixtures.common_sense_qa import COMMON_SENSE_QA_FIXTURES
@@ -63,9 +66,11 @@ def generator_fn(*, config, rng, count, transforms):
             IDENTITY_FIXTURES,
             0.03,
             default_weights={
-                'self_identification': 0.40,
-                'human': 0.20,
-                'role': 0.20,
+                'self_identification': 0.32,
+                'human_yes_no': 0.12,
+                'human_or_ai': 0.08,
+                'role': 0.18,
+                'name_brief': 0.10,
                 'name_only': 0.10,
                 'other_assistant': 0.10,
             },
@@ -115,7 +120,8 @@ def generator_fn(*, config, rng, count, transforms):
     return generate_weighted_group_examples(
         groups=dict(groups),
         transforms=transforms,
-        count=count
+        count=count,
+        dedupe_key_fn=instruct_dedupe_key
     )
 
 def build_instruct_dataset(*, config, ds_id, seed, count, transforms):

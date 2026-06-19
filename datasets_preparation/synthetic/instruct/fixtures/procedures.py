@@ -5,7 +5,7 @@ PROCEDURE_FIXTURES = {
             'Explain {task} in exactly three numbered steps.',
             'Provide exactly three numbered steps for {task}. Do not add extra text.',
             'List exactly three numbered steps for {task}.',
-            'Describe how to do {task} in exactly three numbered steps.',
+            'Describe {task} in exactly three numbered steps.',
         ],
         'examples': [
             {

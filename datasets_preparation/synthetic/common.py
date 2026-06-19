@@ -85,8 +85,14 @@ def generate_dataset(
     transforms = transforms or {}
     custom_example_count = transforms.get('count', None)
     count = custom_example_count if custom_example_count is not None else count
+    oversample_factor = transforms.get('oversample_factor', 1.0)
 
     logger.info(f'Generating synthetic {label} dataset with a total of {count} examples...')
+    if oversample_factor > 1.0:
+        logger.info(
+            f'Using oversample_factor {oversample_factor} - '
+            f'Temporary oversample target: {int(count * oversample_factor)} examples...'
+        )
 
     examples = generator_fn(
         config=config,

@@ -156,3 +156,9 @@ def render_fixture_example(
     answer = render_template(answer_template, variables)
 
     return row(prompt, answer)
+
+def instruct_dedupe_key(example):
+    return tuple(
+        (message.get('role'), message.get('content'))
+        for message in example.get('messages', [])
+    )
