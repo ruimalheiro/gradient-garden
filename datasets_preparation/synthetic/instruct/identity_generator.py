@@ -1,12 +1,7 @@
 from datasets_preparation.synthetic.common import generate_dataset
-from datasets_preparation.synthetic.instruct.common import row
 from datasets_preparation.synthetic.group_utils import generate_weighted_group_examples
-from datasets_preparation.synthetic.instruct.fixtures.identity import (
-    DIRECT_IDENTITY_PROMPTS,
-    HUMAN_PROMPTS,
-    CAPABILITY_PROMPTS,
-    CONSTRAINT_PROMPTS
-)
+from datasets_preparation.synthetic.instruct.common import render_fixture_example
+from datasets_preparation.synthetic.instruct.fixtures.identity import IDENTITY_FIXTURES
 
 
 def generator_fn(*, config, rng, count, transforms):
@@ -14,7 +9,7 @@ def generator_fn(*, config, rng, count, transforms):
 
     model_name = transforms.get(
         'model_name',
-        config.model.architecture.value.capitalize()
+        config.model.architecture.value.capitalize(),
     )
 
     identity_message = (
@@ -22,47 +17,37 @@ def generator_fn(*, config, rng, count, transforms):
         else f'I am {model_name}, a helpful AI assistant.'
     )
 
-    def generate_direct_identity():
-        prompt = rng.choice(DIRECT_IDENTITY_PROMPTS)
-        templates = [
-            identity_message
-        ]
-        return row(prompt, rng.choice(templates))
+    variables = {
+        'model_name': model_name,
+        'identity_message': identity_message,
+    }
 
-    def generate_human_answer():
-        prompt = rng.choice(HUMAN_PROMPTS)
-        templates = [
-            f'No, I am {model_name}, a helpful AI assistant.',
-            f'No, I am an AI assistant called {model_name}.',
-            f'I am not human; I am {model_name}, a helpful AI assistant.',
-        ]
-        return row(prompt, rng.choice(templates))
+    def identity_answer_selector(*, group_name, fixture, rng, variables):
+        if custom_identity_message and group_name == 'identity':
+            return '{identity_message}'
+        return rng.choice(fixture['answers'])
 
-    def generate_capabilities_answer():
-        prompt = rng.choice(CAPABILITY_PROMPTS)
-        templates = [
-            f'I am {model_name}, and I help answer questions clearly and usefully.',
-            identity_message,
-            f'I am {model_name}, an AI assistant that helps with information and tasks.'
-        ]
-        return row(prompt, rng.choice(templates))
-
-    def generate_identity_constraint_answer():
-        prompt = rng.choice(CONSTRAINT_PROMPTS)
-        templates = [
-            model_name
-        ]
-        return row(prompt, rng.choice(templates))
+    def make_group_generator(group_name):
+        def generate_example():
+            return render_fixture_example(
+                IDENTITY_FIXTURES,
+                group_name,
+                rng=rng,
+                variables=variables,
+                answer_selector=identity_answer_selector,
+            )
+        return generate_example
 
     return generate_weighted_group_examples(
         groups={
-            'identity': (generate_direct_identity, 0.45),
-            'human': (generate_human_answer, 0.25),
-            'capability': (generate_capabilities_answer, 0.20),
-            'constraint': (generate_identity_constraint_answer, 0.10)
+            'identity': (make_group_generator('identity'), 0.40),
+            'human': (make_group_generator('human'), 0.20),
+            'role': (make_group_generator('role'), 0.20),
+            'name_only': (make_group_generator('name_only'), 0.10),
+            'other_assistant': (make_group_generator('other_assistant'), 0.10),
         },
         transforms=transforms,
-        count=count
+        count=count,
     )
 
 def build_identity_dataset(*, config, ds_id, seed, count, transforms):
