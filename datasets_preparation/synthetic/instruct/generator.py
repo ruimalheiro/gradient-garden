@@ -6,26 +6,25 @@ from datasets_preparation.synthetic.common import (
 from datasets_preparation.synthetic.group_utils import generate_weighted_group_examples
 from datasets_preparation.synthetic.instruct.common import render_fixture_example
 from datasets_preparation.synthetic.instruct.fixtures.identity import IDENTITY_FIXTURES
-
-# from datasets_preparation.synthetic.instruct.fixtures.basic_arithmetic import BASIC_ARITHMETIC_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.common_sense_qa import COMMON_SENSE_QA_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.exact_word_count import EXACT_WORD_COUNT_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.extraction import EXTRACTION_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.factual_qa import FACTUAL_QA_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.grammar import GRAMMAR_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.lists import LIST_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.non_repetition import NON_REPETITION_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.one_sentence import ONE_SENTENCE_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.polite_refusals import POLITE_REFUSAL_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.procedures import PROCEDURE_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.rewrites import REWRITE_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.rhymes import RHYME_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.sentence_transforms import SENTENCE_TRANSFORM_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.simple_explanations import SIMPLE_EXPLANATION_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.social_replies import SOCIAL_REPLY_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.summaries import SUMMARY_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.text_classification import TEXT_CLASSIFICATION_FIXTURES
-# from datasets_preparation.synthetic.instruct.fixtures.yes_no import YES_NO_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.factual_qa import FACTUAL_QA_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.common_sense_qa import COMMON_SENSE_QA_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.yes_no import YES_NO_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.social_replies import SOCIAL_REPLY_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.polite_refusals import POLITE_REFUSAL_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.procedures import PROCEDURE_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.grammar import GRAMMAR_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.rewrites import REWRITE_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.sentence_transforms import SENTENCE_TRANSFORM_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.summaries import SUMMARY_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.simple_explanations import SIMPLE_EXPLANATION_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.one_sentence import ONE_SENTENCE_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.lists import LIST_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.exact_word_count import EXACT_WORD_COUNT_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.non_repetition import NON_REPETITION_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.text_classification import TEXT_CLASSIFICATION_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.extraction import EXTRACTION_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.basic_arithmetic import BASIC_ARITHMETIC_FIXTURES
+from datasets_preparation.synthetic.instruct.fixtures.rhymes import RHYME_FIXTURES
 
 
 def generator_fn(*, config, rng, count, transforms):
@@ -75,7 +74,42 @@ def generator_fn(*, config, rng, count, transforms):
                 'identity_message': identity_message,
             },
             override_group_answer=override_group_answer
-        )
+        ),
+        make_generator('factual_qa', FACTUAL_QA_FIXTURES, 0.11),
+        make_generator('common_sense_qa', COMMON_SENSE_QA_FIXTURES, 0.05),
+        make_generator('yes_no', YES_NO_FIXTURES, 0.04),
+        make_generator('social_replies', SOCIAL_REPLY_FIXTURES, 0.06),
+        make_generator('polite_refusals', POLITE_REFUSAL_FIXTURES, 0.04),
+        make_generator('procedures', PROCEDURE_FIXTURES, 0.05),
+        make_generator('grammar', GRAMMAR_FIXTURES, 0.08),
+        make_generator(
+            'rewrites',
+            REWRITE_FIXTURES,
+            0.08,
+            default_weights={
+                'clarity': 0.40,
+                'sampled_clarity': 0.60,
+            },
+        ),
+        make_generator('sentence_transforms', SENTENCE_TRANSFORM_FIXTURES, 0.06),
+        make_generator('summaries', SUMMARY_FIXTURES, 0.04),
+        make_generator('simple_explanations', SIMPLE_EXPLANATION_FIXTURES, 0.05),
+        make_generator('one_sentence', ONE_SENTENCE_FIXTURES, 0.04),
+        make_generator(
+            'lists',
+            LIST_FIXTURES,
+            0.05,
+            default_weights={
+                'dedup': 0.40,
+                'sampled_categories': 0.60,
+            },
+        ),
+        make_generator('exact_word_count', EXACT_WORD_COUNT_FIXTURES, 0.05),
+        make_generator('non_repetition', NON_REPETITION_FIXTURES, 0.05),
+        make_generator('text_classification', TEXT_CLASSIFICATION_FIXTURES, 0.03),
+        make_generator('extraction', EXTRACTION_FIXTURES, 0.03),
+        make_generator('basic_arithmetic', BASIC_ARITHMETIC_FIXTURES, 0.04),
+        make_generator('rhymes', RHYME_FIXTURES, 0.02)
     ]
 
     return generate_weighted_group_examples(

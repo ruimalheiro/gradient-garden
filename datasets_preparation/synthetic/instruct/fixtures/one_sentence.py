@@ -1,5 +1,12 @@
 ONE_SENTENCE_FIXTURES = {
     'topics': {
+        'prompt_templates': [
+            'Write exactly one sentence about {topic}.',
+            'Describe {topic} in exactly one sentence.',
+            'Give one short sentence about {topic}.',
+            'Write one sentence only about {topic}.',
+            'In exactly one sentence, explain {topic}.',
+        ],
         'examples': [
             {
                 'topic': 'rain',
@@ -244,11 +251,3 @@ ONE_SENTENCE_FIXTURES = {
         ],
     },
 }
-
-ONE_SENTENCE_PROMPT_TEMPLATES = [
-    'Write exactly one sentence about {topic}.',
-    'Describe {topic} in exactly one sentence.',
-    'Give one short sentence about {topic}.',
-    'Write one sentence only about {topic}.',
-    'In exactly one sentence, explain {topic}.',
-]
