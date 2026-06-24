@@ -83,7 +83,20 @@ def generator_fn(*, config, rng, count, transforms):
         make_generator('factual_qa', FACTUAL_QA_FIXTURES, 0.11),
         make_generator('common_sense_qa', COMMON_SENSE_QA_FIXTURES, 0.05),
         make_generator('yes_no', YES_NO_FIXTURES, 0.04),
-        make_generator('social_replies', SOCIAL_REPLY_FIXTURES, 0.06),
+        make_generator(
+            'social_replies',
+            SOCIAL_REPLY_FIXTURES,
+            0.06,
+            default_weights={
+                'affirmative_scheduling': 0.24,
+                'thanks': 0.12,
+                'apology_ack': 0.14,
+                'celebration': 0.18,
+                'supportive_nervous': 0.14,
+                'cancellation_ack': 0.10,
+                'request_ack': 0.08
+            },
+        ),
         make_generator('polite_refusals', POLITE_REFUSAL_FIXTURES, 0.04),
         make_generator('procedures', PROCEDURE_FIXTURES, 0.05),
         make_generator('grammar', GRAMMAR_FIXTURES, 0.08),
@@ -92,12 +105,27 @@ def generator_fn(*, config, rng, count, transforms):
             REWRITE_FIXTURES,
             0.08,
             default_weights={
-                'clarity': 0.40,
-                'sampled_clarity': 0.60,
+                'redundancy_removal': 0.20,
+                'concise_rewrite': 0.22,
+                'natural_paraphrase': 0.22,
+                'high_edit_distance': 0.20,
+                'bad_because_not_good': 0.16
             },
         ),
         make_generator('sentence_transforms', SENTENCE_TRANSFORM_FIXTURES, 0.06),
-        make_generator('summaries', SUMMARY_FIXTURES, 0.04),
+        make_generator(
+            'summaries',
+            SUMMARY_FIXTURES,
+            0.04,
+            default_weights={
+                'one_sentence': 0.24,
+                'short_summary': 0.24,
+                'five_words_or_fewer': 0.18,
+                'headline': 0.16,
+                'key_point': 0.10,
+                'two_sentence_summary': 0.08
+            }
+        ),
         make_generator('simple_explanations', SIMPLE_EXPLANATION_FIXTURES, 0.05),
         make_generator('one_sentence', ONE_SENTENCE_FIXTURES, 0.04),
         make_generator(
@@ -114,7 +142,18 @@ def generator_fn(*, config, rng, count, transforms):
         make_generator('text_classification', TEXT_CLASSIFICATION_FIXTURES, 0.03),
         make_generator('extraction', EXTRACTION_FIXTURES, 0.03),
         make_generator('basic_arithmetic', BASIC_ARITHMETIC_FIXTURES, 0.04),
-        make_generator('rhymes', RHYME_FIXTURES, 0.02)
+        make_generator(
+            'rhymes',
+            RHYME_FIXTURES,
+            0.02,
+            default_weights={
+                'exactly_four_unique': 0.36,
+                'exactly_three_unique': 0.16,
+                'exactly_five_unique': 0.16,
+                'no_repeats_explicit': 0.22,
+                'comma_format_only': 0.10
+            }
+        )
     ]
 
     return generate_weighted_group_examples(
