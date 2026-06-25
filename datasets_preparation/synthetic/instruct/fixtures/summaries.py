@@ -1,91 +1,119 @@
 SUMMARY_FIXTURES = {
     'one_sentence': {
+        'prompt_templates': [
+            'Summarize this in one sentence:\n{text}\nOnly provide the summary.',
+            'Summarize this in one sentence:\n{text}\nDo not copy the original text.',
+            'Write a one-sentence summary:\n{text}\nOnly provide the summary.',
+            'Compress this into one sentence:\n{text}\nOnly provide the summary.',
+            'Rewrite this as a shorter one-sentence summary:\n{text}\nDo not explain your answer.',
+        ],
         'examples': [
             {
-                'prompt': 'Summarize this in one sentence:\nPenguins are birds that cannot fly but are excellent swimmers.\nOnly provide the summary.',
+                'text': 'Penguins are birds that cannot fly but are excellent swimmers.',
                 'answer': 'Penguins are flightless birds that swim very well.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe library closes at six, so we need to return the books before then.\nOnly provide the summary.',
+                'text': 'The library closes at six, so we need to return the books before then.',
                 'answer': 'We need to return the books before the library closes.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nSolar panels turn sunlight into electricity that people can use in homes and buildings.\nOnly provide the summary.',
+                'text': 'Solar panels turn sunlight into electricity that people can use in homes and buildings.',
                 'answer': 'Solar panels convert sunlight into usable electricity.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nMaria missed the bus, so she walked to school and arrived ten minutes late.\nOnly provide the summary.',
+                'text': 'Maria missed the bus, so she walked to school and arrived ten minutes late.',
                 'answer': 'Maria arrived late after missing the bus.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nPlants need sunlight, water, and nutrients from the soil to grow.\nOnly provide the summary.',
+                'text': 'Plants need sunlight, water, and nutrients from the soil to grow.',
                 'answer': 'Plants need sunlight, water, and soil nutrients to grow.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe team practiced every day and improved enough to win the final match.\nOnly provide the summary.',
+                'text': 'The team practiced every day and improved enough to win the final match.',
                 'answer': 'Daily practice helped the team win the final match.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nA password manager stores your passwords securely so you do not have to remember each one.\nOnly provide the summary.',
+                'text': 'A password manager stores your passwords securely so you do not have to remember each one.',
                 'answer': 'A password manager securely stores your passwords.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe storm brought heavy rain and strong winds, causing several roads to flood.\nOnly provide the summary.',
+                'text': 'The storm brought heavy rain and strong winds, causing several roads to flood.',
                 'answer': 'The storm caused road flooding.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nExercise can strengthen muscles, improve mood, and support long-term health.\nOnly provide the summary.',
+                'text': 'Exercise can strengthen muscles, improve mood, and support long-term health.',
                 'answer': 'Exercise improves physical and mental health.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe new train route will make travel between the two cities faster and easier.\nOnly provide the summary.',
+                'text': 'The new train route will make travel between the two cities faster and easier.',
                 'answer': 'The new route will improve intercity travel.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe recipe uses flour, eggs, milk, and butter to make soft pancakes.\nOnly provide the summary.',
+                'text': 'The recipe uses flour, eggs, milk, and butter to make soft pancakes.',
                 'answer': 'The recipe makes soft pancakes from simple ingredients.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe company delayed the product launch because it found a bug during final testing.\nOnly provide the summary.',
+                'text': 'The company delayed the product launch because it found a bug during final testing.',
                 'answer': 'A final testing bug delayed the product launch.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe museum added a new exhibit about ancient tools, clothing, and daily life.\nOnly provide the summary.',
+                'text': 'The museum added a new exhibit about ancient tools, clothing, and daily life.',
                 'answer': 'The museum opened an exhibit about ancient daily life.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe student revised her essay after receiving feedback from her teacher.\nOnly provide the summary.',
+                'text': 'The student revised her essay after receiving feedback from her teacher.',
                 'answer': 'The student improved her essay using teacher feedback.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe city planted more trees to provide shade and improve air quality.\nOnly provide the summary.',
+                'text': 'The city planted more trees to provide shade and improve air quality.',
                 'answer': 'The city planted trees to improve shade and air quality.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe phone battery drained quickly because several apps were running in the background.\nOnly provide the summary.',
+                'text': 'The phone battery drained quickly because several apps were running in the background.',
                 'answer': 'Background apps drained the phone battery.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe chef changed the menu after customers asked for more vegetarian options.\nOnly provide the summary.',
+                'text': 'The chef changed the menu after customers asked for more vegetarian options.',
                 'answer': 'Customer requests led the chef to add vegetarian options.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe researcher repeated the experiment to check whether the results were reliable.\nOnly provide the summary.',
+                'text': 'The researcher repeated the experiment to check whether the results were reliable.',
                 'answer': 'The researcher repeated the experiment to verify the results.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe school closed early because snow made the roads unsafe for buses.\nOnly provide the summary.',
+                'text': 'The school closed early because snow made the roads unsafe for buses.',
                 'answer': 'Snowy roads caused the school to close early.',
             },
             {
-                'prompt': 'Summarize this in one sentence:\nThe app update fixed several crashes and made the search feature faster.\nOnly provide the summary.',
+                'text': 'The app update fixed several crashes and made the search feature faster.',
                 'answer': 'The app update improved stability and search speed.',
+            },
+            {
+                'text': 'The farmer watered the crops every morning because the weather had been dry for weeks.',
+                'answer': 'The farmer watered crops during dry weather.',
+            },
+            {
+                'text': 'The café changed its opening hours so commuters could buy breakfast earlier in the morning.',
+                'answer': 'The café opened earlier for commuters.',
+            },
+            {
+                'text': 'The old bridge was repaired after inspectors found cracks in the stone supports.',
+                'answer': 'Inspectors found cracks, so the bridge was repaired.',
+            },
+            {
+                'text': 'The science teacher used a simple experiment to show how warm air rises.',
+                'answer': 'The teacher demonstrated that warm air rises.',
+            },
+            {
+                'text': 'The family packed snacks, water, and jackets before starting their hike.',
+                'answer': 'The family prepared supplies for their hike.',
             },
         ],
     },
     'short_summary': {
         'prompt_templates': [
             'Write a short summary:\n{text}\nOnly provide the summary.',
+            'Write a short summary:\n{text}\nDo not copy the original text.',
             'Summarize this briefly:\n{text}\nOnly provide the summary.',
             'Give a brief summary of this text:\n{text}\nDo not explain your answer.',
             'Summarize the following text in a short phrase:\n{text}\nOnly output the summary.',
@@ -172,11 +200,32 @@ SUMMARY_FIXTURES = {
                 'text': 'The startup hired more engineers to speed up development of its mobile app.',
                 'answer': 'The startup expanded its engineering team.',
             },
+            {
+                'text': 'The school added more buses after students complained about crowded morning routes.',
+                'answer': 'The school reduced bus crowding.',
+            },
+            {
+                'text': 'The phone company replaced the damaged cable after many homes lost internet service.',
+                'answer': 'Cable damage caused internet outages.',
+            },
+            {
+                'text': 'The park reopened after workers removed fallen branches and repaired the walking paths.',
+                'answer': 'Repairs allowed the park to reopen.',
+            },
+            {
+                'text': 'The store sold out of umbrellas after a week of heavy rain.',
+                'answer': 'Rain increased umbrella sales.',
+            },
+            {
+                'text': 'The student improved her grade after studying each evening and asking for help.',
+                'answer': 'Studying helped the student improve.',
+            },
         ],
     },
     'five_words_or_fewer': {
         'prompt_templates': [
             'Summarize this in five words or fewer:\n{text}\nOnly provide the summary.',
+            'Summarize this in five words or fewer:\n{text}\nDo not copy the original text.',
             'Write a summary using at most five words:\n{text}\nOnly output the summary.',
             'Compress this into five words or fewer:\n{text}\nDo not explain your answer.',
             'Give a five-word-or-fewer summary:\n{text}\nOnly provide the summary.',
@@ -242,6 +291,26 @@ SUMMARY_FIXTURES = {
             {
                 'text': 'The researcher repeated the experiment to check whether the results were reliable.',
                 'answer': 'Researcher verifies experiment results.',
+            },
+            {
+                'text': 'The café opened earlier so commuters could buy breakfast before work.',
+                'answer': 'Café opens earlier for commuters.',
+            },
+            {
+                'text': 'The bridge was repaired after inspectors found cracks in its supports.',
+                'answer': 'Cracks led to bridge repairs.',
+            },
+            {
+                'text': 'The store sold many umbrellas during a week of heavy rain.',
+                'answer': 'Rain boosted umbrella sales.',
+            },
+            {
+                'text': 'The garden grew well because it received regular water and sunlight.',
+                'answer': 'Water and sunlight helped growth.',
+            },
+            {
+                'text': 'The airport added staff to help passengers move through security faster.',
+                'answer': 'Airport adds security staff.',
             },
         ],
     },
@@ -314,6 +383,26 @@ SUMMARY_FIXTURES = {
                 'text': 'The author rewrote the final chapter to make the ending clearer and more emotional.',
                 'answer': 'Author Rewrites Final Chapter',
             },
+            {
+                'text': 'The park reopened after workers cleared fallen branches and repaired damaged signs.',
+                'answer': 'Trail Reopens After Repairs',
+            },
+            {
+                'text': 'The airport added clearer signs and more staff near security checkpoints.',
+                'answer': 'Airport Improves Security Checkpoints',
+            },
+            {
+                'text': 'The store sold out of umbrellas after a week of heavy rain.',
+                'answer': 'Rain Drives Umbrella Sellout',
+            },
+            {
+                'text': 'The school garden produced tomatoes, carrots, and herbs this spring.',
+                'answer': 'School Garden Produces Fresh Food',
+            },
+            {
+                'text': 'The company introduced a four-day workweek for a three-month trial.',
+                'answer': 'Company Tests Four-Day Workweek',
+            },
         ],
     },
     'key_point': {
@@ -323,6 +412,7 @@ SUMMARY_FIXTURES = {
             'Identify the main idea:\n{text}\nDo not explain your answer.',
             'Give the central point of this text:\n{text}\nOnly output the central point.',
             'Summarize the main idea:\n{text}\nOnly provide the main idea.',
+            'Give the key idea without copying the text:\n{text}\nOnly provide the key idea.',
         ],
         'examples': [
             {
@@ -385,6 +475,26 @@ SUMMARY_FIXTURES = {
                 'text': 'The new software tool organizes tasks, tracks deadlines, and sends reminders.',
                 'answer': 'The tool helps people manage work.',
             },
+            {
+                'text': 'The café opened earlier so commuters could buy breakfast before work.',
+                'answer': 'The café changed hours to serve commuters.',
+            },
+            {
+                'text': 'The old bridge was repaired after inspectors found cracks in the stone supports.',
+                'answer': 'Safety problems led to bridge repairs.',
+            },
+            {
+                'text': 'The family packed snacks, water, and jackets before starting their hike.',
+                'answer': 'The family prepared carefully for a hike.',
+            },
+            {
+                'text': 'The school added more buses after students complained about crowded morning routes.',
+                'answer': 'The school responded to bus crowding.',
+            },
+            {
+                'text': 'The phone company replaced the damaged cable after many homes lost internet service.',
+                'answer': 'Cable repairs restored internet service.',
+            },
         ],
     },
     'two_sentence_summary': {
@@ -394,6 +504,7 @@ SUMMARY_FIXTURES = {
             'Summarize the following text in exactly two sentences:\n{text}\nDo not explain your answer.',
             'Give a brief two-sentence summary:\n{text}\nOnly output the summary.',
             'Compress this into two short sentences:\n{text}\nOnly provide the summary.',
+            'Write exactly two short summary sentences without copying the text:\n{text}',
         ],
         'examples': [
             {
@@ -435,6 +546,26 @@ SUMMARY_FIXTURES = {
             {
                 'text': 'The company introduced a four-day workweek for a three-month trial. Managers will compare productivity and employee satisfaction before deciding whether to keep it.',
                 'answer': 'The company is testing a four-day workweek. It will review productivity and employee satisfaction before deciding.',
+            },
+            {
+                'text': 'The school added more buses after students complained about crowded morning routes. Administrators said the change should make morning travel safer and easier.',
+                'answer': 'The school added buses to reduce crowding. Administrators expect safer and easier morning travel.',
+            },
+            {
+                'text': 'The store sold out of umbrellas after heavy rain continued for several days. Staff ordered more stock for the following week.',
+                'answer': 'Heavy rain increased umbrella demand. The store ordered more stock for next week.',
+            },
+            {
+                'text': 'The old bridge was closed after inspectors found cracks in its supports. Repair crews started work the next morning.',
+                'answer': 'Inspectors found cracks in the bridge. Repair crews began fixing it the next morning.',
+            },
+            {
+                'text': 'The café opened earlier so commuters could buy breakfast before work. The owner said morning sales improved immediately.',
+                'answer': 'The café changed its hours for commuters. Morning sales improved right away.',
+            },
+            {
+                'text': 'The phone company replaced a damaged cable after many homes lost internet service. Most customers were back online by evening.',
+                'answer': 'A damaged cable caused internet outages. Repairs restored service by evening.',
             },
         ],
     },

@@ -2,10 +2,13 @@ PROCEDURE_FIXTURES = {
     'three_step': {
         'prompt_templates': [
             'Give exactly three numbered steps for {task}.',
-            'Explain {task} in exactly three numbered steps.',
+            'Give exactly three numbered steps for {task}. Stop after step 3.',
+            'Give exactly three numbered steps for {task}. Do not add extra text.',
+            'Explain {task} in exactly three numbered steps. Stop after step 3.',
             'Provide exactly three numbered steps for {task}. Do not add extra text.',
-            'List exactly three numbered steps for {task}.',
-            'Describe {task} in exactly three numbered steps.',
+            'List exactly three numbered steps for {task}. Do not include anything after step 3.',
+            'Describe {task} in exactly three numbered steps. Only provide the steps.',
+            'Answer with exactly three numbered steps for {task}.',
         ],
         'examples': [
             {
@@ -407,6 +410,70 @@ PROCEDURE_FIXTURES = {
                     'Pack heavy items first and lighter items on top.',
                     'Check the bag before leaving.',
                 ],
+            },
+        ],
+    },
+    'strict_eval_tasks': {
+        'examples': [
+            {
+                'prompt': 'Give exactly three numbered steps for cooking a boiled egg.',
+                'answer': '1. Place the egg in a pot and cover it with water.\n2. Boil the water, then simmer the egg for 9 to 12 minutes.\n3. Cool the egg in cold water, then peel it.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for making toast.',
+                'answer': '1. Place a slice of bread in the toaster.\n2. Toast it until it is golden brown.\n3. Remove it carefully and add butter or another topping.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for brushing your teeth.',
+                'answer': '1. Put toothpaste on a toothbrush.\n2. Brush all sides of your teeth for about two minutes.\n3. Rinse your mouth and toothbrush with water.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for making a cup of tea.',
+                'answer': '1. Boil fresh water.\n2. Steep the tea bag or leaves in the hot water.\n3. Remove the tea and serve it.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for washing your hands.',
+                'answer': '1. Wet your hands with clean water and apply soap.\n2. Scrub your hands for at least 20 seconds.\n3. Rinse and dry your hands.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for sending an email.',
+                'answer': '1. Write the recipient, subject, and message.\n2. Review the email for mistakes.\n3. Click send.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for planting a seed.',
+                'answer': '1. Fill a small pot with soil.\n2. Place the seed in the soil and cover it lightly.\n3. Water the soil and put the pot in a suitable place.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for charging a phone.',
+                'answer': '1. Plug the charger into a power outlet.\n2. Connect the cable to the phone.\n3. Wait until the battery has enough charge.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for taking a screenshot.',
+                'answer': '1. Open the screen you want to capture.\n2. Press the screenshot shortcut on your device.\n3. Save or share the captured image.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for making rice.',
+                'answer': '1. Rinse the rice if needed.\n2. Cook it with the correct amount of water.\n3. Let it rest briefly before serving.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for saving a document.',
+                'answer': '1. Open the document you want to save.\n2. Choose the save option and select a location.\n3. Name the file and confirm the save.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for checking the weather.',
+                'answer': '1. Open a weather app or website.\n2. Enter your location if needed.\n3. Read the forecast for the time you need.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for making a sandwich.',
+                'answer': '1. Place your chosen filling between two slices of bread.\n2. Add any sauce or vegetables you want.\n3. Cut the sandwich if desired and serve it.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for washing fruit.',
+                'answer': '1. Hold the fruit under clean running water.\n2. Rub the surface gently with your hands.\n3. Dry the fruit before eating or cutting it.',
+            },
+            {
+                'prompt': 'Give exactly three numbered steps for backing up files.',
+                'answer': '1. Choose the files you want to protect.\n2. Copy them to cloud storage or an external drive.\n3. Check that the backup was saved correctly.',
             },
         ],
     },
