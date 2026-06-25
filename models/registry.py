@@ -1,11 +1,13 @@
 from config import ModelArchitecture
 from models.implementations.tendril import TendrilTransformer
 from models.implementations.tendril_moe import TendrilMoETransformer
+from models.implementations.hf_wrapper import HFModelWrapper
 
 
 MODEL_REGISTRY = {
     ModelArchitecture.TENDRIL: TendrilTransformer,
     ModelArchitecture.TENDRIL_MOE: TendrilMoETransformer,
+    ModelArchitecture.HF_WRAPPER: HFModelWrapper,
 }
 
 def build_model(*, config, pad_token_id, vocab_size, ignore_index):
