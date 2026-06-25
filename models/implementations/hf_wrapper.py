@@ -23,8 +23,8 @@ class HFModelWrapper(BaseModel):
         self.config = self.inner.config
         self.config.max_seq_len = self.inner.config.max_position_embeddings
         self.config.n_layers = self.inner.config.num_hidden_layers
-        self.config.n_heads  = self.inner.config.num_attention_heads
-        self.config.dim      = self.inner.config.hidden_size
+        self.config.n_heads = self.inner.config.num_attention_heads
+        self.config.dim = self.inner.config.hidden_size
         self.config.n_kv_heads = self.inner.config.num_key_value_heads
         self.pad_token_id = self.inner.config.pad_token_id
         self.vocab_size = self.inner.config.vocab_size
