@@ -57,10 +57,12 @@ class MoEConfig(BaseModel):
 class ModelArchitecture(str, Enum):
     TENDRIL = 'tendril'
     TENDRIL_MOE = 'tendril_moe'
+    HF_WRAPPER = 'hf_wrapper'
 
 class ModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     architecture: ModelArchitecture = ModelArchitecture.TENDRIL
+    model_name: str | None = None
     dim: int = 768
     n_layers: int = 16
     n_heads: int = 16
