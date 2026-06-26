@@ -8,10 +8,11 @@ class HFTokenizer(BaseTokenizer):
         self.model.model_max_length = int(1e30)
         self.system_prompt = system_prompt
 
-        self.model.pad_token = self.model.eos_token
-        self.model.pad_token_id = self.model.eos_token_id
-        self.pad_id = 0
-        self.pad_token = self.model.eos_token
+        if self.model.pad_token_id is None:
+            self.model.pad_token = self.model.eos_token
+
+        self.pad_id = self.model.pad_token_id
+        self.pad_token = self.model.pad_token
 
         self.vocab_size = len(self.model)
 

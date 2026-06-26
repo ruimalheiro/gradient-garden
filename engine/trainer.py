@@ -15,7 +15,8 @@ from logger import logger
 from config import (
     DeviceType,
     TrainingStage,
-    TrainingPrecision
+    TrainingPrecision,
+    ModelArchitecture
 )
 from engine.context import (
     DistributedContext,
@@ -90,7 +91,8 @@ from evals import (
 )
 from utils import (
     generate_name,
-    set_seed
+    set_seed,
+    get_architecture_name
 )
 
 
@@ -189,7 +191,7 @@ class Trainer:
         return (
             Path(self.config.paths.runs.output_dir_path) /
             self.config.training.stage.value /
-            self.config.model.architecture.value /
+            get_architecture_name(self.config) /
             self.run_ctx.name
         )
 

@@ -23,6 +23,12 @@ class HFModelWrapper(BaseModel):
         )
 
         self.inner = AutoModelForCausalLM.from_pretrained(config.model_name)
+        if self.inner.config.vocab_size != vocab_size:
+            raise ValueError(
+                f'Tokenizer vocab_size={vocab_size} != HF model vocab_size={self.inner.config.vocab_size}. '
+                'You must pick a compatible tokenizer.'
+            )
+
         self.hf_config = self.inner.config
 
         self.hf_config.pad_token_id = pad_token_id

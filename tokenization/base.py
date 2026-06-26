@@ -50,12 +50,12 @@ class PromptBuilder:
         return other
 
     def build(self):
-        self.tokens.insert(0, self.bos_id)
-        if not self.no_labels:
-            self.labels.insert(0, self.ignore_index)
+        tokens = [self.bos_id] + self.tokens
 
         if self.no_labels:
-            return self.tokens
+            return tokens
+
+        labels = [self.ignore_index] + self.labels
 
         if len(self.tokens) != len(self.labels):
             raise ValueError(
@@ -63,8 +63,8 @@ class PromptBuilder:
             )
 
         # Shift labels for next‑token prediction
-        shifted_labels = self.labels[1:] + [self.ignore_index]
-        return self.tokens, shifted_labels
+        shifted_labels = labels[1:] + [self.ignore_index]
+        return tokens, shifted_labels
 
 class BaseTokenizer(ABC):
     @abstractmethod

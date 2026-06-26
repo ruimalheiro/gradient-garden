@@ -159,8 +159,8 @@ def generate(
 
         results = []
         for i in range(len(prompt_tokens)):
-            prompt_len = len(prompt_tokens[i])
-            gen_ids = outputs[i, prompt_len:].tolist()
+            input_len = padded.shape[1]
+            gen_ids = outputs[i, input_len:].tolist()
 
             stop_idx = None
             for j, tid in enumerate(gen_ids):
@@ -199,6 +199,11 @@ def generate(
         raise ValueError('Prompt cannot be of length 0')
 
     max_prompt_len = max(len(t) for t in prompt_tokens)
+    if max_prompt_len >= model.config.max_seq_len:
+        raise ValueError(
+            f'Prompt length {max_prompt_len} exceeds max_seq_len {model.config.max_seq_len}'
+        )
+
     total_len = min(model.config.max_seq_len, max_gen_len + max_prompt_len)
 
     # Here we assume we receive a batch of multiple tokenized sequences.
