@@ -113,12 +113,13 @@ class BaseTokenizer(ABC):
 
             is_assistant = role == 'assistant'
             is_last_message = idx == len(conversation) - 1
+            is_final_assistant = is_assistant and is_last_message
 
             builder.add_message(
                 role,
                 content,
-                supervise=is_assistant,
-                final_assistant=is_assistant and is_last_message,
+                supervise=is_final_assistant,
+                final_assistant=is_final_assistant
             )
 
         return builder.build()
