@@ -113,7 +113,7 @@ class BaseTokenizer(ABC):
         for interaction in conversation:
             prefix_builder.add_message(interaction['role'], interaction['content'], supervise=False)
 
-        prefix_builder.push(prefix_builder.encode('Assistant:'), supervise=False)
+        prefix_builder.push(prefix_builder.encode('Assistant: '), supervise=False)
 
         def build_answer(answer):
             builder = prefix_builder.clone()
