@@ -64,8 +64,7 @@ The project began with a decoder-only transformer baseline and has evolved into 
 ## Notes
 - The project is currently focused on CUDA-based training workflows.
 - Additional model architectures can be added through the model registry.
-- By default, the project uses a Hugging Face tokenizer.
-- It also supports a `tiktoken` tokenizer that can be loaded from a local BPE file. For now, this path expects a tokenizer compatible with the Llama 3 tiktoken configuration and chat/control tokens, e.g. (`<|begin_of_text|>`, `<|end_of_text|>`, `<|start_header_id|>`, `<|end_header_id|>`, `<|eot_id|>`). The local tokenizer file is **not** included in this repository and must be provided separately. This will be made more generic later.
+- By default, the project uses a Hugging Face tokenizer. Future work will add mechanism to build and train a tokenizer.
 
 ## Project structure
 - `cli/` Common cli related logic.
@@ -114,10 +113,9 @@ The project began with a decoder-only transformer baseline and has evolved into 
   - `dpo_utils.py` Logic to calculate DPO loss.
 - `tests/` Groups tests for different components.
 - `tokenization/` Groups any component related to tokenizers.
-  - `tokenizer.py` Provides the tokenizer abstraction used by the project and supports two backends:
-    - `TikTokenizer`: loads tiktoken BPE weights from a local file path and configures the special tokens used by the project.
-    - `HFTokenizer`: loads a tokenizer from Hugging Face via `AutoTokenizer.from_pretrained(...)` and aligns the required special tokens (`bos`, `eos`, headers, `eot`, `pad`).
-    - `init_tokenizer(...)` selects the backend based on `config.tokenizer.huggingface_tokenizer`.
+  - `tokenizer.py` Provides the tokenizer abstraction used by the project and currently supports one backend:
+    - `HFTokenizer`: loads a tokenizer from Hugging Face via `AutoTokenizer.from_pretrained(...)` and aligns the required tokens (`bos`, `eos`, `pad`).
+    - `init_tokenizer(...)` selects the backend based on the config in `config.tokenizer`.
 - `config.py` Defines the nested `GlobalConfig` used by the trainer, dataset preparation, evaluation, checkpointing, and runtime setup.
   - Most experiment settings currently live as defaults in `config.py`.
   - Recipes define experiment settings under the `config` section.

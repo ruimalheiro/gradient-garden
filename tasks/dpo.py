@@ -51,11 +51,13 @@ class DPOTask(BaseTask):
         dpo_beta = self.config.dpo.beta
         ignore_index = self.config.tokenizer.ignore_index
 
-        chosen_input_ids, chosen_labels, rejected_input_ids, rejected_labels = batch
+        chosen_input_ids, chosen_labels, chosen_mask, rejected_input_ids, rejected_labels, rejected_mask = batch
         chosen_input_ids = chosen_input_ids.to(device, non_blocking=True)
         chosen_labels = chosen_labels.to(device, non_blocking=True)
+        chosen_mask = chosen_mask.to(device, non_blocking=True)
         rejected_input_ids = rejected_input_ids.to(device, non_blocking=True)
         rejected_labels = rejected_labels.to(device, non_blocking=True)
+        rejected_mask = rejected_mask.to(device, non_blocking=True)
 
         chosen_valid_tokens = (chosen_labels != ignore_index).sum()
         rejected_valid_tokens = (rejected_labels != ignore_index).sum()
@@ -71,13 +73,13 @@ class DPOTask(BaseTask):
         )
 
         with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-            policy_log_probs_pos = dpo_log_probs(model, chosen_input_ids, chosen_labels, ignore_index)
-            policy_log_probs_neg = dpo_log_probs(model, rejected_input_ids, rejected_labels, ignore_index)
+            policy_log_probs_pos = dpo_log_probs(model, chosen_input_ids, chosen_labels, chosen_mask, ignore_index)
+            policy_log_probs_neg = dpo_log_probs(model, rejected_input_ids, rejected_labels, rejected_mask, ignore_index)
 
         with torch.no_grad():
             with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-                reference_log_probs_pos = dpo_log_probs(assets.dpo_ref_model, chosen_input_ids, chosen_labels, ignore_index)
-                reference_log_probs_neg = dpo_log_probs(assets.dpo_ref_model, rejected_input_ids, rejected_labels, ignore_index)
+                reference_log_probs_pos = dpo_log_probs(assets.dpo_ref_model, chosen_input_ids, chosen_labels, chosen_mask, ignore_index)
+                reference_log_probs_neg = dpo_log_probs(assets.dpo_ref_model, rejected_input_ids, rejected_labels, rejected_mask, ignore_index)
 
         loss, dpo_metrics = dpo_loss(
             policy_log_probs_pos,
@@ -115,12 +117,13 @@ class DPOTask(BaseTask):
         dpo_beta = self.config.dpo.beta
         ignore_index = self.config.tokenizer.ignore_index
 
-        chosen_input_ids, chosen_labels, rejected_input_ids, rejected_labels = batch
-
+        chosen_input_ids, chosen_labels, chosen_mask, rejected_input_ids, rejected_labels, rejected_mask = batch
         chosen_input_ids = chosen_input_ids.to(device, non_blocking=True)
         chosen_labels = chosen_labels.to(device, non_blocking=True)
+        chosen_mask = chosen_mask.to(device, non_blocking=True)
         rejected_input_ids = rejected_input_ids.to(device, non_blocking=True)
         rejected_labels = rejected_labels.to(device, non_blocking=True)
+        rejected_mask = rejected_mask.to(device, non_blocking=True)
 
         chosen_valid_tokens = (chosen_labels != ignore_index).sum()
         rejected_valid_tokens = (rejected_labels != ignore_index).sum()
@@ -131,10 +134,10 @@ class DPOTask(BaseTask):
             raise ValueError('DPO validation batch has no supervised rejected tokens')
 
         with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-            policy_log_probs_pos = dpo_log_probs(model, chosen_input_ids, chosen_labels, ignore_index)
-            policy_log_probs_neg = dpo_log_probs(model, rejected_input_ids, rejected_labels, ignore_index)
-            reference_log_probs_pos = dpo_log_probs(assets.dpo_ref_model, chosen_input_ids, chosen_labels, ignore_index)
-            reference_log_probs_neg = dpo_log_probs(assets.dpo_ref_model, rejected_input_ids, rejected_labels, ignore_index)
+            policy_log_probs_pos = dpo_log_probs(model, chosen_input_ids, chosen_labels, chosen_mask, ignore_index)
+            policy_log_probs_neg = dpo_log_probs(model, rejected_input_ids, rejected_labels, rejected_mask, ignore_index)
+            reference_log_probs_pos = dpo_log_probs(assets.dpo_ref_model, chosen_input_ids, chosen_labels, chosen_mask, ignore_index)
+            reference_log_probs_neg = dpo_log_probs(assets.dpo_ref_model, rejected_input_ids, rejected_labels, rejected_mask, ignore_index)
 
         loss, dpo_metrics = dpo_loss(
             policy_log_probs_pos,

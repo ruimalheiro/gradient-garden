@@ -52,8 +52,10 @@ class DirectPreferenceOptimizationDataLoader:
         def collate(examples):
             chosen_ids = []
             chosen_labels = []
+            chosen_lengths = []
             rejected_ids = []
             rejected_labels = []
+            rejected_lengths = []
 
             for i, e in enumerate(examples):
                 chosen_input_ids = torch.tensor(e['chosen_input_ids'], dtype=torch.long)
@@ -102,8 +104,10 @@ class DirectPreferenceOptimizationDataLoader:
 
                 chosen_ids.append(chosen_input_ids)
                 chosen_labels.append(chosen_target_labels)
+                chosen_lengths.append(len(c_ids))
                 rejected_ids.append(rejected_input_ids)
                 rejected_labels.append(rejected_target_labels)
+                rejected_lengths.append(len(r_ids))
 
             chosen_ids = pad_batch_to_multiple_of(
                 sequences=chosen_ids,
@@ -130,7 +134,15 @@ class DirectPreferenceOptimizationDataLoader:
                 max_length=sequence_length,
             )
 
-            return chosen_ids, chosen_labels, rejected_ids, rejected_labels
+            chosen_mask = torch.zeros_like(chosen_ids)
+            for i, length in enumerate(chosen_lengths):
+                chosen_mask[i, :length] = 1
+
+            rejected_mask = torch.zeros_like(rejected_ids)
+            for i, length in enumerate(rejected_lengths):
+                rejected_mask[i, :length] = 1
+
+            return chosen_ids, chosen_labels, chosen_mask, rejected_ids, rejected_labels, rejected_mask
 
         self._dataloader = DataLoader(
             dataset,

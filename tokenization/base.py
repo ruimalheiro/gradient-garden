@@ -9,11 +9,8 @@ class PromptBuilder:
         self.ignore_index = ignore_index
         self.no_labels = no_labels
         self.system_prompt = tokenizer.system_prompt
-        self.bot = tokenizer.bos_id
-        self.sh = tokenizer.sh_id
-        self.eh = tokenizer.eh_id
-        self.eot = tokenizer.eot_id
-        self.eos = tokenizer.eos_id
+        self.eos_token = tokenizer.eos_token
+        self.bos_id = tokenizer.bos_id
         self.tokens = []
         self.labels = []
 
@@ -29,26 +26,18 @@ class PromptBuilder:
         else:
             self.labels.extend([self.ignore_index] * len(tok_ids))
 
-    def add_header(self, system_msg=True):
-        self.push([self.bot], supervise=False)
-        if system_msg:
-            self.add_role_prefix('system')
-            self.push(self.encode(self.system_prompt), supervise=False)
-            self.push([self.eot], supervise=False)
-
-    def add_role_prefix(self, role):
-        self.push([self.sh], supervise=False)
-        self.push(self.encode(role), supervise=False)
-        self.push([self.eh], supervise=False)
-        self.push(self.encode('\n'), supervise=False)
-
-    def add_message(self, role, text, *, supervise=False, final_assistant=False):
-        self.add_role_prefix(role)
-        self.push(self.encode(text), supervise=supervise)
-        if final_assistant:
-            self.push([self.eos], supervise=supervise)
+    def add_message(self, role, content, *, supervise=False, final_assistant=False):
+        if role == 'assistant':
+            prefix = 'Assistant: '
+            self.push(self.encode(prefix), supervise=False)
+            if final_assistant:
+                text = content + self.eos_token
+            else:
+                text = content + '\n'
+            self.push(self.encode(text), supervise=supervise)
         else:
-            self.push([self.eot], supervise=supervise and role == 'assistant')
+            prefix = f'{role.capitalize()}: {content}\n'
+            self.push(self.encode(prefix), supervise=False)
 
     def clone(self):
         other = PromptBuilder(
@@ -61,6 +50,10 @@ class PromptBuilder:
         return other
 
     def build(self):
+        self.tokens.insert(0, self.bos_id)
+        if not self.no_labels:
+            self.labels.insert(0, self.ignore_index)
+
         if self.no_labels:
             return self.tokens
 
@@ -69,12 +62,11 @@ class PromptBuilder:
                 f'Tokens and labels length do not match: {len(self.tokens)} vs {len(self.labels)}'
             )
 
+        # Shift labels for next‑token prediction
         shifted_labels = self.labels[1:] + [self.ignore_index]
-
         return self.tokens, shifted_labels
 
 class BaseTokenizer(ABC):
-
     @abstractmethod
     def encode(self, text, *, bos=False, eos=False, allowed_special=set(), disallowed_special=()):
         ...
@@ -83,76 +75,54 @@ class BaseTokenizer(ABC):
     def decode(self, ids):
         ...
 
-    def encode_instruct_inference(
-        self,
-        text: str,
-        system_msg: bool = True
-    ):
+    def encode_instruct_inference(self, text: str, system_msg: bool = True):
         builder = PromptBuilder(self, no_labels=True)
-        builder.add_header(system_msg=system_msg)
-        builder.add_message('user', text, supervise=False)
-        builder.add_role_prefix('assistant')
+
+        if system_msg:
+            builder.add_message('system', self.system_prompt)
+
+        builder.add_message('user', text)
+
+        prefix = 'Assistant: '
+        builder.push(builder.encode(prefix))
         return builder.build()
 
-    def encode_instruct_chat(
-        self,
-        *,
-        conversation: object,
-        ignore_index: int
-    ):
+    def encode_instruct_chat(self, *, conversation, ignore_index: int):
         builder = PromptBuilder(self, ignore_index=ignore_index)
-        builder.add_header(system_msg=True)
+
+        has_system = any(msg['role'] == 'system' for msg in conversation)
+        if not has_system:
+            builder.add_message('system', self.system_prompt)
 
         for idx, interaction in enumerate(conversation):
             role = interaction['role']
             content = interaction['content']
-
             is_assistant = (role == 'assistant')
             is_last_message = (idx == len(conversation) - 1)
-
             builder.add_message(
                 role,
                 content,
                 supervise=is_assistant,
                 final_assistant=(is_assistant and is_last_message)
             )
-
         return builder.build()
 
-    def encode_instruct_chat_dpo(
-        self,
-        *,
-        conversation: object,
-        chosen: str,
-        rejected: str,
-        ignore_index: int
-    ):
-        prefix = PromptBuilder(self, ignore_index=ignore_index)
-        prefix.add_header(system_msg=True)
+    def encode_instruct_chat_dpo(self, *, conversation, chosen: str, rejected: str, ignore_index: int):
+        prefix_builder = PromptBuilder(self, ignore_index=ignore_index)
 
         for interaction in conversation:
-            role = interaction['role']
-            content = interaction['content']
+            prefix_builder.add_message(interaction['role'], interaction['content'], supervise=False)
 
-            prefix.add_message(
-                role,
-                content,
-                supervise=False,
-                final_assistant=False
-            )
-
-        prefix.add_role_prefix('assistant')
+        prefix_builder.push(prefix_builder.encode('Assistant:'), supervise=False)
 
         def build_answer(answer):
-            builder = prefix.clone()
-
-            builder.push(builder.encode(answer), supervise=True)
-            builder.push([builder.eos], supervise=True)
-
+            builder = prefix_builder.clone()
+            ans_tokens = builder.encode(answer + self.eos_token)
+            builder.push(ans_tokens, supervise=True)
             return builder.build()
 
-        prompt_input_ids, _ = prefix.build()
-        chosen_input_ids, chosen_labels = build_answer(chosen)
-        rejected_input_ids, rejected_labels = build_answer(rejected)
+        prompt_ids, _ = prefix_builder.build()
+        chosen_ids, chosen_labels = build_answer(chosen)
+        rejected_ids, rejected_labels = build_answer(rejected)
 
-        return prompt_input_ids, chosen_input_ids, chosen_labels, rejected_input_ids, rejected_labels
+        return prompt_ids, chosen_ids, chosen_labels, rejected_ids, rejected_labels

@@ -74,7 +74,7 @@ def apply_no_repeat_ngram(current_tokens, logits, ngram_size):
         for banned_token in banned.get(prefix, ()):
             logits[batch_index, banned_token] = float('-inf')
 
-def build_response(tokens_batch, prompt_tokens, stop_tokens, max_gen_len, eos_id, eot_id):
+def build_response(tokens_batch, prompt_tokens, stop_tokens, max_gen_len, eos_id):
     stop_tokens_set = set(stop_tokens)
     result = []
     for i, tokens in enumerate(tokens_batch.tolist()):
@@ -103,7 +103,6 @@ def build_response(tokens_batch, prompt_tokens, stop_tokens, max_gen_len, eos_id
             'last_result_token_id': result_tokens[-1] if result_tokens else None,
             'last_10_generated_token_ids': effective_tokens[-10:],
             'contains_eos': eos_id in effective_set,
-            'contains_eot': eot_id in effective_set,
             'stop_token_id': stop_token_id,
             'stopped_by_stop_token': stop_index is not None,
             'stop_index': stop_index,
@@ -130,6 +129,55 @@ def generate(
     dtype,
     use_kv_cache
 ):
+    if hasattr(model, 'inner') and hasattr(model.inner, 'generate'):
+        tokenizer.model.padding_side = 'right'
+        batch_encoding = tokenizer.model.pad(
+            [{'input_ids': ids} for ids in prompt_tokens],
+            padding=True,
+            return_attention_mask=True
+        )
+        padded = torch.tensor(batch_encoding['input_ids'], device=device)
+        attn_mask = torch.tensor(batch_encoding['attention_mask'], device=device)
+
+        gen_kwargs = dict(
+            max_new_tokens=max_gen_len,
+            pad_token_id=tokenizer.pad_id,
+            eos_token_id=tokenizer.eos_id,
+            do_sample=temperature > 0,
+            temperature=temperature if temperature > 0 else 1.0,
+            top_p=top_p if temperature > 0 else 1.0,
+            repetition_penalty=repetition_penalty,
+            no_repeat_ngram_size=no_repeat_ngram_size
+        )
+        gen_kwargs = {k: v for k, v in gen_kwargs.items() if v is not None}
+
+        outputs = model.inner.generate(
+            padded,
+            attention_mask=attn_mask,
+            **gen_kwargs,
+        )
+
+        results = []
+        for i in range(len(prompt_tokens)):
+            prompt_len = len(prompt_tokens[i])
+            gen_ids = outputs[i, prompt_len:].tolist()
+
+            stop_idx = None
+            for j, tid in enumerate(gen_ids):
+                if tid in tokenizer.stop_tokens:
+                    stop_idx = j
+                    break
+            result_ids = gen_ids[:stop_idx] if stop_idx is not None else gen_ids
+            effective_ids = gen_ids[:stop_idx+1] if stop_idx is not None else gen_ids
+            results.append({
+                'result': result_ids,
+                'metadata': {
+                    'generated_tokens_before_stop_or_limit': len(effective_ids),
+                    'stopped_by_stop_token': stop_idx is not None,
+                }
+            })
+        return results
+
     if temperature < 0.0:
         raise ValueError(f'temperature must be >= 0.0, got {temperature}')
     if top_p <= 0.0 or top_p > 1.0:
@@ -144,7 +192,6 @@ def generate(
     pad_token_id = tokenizer.pad_id
     stop_tokens = tokenizer.stop_tokens
     eos_id = tokenizer.eos_id
-    eot_id = tokenizer.eot_id
 
     # Finding the boundaries / limits.
     min_prompt_len = min(len(t) for t in prompt_tokens)
@@ -162,7 +209,10 @@ def generate(
 
     # Define stop conditions, input mask and the stop tokens (extracted from the tokenizer)
     eos_reached = torch.tensor([False] * batch_size, device=device)
-    input_text_mask = tokens != pad_token_id
+    # input_text_mask = tokens != pad_token_id
+    input_text_mask = torch.zeros_like(tokens, dtype=torch.bool)
+    for i in range(batch_size):
+        input_text_mask[i, :len(prompt_tokens[i])] = True
     stop_tokens = torch.tensor(list(stop_tokens), device=device)
 
     current_position = min_prompt_len
@@ -230,8 +280,7 @@ def generate(
         prompt_tokens,
         list(tokenizer.stop_tokens),
         max_gen_len,
-        eos_id,
-        eot_id
+        eos_id
     )
 
 @torch.inference_mode()

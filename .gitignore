@@ -44,5 +44,4 @@ outputs/
 
 # Optional extra ignores for local tokenizer assets
 tokenizer.model
-*.tiktoken
 tea_debug.log

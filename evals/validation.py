@@ -49,12 +49,14 @@ def evaluate_validation_ppl(
     tokens_sum = 0
 
     for step in tqdm(range(validation_steps), 'Validating'):
-        x, y = val_loader.next_batch()
+        x, y, attention_mask = val_loader.next_batch()
 
         x = x.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(device, non_blocking=True)
 
-        loss = model(x, labels=y)['loss'].item()
+        loss = model(x, labels=y, attention_mask=attention_mask)['loss'].item()
         n_valid = ((y != ignore_index).sum().float()).item()
         if n_valid == 0:
             continue

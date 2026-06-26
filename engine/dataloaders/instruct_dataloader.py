@@ -52,6 +52,7 @@ class InstructDataLoader:
         def collate(examples):
             ids = []
             labels = []
+            original_lengths = []
 
             for i, e in enumerate(examples):
                 input_ids = torch.tensor(e['input_ids'], dtype=torch.long)
@@ -78,6 +79,7 @@ class InstructDataLoader:
 
                 ids.append(input_ids)
                 labels.append(target_labels)
+                original_lengths.append(len(input_ids))
 
             ids = pad_batch_to_multiple_of(
                 sequences=ids,
@@ -92,7 +94,12 @@ class InstructDataLoader:
                 max_length=sequence_length,
             )
 
-            return ids, labels
+            # Create attention mask: 1 for real tokens, 0 for padding
+            attention_mask = torch.zeros((len(ids), len(ids[0])), dtype=torch.long)
+            for i, length in enumerate(original_lengths):
+                attention_mask[i, :length] = 1
+
+            return ids, labels, attention_mask
 
         self._dataloader = DataLoader(
             dataset,

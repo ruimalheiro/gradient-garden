@@ -2,14 +2,14 @@ import torch
 import torch.nn.functional as F
 
 
-def dpo_log_probs(model, input_ids, labels, ignore_index):
+def dpo_log_probs(model, input_ids, labels, attention_mask, ignore_index):
     ''' Computes de log probabilities for DPO.
 
         Assumes dimensions input_ids [B, L] and labels_ids [B, L]
         labels here are already shifted. Prompt and pad tokens are ignore_index (ignored)
     '''
     # compute logits
-    logits = model(input_ids)['logits'] # [B, L, V]
+    logits = model(input_ids, attention_mask=attention_mask)['logits'] # [B, L, V]
     log_probs = F.log_softmax(logits, dim=-1)
 
     mask = labels != ignore_index # [B, L]
