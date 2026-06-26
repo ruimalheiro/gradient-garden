@@ -17,9 +17,7 @@ DEFAULT_INSTRUCT_MIX = {
         'HuggingFaceH4/ultrachat_200k': {
             'default': {
                 'weight': 1.0,
-                'transforms': {
-                    'max_messages': 8
-                }
+                'transforms': {}
             }
         }
     }

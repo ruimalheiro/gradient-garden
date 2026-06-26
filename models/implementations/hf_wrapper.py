@@ -3,7 +3,6 @@ import torch
 from transformers import AutoModelForCausalLM
 from config import ModelConfig
 from models.base import BaseModel
-from logger import logger
 
 
 class HFModelWrapper(BaseModel):

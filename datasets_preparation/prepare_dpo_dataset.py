@@ -72,7 +72,7 @@ def ensure_user_first(conversation):
 
 tokenizer = None
 
-def tokenize(tokenizer_kwargs, ignore_index, doc):
+def tokenize(tokenizer_kwargs, ignore_index, max_seq_len, doc):
     global tokenizer
     if tokenizer is None:
         tokenizer = init_tokenizer(**tokenizer_kwargs)
@@ -87,7 +87,9 @@ def tokenize(tokenizer_kwargs, ignore_index, doc):
         conversation=doc['prompt'],
         chosen=doc['chosen'],
         rejected=doc['rejected'],
-        ignore_index=ignore_index
+        ignore_index=ignore_index,
+        max_seq_len=max_seq_len,
+        trim_to_context=True
     )
 
     return {
@@ -158,10 +160,36 @@ def download_and_prepare_data(
             partial(
                 tokenize,
                 tokenizer_kwargs,
-                config.tokenizer.ignore_index
+                config.tokenizer.ignore_index,
+                config.model.max_seq_len
             ),
             num_proc=num_proc,
             remove_columns=columns_to_remove
+        )
+
+        def is_valid_tokenized_dpo(example):
+            ignore_index = config.tokenizer.ignore_index
+            max_seq_len = config.model.max_seq_len
+
+            return (
+                len(example['prompt_input_ids']) > 0 and
+                len(example['chosen_input_ids']) > 0 and
+                len(example['rejected_input_ids']) > 0 and
+
+                len(example['chosen_input_ids']) == len(example['chosen_labels']) and
+                len(example['rejected_input_ids']) == len(example['rejected_labels']) and
+
+                len(example['prompt_input_ids']) <= max_seq_len and
+                len(example['chosen_input_ids']) <= max_seq_len and
+                len(example['rejected_input_ids']) <= max_seq_len and
+
+                any(label != ignore_index for label in example['chosen_labels']) and
+                any(label != ignore_index for label in example['rejected_labels'])
+            )
+
+        tokenized_ds = tokenized_ds.filter(
+            is_valid_tokenized_dpo,
+            num_proc=num_proc,
         )
 
         prepared_datasets.append(tokenized_ds)

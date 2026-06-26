@@ -97,7 +97,14 @@ class BaseTokenizer(ABC):
 
         return builder.build()
 
-    def encode_instruct_chat(self, *, conversation, ignore_index: int):
+    def encode_instruct_chat(
+        self,
+        *,
+        conversation,
+        ignore_index: int,
+        max_seq_len: int | None = None,
+        trim_to_context: bool = False
+    ):
         if not conversation or conversation[-1]['role'] != 'assistant':
             raise ValueError('Instruct conversation must end with an assistant message.')
 
@@ -124,7 +131,16 @@ class BaseTokenizer(ABC):
 
         return builder.build()
 
-    def encode_instruct_chat_dpo(self, *, conversation, chosen: str, rejected: str, ignore_index: int):
+    def encode_instruct_chat_dpo(
+        self,
+        *,
+        conversation,
+        chosen: str,
+        rejected: str,
+        ignore_index: int,
+        max_seq_len: int | None = None,
+        trim_to_context: bool = False
+    ):
         prefix_builder = PromptBuilder(self, ignore_index=ignore_index)
 
         has_system = any(msg['role'] == 'system' for msg in conversation)
