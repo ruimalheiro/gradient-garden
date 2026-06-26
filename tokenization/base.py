@@ -2,6 +2,12 @@ from abc import ABC, abstractmethod
 
 
 class PromptBuilder:
+    ROLE_NAMES = {
+        'system': 'System',
+        'user': 'User',
+        'assistant': 'Assistant',
+    }
+
     def __init__(self, tokenizer, *, ignore_index=None, no_labels=False):
         self.tokenizer = tokenizer
         if no_labels is False and ignore_index is None:
@@ -26,18 +32,23 @@ class PromptBuilder:
         else:
             self.labels.extend([self.ignore_index] * len(tok_ids))
 
+    def role_prefix(self, role: str) -> str:
+        if role not in self.ROLE_NAMES:
+            raise ValueError(f'Unknown role: {role}')
+        return f'{self.ROLE_NAMES[role]}: '
+
     def add_message(self, role, content, *, supervise=False, final_assistant=False):
+        prefix = self.role_prefix(role)
+        self.push(self.encode(prefix), supervise=False)
+
         if role == 'assistant':
-            prefix = 'Assistant: '
-            self.push(self.encode(prefix), supervise=False)
-            if final_assistant:
-                text = content + self.eos_token
-            else:
-                text = content + '\n'
+            text = content + (self.eos_token if final_assistant else '\n')
             self.push(self.encode(text), supervise=supervise)
         else:
-            prefix = f'{role.capitalize()}: {content}\n'
-            self.push(self.encode(prefix), supervise=False)
+            self.push(self.encode(content + '\n'), supervise=False)
+
+    def add_assistant_prefix(self):
+        self.push(self.encode(self.role_prefix('assistant')), supervise=False)
 
     def clone(self):
         other = PromptBuilder(
@@ -57,9 +68,9 @@ class PromptBuilder:
 
         labels = [self.ignore_index] + self.labels
 
-        if len(self.tokens) != len(self.labels):
+        if len(tokens) != len(labels):
             raise ValueError(
-                f'Tokens and labels length do not match: {len(self.tokens)} vs {len(self.labels)}'
+                f'Tokens and labels length do not match: {len(tokens)} vs {len(labels)}'
             )
 
         # Shift labels for next‑token prediction
@@ -82,12 +93,14 @@ class BaseTokenizer(ABC):
             builder.add_message('system', self.system_prompt)
 
         builder.add_message('user', text)
+        builder.add_assistant_prefix()
 
-        prefix = 'Assistant: '
-        builder.push(builder.encode(prefix))
         return builder.build()
 
     def encode_instruct_chat(self, *, conversation, ignore_index: int):
+        if not conversation or conversation[-1]['role'] != 'assistant':
+            raise ValueError('Instruct conversation must end with an assistant message.')
+
         builder = PromptBuilder(self, ignore_index=ignore_index)
 
         has_system = any(msg['role'] == 'system' for msg in conversation)
@@ -97,28 +110,38 @@ class BaseTokenizer(ABC):
         for idx, interaction in enumerate(conversation):
             role = interaction['role']
             content = interaction['content']
-            is_assistant = (role == 'assistant')
-            is_last_message = (idx == len(conversation) - 1)
+
+            is_assistant = role == 'assistant'
+            is_last_message = idx == len(conversation) - 1
+
             builder.add_message(
                 role,
                 content,
                 supervise=is_assistant,
-                final_assistant=(is_assistant and is_last_message)
+                final_assistant=is_assistant and is_last_message,
             )
+
         return builder.build()
 
     def encode_instruct_chat_dpo(self, *, conversation, chosen: str, rejected: str, ignore_index: int):
         prefix_builder = PromptBuilder(self, ignore_index=ignore_index)
 
-        for interaction in conversation:
-            prefix_builder.add_message(interaction['role'], interaction['content'], supervise=False)
+        has_system = any(msg['role'] == 'system' for msg in conversation)
+        if not has_system:
+            prefix_builder.add_message('system', self.system_prompt)
 
-        prefix_builder.push(prefix_builder.encode('Assistant: '), supervise=False)
+        for interaction in conversation:
+            prefix_builder.add_message(
+                interaction['role'],
+                interaction['content'],
+                supervise=False,
+            )
+
+        prefix_builder.add_assistant_prefix()
 
         def build_answer(answer):
             builder = prefix_builder.clone()
-            ans_tokens = builder.encode(answer + self.eos_token)
-            builder.push(ans_tokens, supervise=True)
+            builder.push(builder.encode(answer + self.eos_token), supervise=True)
             return builder.build()
 
         prompt_ids, _ = prefix_builder.build()
