@@ -79,7 +79,7 @@ class PromptBuilder:
 
 class BaseTokenizer(ABC):
     @abstractmethod
-    def encode(self, text, *, bos=False, eos=False, allowed_special=set(), disallowed_special=()):
+    def encode(self, text, *, bos=False, eos=False, allowed_special=None, disallowed_special=()):
         ...
 
     @abstractmethod
@@ -105,31 +105,57 @@ class BaseTokenizer(ABC):
         max_seq_len: int | None = None,
         trim_to_context: bool = False
     ):
-        if not conversation or conversation[-1]['role'] != 'assistant':
-            raise ValueError('Instruct conversation must end with an assistant message.')
-
-        builder = PromptBuilder(self, ignore_index=ignore_index)
-
-        has_system = any(msg['role'] == 'system' for msg in conversation)
-        if not has_system:
+        def encode_messages(messages):
+            builder = PromptBuilder(self, ignore_index=ignore_index)
             builder.add_message('system', self.system_prompt)
 
-        for idx, interaction in enumerate(conversation):
-            role = interaction['role']
-            content = interaction['content']
+            for idx, interaction in enumerate(messages):
+                role = interaction['role']
+                content = interaction['content']
 
-            is_assistant = role == 'assistant'
-            is_last_message = idx == len(conversation) - 1
-            is_final_assistant = is_assistant and is_last_message
+                is_assistant = role == 'assistant'
+                is_last_message = idx == len(messages) - 1
+                is_final_assistant = is_assistant and is_last_message
 
-            builder.add_message(
-                role,
-                content,
-                supervise=is_final_assistant,
-                final_assistant=is_final_assistant
+                builder.add_message(
+                    role,
+                    content,
+                    supervise=is_final_assistant,
+                    final_assistant=is_final_assistant
+                )
+
+            return builder.build()
+
+        if trim_to_context:
+            if max_seq_len is None:
+                raise ValueError('max_seq_len is required when trim_to_context=True')
+
+            messages = [m for m in conversation]
+            valid_messages = []
+            tokens = []
+            labels = []
+            while len(messages) >= 2:
+                assistant = messages.pop()
+                user = messages.pop()
+
+                candidate_tokens, candidate_labels = encode_messages([user, assistant, *valid_messages])
+                if len(candidate_tokens) > max_seq_len:
+                    break
+
+                valid_messages = [user, assistant, *valid_messages]
+                tokens = candidate_tokens
+                labels = candidate_labels
+
+            return tokens, labels
+
+        tokens, labels = encode_messages(conversation)
+
+        if max_seq_len is not None and len(tokens) > max_seq_len:
+            raise ValueError(
+                f'Encoded instruct example length {len(tokens)} exceeds max_seq_len={max_seq_len}'
             )
 
-        return builder.build()
+        return tokens, labels
 
     def encode_instruct_chat_dpo(
         self,

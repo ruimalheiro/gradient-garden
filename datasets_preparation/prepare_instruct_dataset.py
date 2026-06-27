@@ -123,6 +123,18 @@ def remove_system_messages(conversation):
         if message['role'] != 'system'
     ]
 
+def ensure_only_user_assistant(conversation):
+    allowed_roles = {'user', 'assistant'}
+
+    if not conversation:
+        return []
+
+    for message in conversation:
+        if message['role'] not in allowed_roles:
+            return []
+
+    return conversation
+
 def ensure_user_first(conversation):
     if not conversation:
         return []
@@ -138,6 +150,17 @@ def trim_to_last_assistant(conversation):
         ):
             return conversation[:i + 1]
     return []
+
+def ensure_alternating_user_assistant(conversation):
+    if not conversation:
+        return []
+
+    for idx, message in enumerate(conversation):
+        expected_role = 'user' if idx % 2 == 0 else 'assistant'
+        if message['role'] != expected_role:
+            return []
+
+    return conversation
 
 tokenizer = None
 
@@ -225,8 +248,10 @@ def download_and_prepare_data(
         def normalize(doc):
             conversation = adapter(doc, transforms, seed)
             conversation = remove_system_messages(conversation)
+            conversation = ensure_only_user_assistant(conversation)
             conversation = ensure_user_first(conversation)
             conversation = trim_to_last_assistant(conversation)
+            conversation = ensure_alternating_user_assistant(conversation)
 
             return {
                 'conversation': conversation,
