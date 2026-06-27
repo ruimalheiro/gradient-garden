@@ -79,7 +79,7 @@ class PromptBuilder:
 
 class BaseTokenizer(ABC):
     @abstractmethod
-    def encode(self, text, *, bos=False, eos=False, allowed_special=None, disallowed_special=()):
+    def encode(self, text):
         ...
 
     @abstractmethod
@@ -167,28 +167,94 @@ class BaseTokenizer(ABC):
         max_seq_len: int | None = None,
         trim_to_context: bool = False
     ):
-        prefix_builder = PromptBuilder(self, ignore_index=ignore_index)
-
-        has_system = any(msg['role'] == 'system' for msg in conversation)
-        if not has_system:
+        def encode_prompt(messages):
+            prefix_builder = PromptBuilder(self, ignore_index=ignore_index)
             prefix_builder.add_message('system', self.system_prompt)
 
-        for interaction in conversation:
-            prefix_builder.add_message(
-                interaction['role'],
-                interaction['content'],
-                supervise=False,
+            for interaction in messages:
+                prefix_builder.add_message(
+                    interaction['role'],
+                    interaction['content'],
+                    supervise=False,
+                )
+
+            prefix_builder.add_assistant_prefix()
+
+            def build_answer(answer):
+                builder = prefix_builder.clone()
+                builder.push(builder.encode(answer + self.eos_token), supervise=True)
+                return builder.build()
+
+            prompt_ids, _ = prefix_builder.build()
+            chosen_ids, chosen_labels = build_answer(chosen)
+            rejected_ids, rejected_labels = build_answer(rejected)
+
+            return prompt_ids, chosen_ids, chosen_labels, rejected_ids, rejected_labels
+
+        def fits(prompt_tokens, chosen_tokens, rejected_tokens):
+            return (
+                len(prompt_tokens) <= max_seq_len and
+                len(chosen_tokens) <= max_seq_len and
+                len(rejected_tokens) <= max_seq_len
             )
 
-        prefix_builder.add_assistant_prefix()
+        if trim_to_context:
+            if max_seq_len is None:
+                raise ValueError('max_seq_len is required when trim_to_context=True')
 
-        def build_answer(answer):
-            builder = prefix_builder.clone()
-            builder.push(builder.encode(answer + self.eos_token), supervise=True)
-            return builder.build()
+            messages = [m for m in conversation]
+            valid_messages = [messages.pop()] # last is always user
+            (
+                prompt_tokens,
+                chosen_tokens,
+                chosen_labels,
+                rejected_tokens,
+                rejected_labels
+            ) = encode_prompt(valid_messages)
 
-        prompt_ids, _ = prefix_builder.build()
-        chosen_ids, chosen_labels = build_answer(chosen)
-        rejected_ids, rejected_labels = build_answer(rejected)
+            if not fits(prompt_tokens, chosen_tokens, rejected_tokens):
+                return [], [], [], [], []
 
-        return prompt_ids, chosen_ids, chosen_labels, rejected_ids, rejected_labels
+            while len(messages) >= 2:
+                assistant = messages.pop()
+                user = messages.pop()
+
+                candidate_messages = [user, assistant, *valid_messages]
+
+                (
+                    candidate_prompt_tokens,
+                    candidate_chosen_tokens,
+                    candidate_chosen_labels,
+                    candidate_rejected_tokens,
+                    candidate_rejected_labels
+                ) = encode_prompt(candidate_messages)
+                if not fits(
+                    candidate_prompt_tokens,
+                    candidate_chosen_tokens,
+                    candidate_rejected_tokens
+                ):
+                    break
+
+                valid_messages = candidate_messages
+                prompt_tokens = candidate_prompt_tokens
+                chosen_tokens = candidate_chosen_tokens
+                chosen_labels = candidate_chosen_labels
+                rejected_tokens = candidate_rejected_tokens
+                rejected_labels = candidate_rejected_labels
+
+            return prompt_tokens, chosen_tokens, chosen_labels, rejected_tokens, rejected_labels
+
+        prompt_tokens, chosen_tokens, chosen_labels, rejected_tokens, rejected_labels = encode_prompt(conversation)
+
+        if max_seq_len is not None:
+            if (
+                len(prompt_tokens) > max_seq_len or
+                len(chosen_tokens) > max_seq_len or
+                len(rejected_tokens) > max_seq_len
+            ):
+                raise ValueError(
+                    f'Encoded DPO example exceeds max_seq_len={max_seq_len}: '
+                    f'prompt={len(prompt_tokens)}, chosen={len(chosen_tokens)}, rejected={len(rejected_tokens)}'
+                )
+
+        return prompt_tokens, chosen_tokens, chosen_labels, rejected_tokens, rejected_labels

@@ -40,9 +40,6 @@ def adapt_anthropic_hh_rlhf(doc, transforms):
             if role == 'assistant':
                 assistant_statements.append(content)
 
-        if not len(assistant_statements):
-            assistant_statements.append('')
-
         return conversation, assistant_statements
 
     chosen_conversation, chosen_assistant = extract_interactions(doc['chosen'])
@@ -62,12 +59,56 @@ SUPPORTED_HF_DATASETS = {
     }
 }
 
+def remove_system_messages(conversation):
+    return [
+        message for message in conversation
+        if message['role'] != 'system'
+    ]
+
+def ensure_only_user_assistant(conversation):
+    allowed_roles = {'user', 'assistant'}
+
+    if not conversation:
+        return []
+
+    for message in conversation:
+        if message['role'] not in allowed_roles:
+            return []
+
+    return conversation
+
 def ensure_user_first(conversation):
     if not conversation:
-        return conversation
+        return []
     if conversation[0]['role'] != 'user':
-        # add default empty user conversation if it is missing (If it starts with assistant)
-        return [{'role': 'user', 'content': ''}] + conversation
+        return []
+    return conversation
+
+def ensure_user_last(conversation):
+    if not conversation:
+        return []
+    if conversation[-1]['role'] != 'user':
+        return []
+    return conversation
+
+def ensure_alternating_prompt_for_dpo(conversation):
+    """
+    DPO prompt should be:
+      user, assistant, user, assistant, ..., user
+
+    chosen/rejected are the final assistant replies.
+    """
+    if not conversation:
+        return []
+
+    for idx, message in enumerate(conversation):
+        expected_role = 'user' if idx % 2 == 0 else 'assistant'
+        if message['role'] != expected_role:
+            return []
+
+    if conversation[-1]['role'] != 'user':
+        return []
+
     return conversation
 
 tokenizer = None
@@ -147,13 +188,30 @@ def download_and_prepare_data(
 
         def normalize(doc):
             data = adapter(doc, transforms)
-            data['prompt'] = ensure_user_first(data['prompt'])
+
+            prompt = data['prompt']
+            prompt = remove_system_messages(prompt)
+            prompt = ensure_only_user_assistant(prompt)
+            prompt = ensure_user_first(prompt)
+            prompt = ensure_user_last(prompt)
+            prompt = ensure_alternating_prompt_for_dpo(prompt)
+
+            data['prompt'] = prompt
+            data['chosen'] = data['chosen'].strip()
+            data['rejected'] = data['rejected'].strip()
             data['source'] = source_key
 
             return data
 
         ds = ds.map(normalize, num_proc=num_proc)
-        ds = ds.filter(lambda x: len(x['prompt']) > 0, num_proc=num_proc)
+        ds = ds.filter(
+            lambda x: (
+                len(x['prompt']) > 0 and
+                len(x['chosen']) > 0 and
+                len(x['rejected']) > 0
+            ),
+            num_proc=num_proc
+        )
 
         columns_to_remove = [c for c in ds.column_names if c not in ['source']]
         tokenized_ds = ds.map(

@@ -23,13 +23,8 @@ class HFTokenizer(BaseTokenizer):
 
         self.stop_tokens = {self.eos_id}
 
-    def encode(self, text, *, bos=False, eos=False, add_special_tokens=False, **kw):
-        tokens = self.model.encode(text, add_special_tokens=add_special_tokens)
-        if bos:
-            tokens.insert(0, self.bos_id)
-        if eos:
-            tokens.append(self.eos_id)
-        return tokens
+    def encode(self, text, add_special_tokens=False):
+        return self.model.encode(text, add_special_tokens=add_special_tokens)
 
     def decode(self, tokens, skip_special_tokens=False):
         return self.model.decode(tokens, skip_special_tokens=skip_special_tokens)
