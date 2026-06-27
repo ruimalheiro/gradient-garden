@@ -104,10 +104,10 @@ class DirectPreferenceOptimizationDataLoader:
 
                 chosen_ids.append(chosen_input_ids)
                 chosen_labels.append(chosen_target_labels)
-                chosen_lengths.append(len(c_ids))
+                chosen_lengths.append(len(chosen_input_ids))
                 rejected_ids.append(rejected_input_ids)
                 rejected_labels.append(rejected_target_labels)
-                rejected_lengths.append(len(r_ids))
+                rejected_lengths.append(len(rejected_input_ids))
 
             chosen_ids = pad_batch_to_multiple_of(
                 sequences=chosen_ids,
