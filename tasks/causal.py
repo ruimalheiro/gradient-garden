@@ -50,9 +50,11 @@ class CausalTask(BaseTask):
         use_autocast = self.ctx.precision.use_autocast
         grad_accum_steps = self.ctx.grad_accum_steps
 
-        x, y = batch
+        x, y, attention_mask = batch
         x = x.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(device, non_blocking=True)
 
         tokens_processed = x.numel()
 
@@ -61,7 +63,7 @@ class CausalTask(BaseTask):
             dtype=autocast_dtype,
             enabled=use_autocast
         ):
-            result = model(x, labels=y)
+            result = model(x, labels=y, attention_mask=attention_mask)
             loss = result['loss']
 
         loss_for_backward = loss
@@ -105,12 +107,14 @@ class CausalTask(BaseTask):
         autocast_dtype = self.ctx.precision.autocast_dtype
         use_autocast = self.ctx.precision.use_autocast
 
-        x, y = batch
+        x, y, attention_mask = batch
         x = x.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
+        if attention_mask is not None:
+            attention_mask = attention_mask.to(device, non_blocking=True)
 
         with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-            loss = model(x, labels=y)['loss']
+            loss = model(x, labels=y, attention_mask=attention_mask)['loss']
         
         n_valid = (y != self.config.tokenizer.ignore_index).sum().float()
 

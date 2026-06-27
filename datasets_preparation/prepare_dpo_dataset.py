@@ -40,9 +40,6 @@ def adapt_anthropic_hh_rlhf(doc, transforms):
             if role == 'assistant':
                 assistant_statements.append(content)
 
-        if not len(assistant_statements):
-            assistant_statements.append('')
-
         return conversation, assistant_statements
 
     chosen_conversation, chosen_assistant = extract_interactions(doc['chosen'])
@@ -62,17 +59,61 @@ SUPPORTED_HF_DATASETS = {
     }
 }
 
+def remove_system_messages(conversation):
+    return [
+        message for message in conversation
+        if message['role'] != 'system'
+    ]
+
+def ensure_only_user_assistant(conversation):
+    allowed_roles = {'user', 'assistant'}
+
+    if not conversation:
+        return []
+
+    for message in conversation:
+        if message['role'] not in allowed_roles:
+            return []
+
+    return conversation
+
 def ensure_user_first(conversation):
     if not conversation:
-        return conversation
+        return []
     if conversation[0]['role'] != 'user':
-        # add default empty user conversation if it is missing (If it starts with assistant)
-        return [{'role': 'user', 'content': ''}] + conversation
+        return []
+    return conversation
+
+def ensure_user_last(conversation):
+    if not conversation:
+        return []
+    if conversation[-1]['role'] != 'user':
+        return []
+    return conversation
+
+def ensure_alternating_prompt_for_dpo(conversation):
+    """
+    DPO prompt should be:
+      user, assistant, user, assistant, ..., user
+
+    chosen/rejected are the final assistant replies.
+    """
+    if not conversation:
+        return []
+
+    for idx, message in enumerate(conversation):
+        expected_role = 'user' if idx % 2 == 0 else 'assistant'
+        if message['role'] != expected_role:
+            return []
+
+    if conversation[-1]['role'] != 'user':
+        return []
+
     return conversation
 
 tokenizer = None
 
-def tokenize(tokenizer_kwargs, ignore_index, doc):
+def tokenize(tokenizer_kwargs, ignore_index, max_seq_len, doc):
     global tokenizer
     if tokenizer is None:
         tokenizer = init_tokenizer(**tokenizer_kwargs)
@@ -87,7 +128,9 @@ def tokenize(tokenizer_kwargs, ignore_index, doc):
         conversation=doc['prompt'],
         chosen=doc['chosen'],
         rejected=doc['rejected'],
-        ignore_index=ignore_index
+        ignore_index=ignore_index,
+        max_seq_len=max_seq_len,
+        trim_to_context=True
     )
 
     return {
@@ -145,23 +188,66 @@ def download_and_prepare_data(
 
         def normalize(doc):
             data = adapter(doc, transforms)
-            data['prompt'] = ensure_user_first(data['prompt'])
+
+            prompt = data['prompt']
+            prompt = remove_system_messages(prompt)
+            prompt = ensure_only_user_assistant(prompt)
+            prompt = ensure_user_first(prompt)
+            prompt = ensure_user_last(prompt)
+            prompt = ensure_alternating_prompt_for_dpo(prompt)
+
+            data['prompt'] = prompt
+            data['chosen'] = data['chosen'].strip()
+            data['rejected'] = data['rejected'].strip()
             data['source'] = source_key
 
             return data
 
         ds = ds.map(normalize, num_proc=num_proc)
-        ds = ds.filter(lambda x: len(x['prompt']) > 0, num_proc=num_proc)
+        ds = ds.filter(
+            lambda x: (
+                len(x['prompt']) > 0 and
+                len(x['chosen']) > 0 and
+                len(x['rejected']) > 0
+            ),
+            num_proc=num_proc
+        )
 
         columns_to_remove = [c for c in ds.column_names if c not in ['source']]
         tokenized_ds = ds.map(
             partial(
                 tokenize,
                 tokenizer_kwargs,
-                config.tokenizer.ignore_index
+                config.tokenizer.ignore_index,
+                config.model.max_seq_len
             ),
             num_proc=num_proc,
             remove_columns=columns_to_remove
+        )
+
+        def is_valid_tokenized_dpo(example):
+            ignore_index = config.tokenizer.ignore_index
+            max_seq_len = config.model.max_seq_len
+
+            return (
+                len(example['prompt_input_ids']) > 0 and
+                len(example['chosen_input_ids']) > 0 and
+                len(example['rejected_input_ids']) > 0 and
+
+                len(example['chosen_input_ids']) == len(example['chosen_labels']) and
+                len(example['rejected_input_ids']) == len(example['rejected_labels']) and
+
+                len(example['prompt_input_ids']) <= max_seq_len and
+                len(example['chosen_input_ids']) <= max_seq_len and
+                len(example['rejected_input_ids']) <= max_seq_len and
+
+                any(label != ignore_index for label in example['chosen_labels']) and
+                any(label != ignore_index for label in example['rejected_labels'])
+            )
+
+        tokenized_ds = tokenized_ds.filter(
+            is_valid_tokenized_dpo,
+            num_proc=num_proc,
         )
 
         prepared_datasets.append(tokenized_ds)

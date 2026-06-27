@@ -1,4 +1,5 @@
 
+from utils import get_architecture_name
 from datasets_preparation.synthetic.common import (
     make_fixture_dataset_generator,
     generate_dataset
@@ -47,7 +48,7 @@ def generator_fn(*, config, rng, count, transforms):
 
     model_name = transforms.get(
         'model_name',
-        config.model.architecture.value.capitalize(),
+        get_architecture_name(config).capitalize()
     )
 
     identity_message = custom_identity_message or (

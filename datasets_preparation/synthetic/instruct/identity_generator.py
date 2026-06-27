@@ -1,3 +1,4 @@
+from utils import get_architecture_name
 from datasets_preparation.synthetic.common import generate_dataset
 from datasets_preparation.synthetic.group_utils import generate_weighted_group_examples
 from datasets_preparation.synthetic.instruct.common import render_fixture_example
@@ -9,7 +10,7 @@ def generator_fn(*, config, rng, count, transforms):
 
     model_name = transforms.get(
         'model_name',
-        config.model.architecture.value.capitalize(),
+        get_architecture_name(config).capitalize()
     )
 
     identity_message = (

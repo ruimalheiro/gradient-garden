@@ -5,8 +5,7 @@
       "default": {
         "weight": 1.0,
         "transforms": {
-          "max_datapoints": 100,
-          "max_messages": 8
+          "max_datapoints": 100
         }
       }
     }

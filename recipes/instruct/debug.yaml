@@ -104,4 +104,3 @@ data:
         weight: 1.0
         transforms:
           max_datapoints: 1000
-          max_messages: 8

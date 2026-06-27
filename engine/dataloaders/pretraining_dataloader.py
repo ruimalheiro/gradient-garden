@@ -147,4 +147,5 @@ class PretrainingDataLoader:
             if torch.cuda.is_available():
                 self.tokens = self.tokens.pin_memory()
             self.current_position = self.B * self.S * self.ddp_rank
-        return x, y
+        # None here is because we dont need attention mask.
+        return x, y, None

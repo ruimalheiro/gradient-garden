@@ -123,6 +123,18 @@ def remove_system_messages(conversation):
         if message['role'] != 'system'
     ]
 
+def ensure_only_user_assistant(conversation):
+    allowed_roles = {'user', 'assistant'}
+
+    if not conversation:
+        return []
+
+    for message in conversation:
+        if message['role'] not in allowed_roles:
+            return []
+
+    return conversation
+
 def ensure_user_first(conversation):
     if not conversation:
         return []
@@ -139,16 +151,29 @@ def trim_to_last_assistant(conversation):
             return conversation[:i + 1]
     return []
 
+def ensure_alternating_user_assistant(conversation):
+    if not conversation:
+        return []
+
+    for idx, message in enumerate(conversation):
+        expected_role = 'user' if idx % 2 == 0 else 'assistant'
+        if message['role'] != expected_role:
+            return []
+
+    return conversation
+
 tokenizer = None
 
-def tokenize(tokenizer_kwargs, ignore_index, doc):
+def tokenize(tokenizer_kwargs, ignore_index, max_seq_len, doc):
     global tokenizer
     if tokenizer is None:
         tokenizer = init_tokenizer(**tokenizer_kwargs)
 
     tokens, labels = tokenizer.encode_instruct_chat(
         conversation=doc['conversation'],
-        ignore_index=ignore_index
+        ignore_index=ignore_index,
+        max_seq_len=max_seq_len,
+        trim_to_context=True
     )
 
     return {
@@ -204,7 +229,6 @@ def download_and_prepare_data(
         adapter = dataset_config['adapter']
 
         max_datapoints = transforms.get('max_datapoints', None)
-        max_messages = transforms.get('max_messages', 8)
 
         hf_name = None if name == 'default' else name
         source_key = make_source_key(ds_id, name)
@@ -224,9 +248,10 @@ def download_and_prepare_data(
         def normalize(doc):
             conversation = adapter(doc, transforms, seed)
             conversation = remove_system_messages(conversation)
+            conversation = ensure_only_user_assistant(conversation)
             conversation = ensure_user_first(conversation)
-            conversation = conversation[:max_messages]
             conversation = trim_to_last_assistant(conversation)
+            conversation = ensure_alternating_user_assistant(conversation)
 
             return {
                 'conversation': conversation,
@@ -241,16 +266,28 @@ def download_and_prepare_data(
             partial(
                 tokenize,
                 tokenizer_kwargs,
-                config.tokenizer.ignore_index
+                config.tokenizer.ignore_index,
+                config.model.max_seq_len
             ),
             num_proc=num_proc,
             remove_columns=columns_to_remove
         )
 
-        def has_supervision(example):
-            return any(label != config.tokenizer.ignore_index for label in example['labels'])
+        def is_valid_tokenized_ds(example):
+            input_ids = example['input_ids']
+            labels = example['labels']
 
-        tokenized_ds = tokenized_ds.filter(has_supervision, num_proc=num_proc)
+            return (
+                len(input_ids) > 0 and
+                len(input_ids) == len(labels) and
+                len(input_ids) <= config.model.max_seq_len and
+                any(label != config.tokenizer.ignore_index for label in labels)
+            )
+
+        tokenized_ds = tokenized_ds.filter(
+            is_valid_tokenized_ds,
+            num_proc=num_proc,
+        )
 
         prepared_datasets.append(tokenized_ds)
 

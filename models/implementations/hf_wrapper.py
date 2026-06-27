@@ -1,7 +1,8 @@
+import torch
+
 from transformers import AutoModelForCausalLM
 from config import ModelConfig
 from models.base import BaseModel
-from logger import logger
 
 
 class HFModelWrapper(BaseModel):
@@ -21,14 +22,11 @@ class HFModelWrapper(BaseModel):
         )
 
         self.inner = AutoModelForCausalLM.from_pretrained(config.model_name)
-
         if self.inner.config.vocab_size != vocab_size:
-            logger.warning(
-                f'Tokenizer vocab_size={vocab_size} does not match HF model '
-                f'vocab_size={self.inner.config.vocab_size}. It is recommended to use the matching tokenizer. '
-                'Automatically resizing for compatibility... '
+            raise ValueError(
+                f'Tokenizer vocab_size={vocab_size} != HF model vocab_size={self.inner.config.vocab_size}. '
+                'You must pick a compatible tokenizer.'
             )
-            self.inner.resize_token_embeddings(vocab_size)
 
         self.hf_config = self.inner.config
 
@@ -53,11 +51,18 @@ class HFModelWrapper(BaseModel):
     def get_output_embeddings(self):
         return self.inner.get_output_embeddings()
 
-    def forward(self, input_ids, labels=None, **kwargs):
-        if 'attention_mask' not in kwargs:
+    def forward(self, input_ids, labels=None, attention_mask=None, **kwargs):
+        if attention_mask is None:
             attention_mask = (input_ids != self.pad_token_id).long()
-            kwargs['attention_mask'] = attention_mask
-        out = self.inner(input_ids=input_ids, labels=labels, **kwargs)
+
+        if labels is not None:
+            # Our labels are shifted by default... So we need to unshift because HF expects unshifted.
+            # Unshift: original = [-100] + shifted[:, :-1]
+            original_labels = torch.full_like(labels, self.ignore_index)
+            original_labels[:, 1:] = labels[:, :-1]
+            labels = original_labels
+
+        out = self.inner(input_ids=input_ids, labels=labels, attention_mask=attention_mask, **kwargs)
         return {
             'logits': out.logits,
             'loss': out.loss,

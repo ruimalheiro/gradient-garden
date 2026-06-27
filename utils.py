@@ -6,6 +6,7 @@ import numpy as np
 
 from pathlib import Path
 from datetime import datetime, timezone
+from config import ModelConfig, ModelArchitecture
 
 
 def clean_name(name):
@@ -82,3 +83,8 @@ def set_seed(seed: int, *, deterministic: bool = False):
 def batch_generator(items, batch_size):
     for i in range(0, len(items), batch_size):
         yield items[i:i + batch_size]
+
+def get_architecture_name(config: ModelConfig):
+    if config.model.architecture == ModelArchitecture.HF_WRAPPER:
+        return config.model.model_name.split('/')[-1].lower()
+    return config.model.architecture.value
