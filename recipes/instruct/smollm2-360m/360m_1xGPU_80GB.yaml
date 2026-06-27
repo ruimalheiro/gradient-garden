@@ -1,9 +1,9 @@
-name: tendril_480m_1xGPU_80GB_instruct_full
-description: Tendril 480m 1xGPU_80GB full instruct finetuning.
+name: smollm2_360m_1xGPU_80GB_instruct_full
+description: SmolLM2 360m 1xGPU_80GB full instruct finetuning.
 
 config:
   run:
-    name: tendril_480m_1xGPU_80GB_instruct_full
+    name: smollm2_360m_1xGPU_80GB_instruct_full
 
   runtime:
     device_type: cuda
@@ -22,19 +22,11 @@ config:
     early_stopping_patience_skip_steps: 0
 
   model:
-    architecture: tendril
-    dim: 1024
-    n_layers: 30
-    n_heads: 8
-    n_kv_heads: 4
-    multiple_of: 1024
-    ffn_dim_multiplier: 1.0
-    norm_eps: 1.0e-5
-    rope_theta: 500000.0
-    max_seq_len: 2048
+    architecture: hf_wrapper
+    model_name: HuggingFaceTB/SmolLM2-360M
 
   prompts:
-    system_prompt: You are Tendril, a helpful AI assistant.
+    system_prompt: You are SmolLM2, a helpful AI assistant.
 
   tokenizer:
     checkpoint_path: HuggingFaceTB/SmolLM2-360M
@@ -134,5 +126,5 @@ data:
           count: 10000
           oversample_factor: 4
           max_duplicates_per_example: 10
-          model_name: 'Tendril'
-          identity_message: 'I am Tendril, a helpful AI assistant.'
+          model_name: 'SmolLM2'
+          identity_message: 'I am SmolLM2, a helpful AI assistant.'
