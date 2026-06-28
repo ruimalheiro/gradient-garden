@@ -130,7 +130,7 @@ def generate(
     use_kv_cache
 ):
     if hasattr(model, 'inner') and hasattr(model.inner, 'generate'):
-        tokenizer.model.padding_side = 'right'
+        tokenizer.model.padding_side = 'left'
         batch_encoding = tokenizer.model.pad(
             [{'input_ids': ids} for ids in prompt_tokens],
             padding=True,
