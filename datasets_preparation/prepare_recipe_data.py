@@ -1,9 +1,10 @@
 from logger import logger
 from config import TrainingStage
 from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
-from datasets_preparation.prepare_hellaswag_dataset import prepare_hellaswag_dataset
-from datasets_preparation.prepare_winogrande_dataset import prepare_winogrande_dataset
-from datasets_preparation.prepare_arc_challenge_dataset import prepare_arc_challenge_dataset
+from datasets_preparation.evals.prepare_hellaswag_dataset import prepare_hellaswag_dataset
+from datasets_preparation.evals.prepare_winogrande_dataset import prepare_winogrande_dataset
+from datasets_preparation.evals.prepare_arc_challenge_dataset import prepare_arc_challenge_dataset
+from datasets_preparation.evals.prepare_ifeval_no_external import prepare_ifeval_no_external_dataset
 from datasets_preparation.prepare_pretraining_dataset import prepare_pretraining_dataset
 from datasets_preparation.prepare_instruct_dataset import prepare_instruct_dataset
 from datasets_preparation.prepare_dpo_dataset import prepare_dpo_dataset
@@ -42,3 +43,6 @@ def prepare_recipe_data(recipe, num_proc):
 
     if data_evals.arc_challenge.enabled:
         prepare_arc_challenge_dataset(config=config, num_proc=num_proc)
+
+    if data_evals.ifeval_no_external.enabled:
+        prepare_ifeval_no_external_dataset(config=config, num_proc=num_proc)

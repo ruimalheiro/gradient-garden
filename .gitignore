@@ -23,6 +23,8 @@ outputs/
 # Local dataset mix recipes
 *.local.json
 *.private.json
+*.local.jsonl
+*.private.jsonl
 
 # Local notebooks / experiments
 *.local.ipynb
