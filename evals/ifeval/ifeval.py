@@ -1,6 +1,4 @@
 import json
-import torch
-import torch.nn.functional as F
 
 from evals.ifeval.checkers import CHECKERS
 from engine.distributed import load_jsonl_file_and_scatter
