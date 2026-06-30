@@ -262,9 +262,7 @@ def prepare_generation_eval_log(
     step_metrics: StepMetrics,
     trainer_state: TrainerState
 ):
-    if step_metrics.step_type not in (
-        StepType.IFEVAL_NO_EXTERNAL
-    ):
+    if step_metrics.step_type not in (StepType.IFEVAL_NO_EXTERNAL,):
         raise ValueError(f'Invalid step type for logging: {step_metrics.step_type.value}')
 
     console_log_label, wandb_label = get_generation_eval_log_labels(step_metrics)

@@ -1279,7 +1279,7 @@ class Trainer:
         with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
             outputs = generate_and_decode(
                 prompts=prompts,
-                model=self.model,
+                model=get_model(self.model),
                 tokenizer=self.tokenizer,
                 max_gen_len=self.config.evals.ifeval_no_external.max_gen_len,
                 temperature=0.0,
