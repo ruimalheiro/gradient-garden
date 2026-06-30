@@ -46,6 +46,9 @@ config:
       instruct_path: ./datasets/debug/instruct
     evals:
       ifeval_no_external_path: ./datasets/debug/ifeval_no_external
+      hellaswag_path: ./datasets/debug/hellaswag
+      winogrande_path: ./datasets/debug/winogrande
+      arc_challenge_path: ./datasets/debug/arc_challenge
     runs:
       output_dir_path: ./runs
 
@@ -76,6 +79,21 @@ config:
     run_on_last_step: true
 
   evals:
+    hellaswag:
+      every_x_steps: -1
+      number_of_examples: 20
+      run_on_first_step: true
+      run_on_last_step: true
+    winogrande:
+      every_x_steps: -1
+      number_of_examples: 20
+      run_on_first_step: true
+      run_on_last_step: true
+    arc_challenge:
+      every_x_steps: -1
+      number_of_examples: 20
+      run_on_first_step: true
+      run_on_last_step: true
     ifeval_no_external:
       every_x_steps: -1
       max_gen_len: 64
@@ -116,5 +134,11 @@ data:
           max_datapoints: 1000
 
   evals:
+      hellaswag:
+        enabled: true
+      winogrande:
+        enabled: true
+      arc_challenge:
+        enabled: true
       ifeval_no_external:
         enabled: true
