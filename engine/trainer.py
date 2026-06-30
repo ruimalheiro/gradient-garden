@@ -144,8 +144,8 @@ class Trainer:
         self.build_contexts()
         self.setup_local_logging()
         self.log_distributed_context()
-        self.load_assets()
         self.build_components()
+        self.load_assets()
         self.resolve_checkpoint()
         self.resolve_apply_lora()
         self.build_task()
@@ -221,14 +221,14 @@ class Trainer:
     def load_generation_assets(self):
         self.load_test_generation_prompts()
 
-    def load_assets(self):
-        self.load_eval_assets()
-        self.load_generation_assets()
-
     def build_components(self):
         self.build_tokenizer()
         self.build_model()
         self.build_data_loaders()
+
+    def load_assets(self):
+        self.load_eval_assets()
+        self.load_generation_assets()
 
     def resolve_checkpoint(self):
         checkpoint_req = self.resolve_checkpoint_request()
@@ -383,6 +383,7 @@ class Trainer:
             filepath=f'{self.config.paths.evals.hellaswag_path}/hellaswag_val.jsonl',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
+            pad_token_id=self.tokenizer.pad_id,
             size=self.config.evals.hellaswag.number_of_examples
         )
 
@@ -396,6 +397,7 @@ class Trainer:
             filepath=f'{self.config.paths.evals.winogrande_path}/winogrande_val.jsonl',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
+            pad_token_id=self.tokenizer.pad_id,
             size=self.config.evals.winogrande.number_of_examples
         )
 
@@ -409,6 +411,7 @@ class Trainer:
             filepath=f'{self.config.paths.evals.arc_challenge_path}/arc_challenge_val.jsonl',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
+            pad_token_id=self.tokenizer.pad_id,
             size=self.config.evals.arc_challenge.number_of_examples
         )
 
@@ -1199,13 +1202,13 @@ class Trainer:
             disable=not is_master_process,
             leave=False
         ):
-            tokens, mask, label_index, valid = example['tokens'], example['mask'], example['label_index'], example['valid']
+            tokens, mask, attention_mask, label_index, valid = example['tokens'], example['mask'], example['attention_mask'], example['label_index'], example['valid']
 
             tokens = tokens.to(device)
             mask = mask.to(device)
 
             with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-                logits = self.model(tokens, attention_mask=mask)['logits']
+                logits = self.model(tokens, attention_mask=attention_mask)['logits']
 
             if not valid:
                 # We want all ranks to still call forward()...
