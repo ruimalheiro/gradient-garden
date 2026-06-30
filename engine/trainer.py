@@ -114,6 +114,7 @@ class Trainer:
         self.hellaswag_data = None
         self.winogrande_data = None
         self.arc_challenge_data = None
+        self.ifeval_no_external_data = None
         self.test_generation_prompts = None
         self.tokenizer = None
         self.model = None
