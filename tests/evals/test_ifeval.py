@@ -1,6 +1,6 @@
 import pytest
 
-
+from evals.ifeval.ifeval import clean_kwargs
 from evals.ifeval.checkers import (
     CHECKERS,
     check_end_checker,
@@ -22,7 +22,6 @@ from evals.ifeval.checkers import (
     check_repeat_prompt,
     check_title,
     check_two_responses,
-    clean_kwargs,
     compare_count,
     count_keyword_occurrences,
 )
