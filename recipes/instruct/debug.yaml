@@ -44,6 +44,8 @@ config:
   paths:
     datasets:
       instruct_path: ./datasets/debug/instruct
+    evals:
+      ifeval_no_external_path: ./datasets/debug/ifeval_no_external
     runs:
       output_dir_path: ./runs
 
@@ -69,9 +71,17 @@ config:
 
   generation:
     every_x_steps: -1
-    max_test_gen_len: 64
+    max_gen_len: 64
     run_on_first_step: true
     run_on_last_step: true
+
+  evals:
+    ifeval_no_external:
+      every_x_steps: -1
+      max_gen_len: 64
+      number_of_examples: 10
+      run_on_first_step: true
+      run_on_last_step: true
 
   checkpointing:
     save_checkpoints: true
@@ -104,3 +114,7 @@ data:
         weight: 1.0
         transforms:
           max_datapoints: 1000
+
+  evals:
+      ifeval_no_external:
+        enabled: true

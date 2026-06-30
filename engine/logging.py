@@ -213,7 +213,7 @@ def prepare_val_step_no_improve_log(
 
     return console_logs
 
-def get_multiple_choice_log_labels(step_metrics: StepMetrics):
+def get_multiple_choice_eval_log_labels(step_metrics: StepMetrics):
     """ Gets console log and wandb labels"""
     if step_metrics.step_type == StepType.HELLASWAG:
         return 'hellaswag', 'HellaSwag'
@@ -222,9 +222,9 @@ def get_multiple_choice_log_labels(step_metrics: StepMetrics):
     elif step_metrics.step_type == StepType.ARC_CHALLENGE:
         return 'arc_challenge', 'ARC-Challenge'
     else:
-        raise ValueError(f'Invalid step type for multiple choice labels: {step_metrics.step_type.value}')
+        raise ValueError(f'Invalid step type for multiple choice eval labels: {step_metrics.step_type.value}')
 
-def prepare_multiple_choice_log(
+def prepare_multiple_choice_eval_log(
     *,
     step_metrics: StepMetrics,
     trainer_state: TrainerState
@@ -236,7 +236,7 @@ def prepare_multiple_choice_log(
     ):
         raise ValueError(f'Invalid step type for logging: {step_metrics.step_type.value}')
 
-    console_log_label, wandb_label = get_multiple_choice_log_labels(step_metrics)
+    console_log_label, wandb_label = get_multiple_choice_eval_log_labels(step_metrics)
 
     step = trainer_state.current_step
 
@@ -246,6 +246,40 @@ def prepare_multiple_choice_log(
     )
 
     wandb_metrics = {f'{wandb_label} accuracy': step_metrics.accuracy}
+    console_logs = [console_log]
+
+    return console_logs, wandb_metrics
+
+def get_generation_eval_log_labels(step_metrics: StepMetrics):
+    """ Gets console log and wandb labels"""
+    if step_metrics.step_type == StepType.IFEVAL_NO_EXTERNAL:
+        return 'ifeval (no external knowledge)', 'IFEval (No external knowledge)'
+    else:
+        raise ValueError(f'Invalid step type for generation eval labels: {step_metrics.step_type.value}')
+
+def prepare_generation_eval_log(
+    *,
+    step_metrics: StepMetrics,
+    trainer_state: TrainerState
+):
+    if step_metrics.step_type not in (
+        StepType.IFEVAL_NO_EXTERNAL
+    ):
+        raise ValueError(f'Invalid step type for logging: {step_metrics.step_type.value}')
+
+    console_log_label, wandb_label = get_generation_eval_log_labels(step_metrics)
+
+    step = trainer_state.current_step
+
+    console_log = (
+        f'{step:4d} | '
+        f'{console_log_label} prompt accuracy: {step_metrics.prompt_accuracy:.4f} | instruction accuracy: {step_metrics.instruction_accuracy:.4f}'
+    )
+
+    wandb_metrics = {
+        f'{wandb_label} prompt accuracy': step_metrics.prompt_accuracy,
+        f'{wandb_label} instruction accuracy': step_metrics.instruction_accuracy,
+    }
     console_logs = [console_log]
 
     return console_logs, wandb_metrics

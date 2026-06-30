@@ -3,7 +3,7 @@ import torch
 from inference.runtime import InferenceRuntime
 from config import GlobalConfig
 from enum import Enum
-from evals import (
+from evals.multiple_choice import (
     load_multiple_choice_eval_file,
     estimate_best_candidate_index_from_logits
 )

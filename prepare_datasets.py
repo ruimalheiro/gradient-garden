@@ -7,9 +7,10 @@ from config import load_config, TrainingStage
 from utils import load_json_file
 from recipes.config import load_recipe
 from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
-from datasets_preparation.prepare_hellaswag_dataset import prepare_hellaswag_dataset
-from datasets_preparation.prepare_winogrande_dataset import prepare_winogrande_dataset
-from datasets_preparation.prepare_arc_challenge_dataset import prepare_arc_challenge_dataset
+from datasets_preparation.evals.prepare_hellaswag_dataset import prepare_hellaswag_dataset
+from datasets_preparation.evals.prepare_winogrande_dataset import prepare_winogrande_dataset
+from datasets_preparation.evals.prepare_arc_challenge_dataset import prepare_arc_challenge_dataset
+from datasets_preparation.evals.prepare_ifeval_no_external import prepare_ifeval_no_external_dataset
 from datasets_preparation.prepare_pretraining_dataset import prepare_pretraining_dataset
 from datasets_preparation.prepare_instruct_dataset import prepare_instruct_dataset
 from datasets_preparation.prepare_dpo_dataset import prepare_dpo_dataset
@@ -30,6 +31,8 @@ if __name__ == '__main__':
     action_group.add_argument('--hellaswag', action='store_true', help='Prepare HellaSwag eval dataset')
     action_group.add_argument('--winogrande', action='store_true', help='Prepare WinoGrande eval dataset')
     action_group.add_argument('--arc-challenge', action='store_true', help='Prepare ARC-Challenge eval dataset')
+    action_group.add_argument('--ifeval-no-external', action='store_true', help='Prepare IFEval (no external knowledge) eval dataset')
+
     action_group.add_argument('--pretraining', action='store_true', help='Prepare pretraining dataset')
     action_group.add_argument('--instruct', action='store_true', help='Prepare instruct (SFT) dataset')
     action_group.add_argument('--dpo', action='store_true', help='Prepare DPO (Direct Preference Optimization) dataset')
@@ -92,6 +95,8 @@ if __name__ == '__main__':
             prepare_winogrande_dataset(config=cfg, num_proc=num_proc)
         elif args.arc_challenge:
             prepare_arc_challenge_dataset(config=cfg, num_proc=num_proc)
+        elif args.ifeval_no_external:
+            prepare_ifeval_no_external_dataset(config=cfg, num_proc=num_proc)
         elif args.pretraining:
             prepare_pretraining_dataset(config=cfg, datasets_mix=datasets_mix, num_proc=num_proc)
         elif args.instruct:

@@ -91,6 +91,7 @@ class TrainingConfig(BaseModel):
 class EvalTaskConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     every_x_steps: int = -1
+    max_gen_len: int | None = 256
     number_of_examples: int = 200
     run_on_first_step: bool = False
     run_on_last_step: bool = False
@@ -100,6 +101,7 @@ class EvalsConfig(BaseModel):
     hellaswag: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
     winogrande: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
     arc_challenge: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
+    ifeval_no_external: EvalTaskConfig = Field(default_factory=EvalTaskConfig)
 
 class DatasetSourcePathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -116,6 +118,7 @@ class EvalPathsConfig(BaseModel):
     hellaswag_path: str = './datasets/hellaswag'
     winogrande_path: str = './datasets/winogrande'
     arc_challenge_path: str = './datasets/arc_challenge'
+    ifeval_no_external_path: str = './datasets/ifeval_no_external'
 
 class RunPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -131,7 +134,7 @@ class PathsConfig(BaseModel):
 class GenerationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     every_x_steps: int = -1
-    max_test_gen_len: int = 256
+    max_gen_len: int = 256
     run_on_first_step: bool = False
     run_on_last_step: bool = False
     test_prompts: list[str] | None = None

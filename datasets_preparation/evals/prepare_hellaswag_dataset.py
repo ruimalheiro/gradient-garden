@@ -1,4 +1,3 @@
-import os
 import json
 import torch
 
@@ -9,12 +8,12 @@ from datasets import load_dataset
 from logger import logger
 
 
-def prepare_arc_challenge_dataset(*, config, num_proc):
-    current_dir = Path(__file__).resolve().parent.parent
+def prepare_hellaswag_dataset(*, config, num_proc):
+    current_dir = Path(__file__).resolve().parent.parent.parent
 
-    data_cache_dir = current_dir / config.paths.evals.arc_challenge_path
+    data_cache_dir = current_dir / config.paths.evals.hellaswag_path
     data_cache_dir.mkdir(parents=True, exist_ok=True)
-    data_filename = data_cache_dir / 'arc_challenge_val.jsonl'
+    data_filename = data_cache_dir / 'hellaswag_val.jsonl'
 
     tokenizer = init_tokenizer(
         path=config.tokenizer.checkpoint_path,
@@ -25,47 +24,42 @@ def prepare_arc_challenge_dataset(*, config, num_proc):
 
     def prepare_example(example):
         """
-        Sample example:
-        {
-            "id": "Mercury_SC_407695",
-            "question": "Juan and LaKeisha roll a few objects down a ramp. They want to see which object rolls the farthest. What should they do so they can repeat their investigation?",
-            "choices": {
-                "text": [
-                    "Put the objects in groups.",
-                    "Change the height of the ramp.",
-                    "Choose different objects to roll.",
-                    "Record the details of the investigation.",
-                ],
-                "label": ["A", "B", "C", "D"],
-            },
-            "answerKey": "D",
-        }
+        Sample example from hellaswag (without some of the metadata):
+            {
+            "ctx": "A man is sitting on a roof. he",
+            "label": 3,
+            "endings": [
+                "is using wrap to wrap a pair of skis.",
+                "is ripping level tiles off.",
+                "is holding a rubik's cube.",
+                "starts pulling up roofing on a roof."
+            ]
+            }
         """
-        question = example['question']
-        choices_texts = example['choices']['text']
-        num_choices = len(choices_texts)
-        label_index = example['choices']['label'].index(example['answerKey'])
+        context = example['ctx']
+        label_index = int(example['label']) # Index for the correct completion
+        endings = example['endings'] # Candidates - always 4
+        num_choices = len(endings)
 
-        prompt = f'Question: {question}\nAnswer: '
-        prompt_tokens = tokenizer.encode(prompt)
+        context_tokens = tokenizer.encode(context)
 
         tokens_rows = []
         mask_rows = []
-        for choice_text in choices_texts:
-            candidate_text = prompt + choice_text
+        for ending in endings:
+            candidate_text = context + ending
             candidate_tokens = tokenizer.encode(candidate_text)
-
             tokens_rows.append(candidate_tokens)
 
             mask_row = torch.cat([
-                torch.zeros(len(prompt_tokens), dtype=torch.long),
-                torch.ones(len(candidate_tokens) - len(prompt_tokens), dtype=torch.long)
+                torch.zeros(len(context_tokens), dtype=torch.long),
+                torch.ones(len(candidate_tokens) - len(context_tokens), dtype=torch.long)
             ])
-
             mask_rows.append(mask_row)
 
+        # rows can have different lengths so pick max for row length.
         max_len = max(len(row) for row in tokens_rows)
 
+        # (num_choices candidates * max length)
         tokens = torch.zeros((num_choices, max_len), dtype=torch.long)
         mask = torch.zeros((num_choices, max_len), dtype=torch.long)
         for i, (tokens_row, mask_row) in enumerate(zip(tokens_rows, mask_rows)):
@@ -82,18 +76,17 @@ def prepare_arc_challenge_dataset(*, config, num_proc):
 
     if not data_filename.exists():
         ds = load_dataset(
-            'allenai/ai2_arc',
-            name='ARC-Challenge',
+            'Rowan/hellaswag',
             split='validation',
             num_proc=num_proc,
             token=config.third_party.hf_token
         )
 
         with open(data_filename, 'w', encoding='utf-8') as file:
-            for example in tqdm(ds, desc='Preparing ARC-Challenge eval dataset'):
+            for example in tqdm(ds, desc='Preparing HellaSwag eval dataset'):
                 processed_example = prepare_example(example)
                 json.dump(processed_example, file, ensure_ascii=False)
                 file.write('\n')
-        logger.info(f'ARC-Challenge preprocessing completed and stored at: {data_filename}')
+        logger.info(f'HellaSwag preprocessing completed and stored at: {data_filename}')
     else:
-        logger.info(f'ARC-Challenge preprocessed file already exists: {data_filename}')
+        logger.info(f'HellaSwag preprocessed file already exists: {data_filename}')

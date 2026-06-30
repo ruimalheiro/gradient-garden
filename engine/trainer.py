@@ -39,7 +39,8 @@ from engine.logging import (
     prepare_train_step_log,
     prepare_val_step_log,
     prepare_val_step_no_improve_log,
-    prepare_multiple_choice_log
+    prepare_multiple_choice_eval_log,
+    prepare_generation_eval_log
 )
 from engine.torch_profiler import (
     init_torch_profiler_context
@@ -85,9 +86,13 @@ from metrics.step import (
 )
 from metrics.model_specific import collect_model_specific_metrics
 from inference.generation import generate_and_decode
-from evals import (
+from evals.multiple_choice import (
     load_multiple_choice_eval_file,
     estimate_best_candidate_index_from_logits
+)
+from evals.ifeval.ifeval import (
+    load_ifeval_eval_file,
+    score_ifeval_example
 )
 from utils import (
     generate_name,
@@ -211,6 +216,7 @@ class Trainer:
         self.load_hellaswag_eval_data()
         self.load_winogrande_eval_data()
         self.load_arc_challenge_eval_data()
+        self.load_ifeval_no_external_eval_data()
 
     def load_generation_assets(self):
         self.load_test_generation_prompts()
@@ -369,7 +375,10 @@ class Trainer:
 
     def load_hellaswag_eval_data(self):
         if (
-            self.config.training.stage != TrainingStage.PRETRAINING or
+            not (
+                self.config.training.stage != TrainingStage.PRETRAINING or
+                self.config.training.stage != TrainingStage.INSTRUCT
+            ) or
             not self.can_run_scheduled_action(self.config.evals.hellaswag)
         ):
             return
@@ -382,7 +391,10 @@ class Trainer:
 
     def load_winogrande_eval_data(self):
         if (
-            self.config.training.stage != TrainingStage.PRETRAINING or
+            not (
+                self.config.training.stage != TrainingStage.PRETRAINING or
+                self.config.training.stage != TrainingStage.INSTRUCT
+            ) or
             not self.can_run_scheduled_action(self.config.evals.winogrande)
         ):
             return
@@ -395,7 +407,10 @@ class Trainer:
 
     def load_arc_challenge_eval_data(self):
         if (
-            self.config.training.stage != TrainingStage.PRETRAINING or
+            not (
+                self.config.training.stage != TrainingStage.PRETRAINING or
+                self.config.training.stage != TrainingStage.INSTRUCT
+            ) or
             not self.can_run_scheduled_action(self.config.evals.arc_challenge)
         ):
             return
@@ -404,6 +419,19 @@ class Trainer:
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
             size=self.config.evals.arc_challenge.number_of_examples
+        )
+
+    def load_ifeval_no_external_eval_data(self):
+        if (
+            self.config.training.stage != TrainingStage.INSTRUCT or
+            not self.can_run_scheduled_action(self.config.evals.ifeval_no_external)
+        ):
+            return
+        self.ifeval_no_external_data = load_ifeval_eval_file(
+            filepath=f'{self.config.paths.evals.ifeval_no_external_path}/ifeval_no_external_val.jsonl',
+            ddp=self.distributed_ctx.ddp,
+            is_master_process=self.distributed_ctx.is_master_process,
+            size=self.config.evals.ifeval_no_external.number_of_examples
         )
     
     def build_tokenizer(self):
@@ -739,7 +767,14 @@ class Trainer:
             StepType.WINOGRANDE,
             StepType.ARC_CHALLENGE
         ):
-            console_logs, wanb_log = prepare_multiple_choice_log(
+            console_logs, wanb_log = prepare_multiple_choice_eval_log(
+                step_metrics=step_metrics,
+                trainer_state=self.trainer_state
+            )
+        elif step_metrics.step_type in (
+            StepType.IFEVAL_NO_EXTERNAL
+        ):
+            console_logs, wanb_log = prepare_generation_eval_log(
                 step_metrics=step_metrics,
                 trainer_state=self.trainer_state
             )
@@ -1156,7 +1191,7 @@ class Trainer:
 
     @torch.inference_mode()
     def run_multiple_choice_eval(self, *, pbar, data, tqdm_label: str, step_type: StepType):
-        if not self.is_pretraining():
+        if not (self.is_pretraining() or self.is_instruct()):
             return
         ddp = self.trainer_ctx.distributed.ddp
         is_master_process = self.trainer_ctx.distributed.is_master_process
@@ -1181,7 +1216,7 @@ class Trainer:
             mask = mask.to(device)
 
             with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-                logits = self.model(tokens)['logits']
+                logits = self.model(tokens, attention_mask=mask)['logits']
 
             if not valid:
                 # We want all ranks to still call forward()...
@@ -1208,7 +1243,7 @@ class Trainer:
         self.run_multiple_choice_eval(
             pbar=pbar,
             data=self.hellaswag_data,
-            tqdm_label='HellaSwag validation',
+            tqdm_label='HellaSwag eval',
             step_type=StepType.HELLASWAG
         )
 
@@ -1217,7 +1252,7 @@ class Trainer:
         self.run_multiple_choice_eval(
             pbar=pbar,
             data=self.winogrande_data,
-            tqdm_label='WinoGrande validation',
+            tqdm_label='WinoGrande eval',
             step_type=StepType.WINOGRANDE
         )
 
@@ -1226,8 +1261,115 @@ class Trainer:
         self.run_multiple_choice_eval(
             pbar=pbar,
             data=self.arc_challenge_data,
-            tqdm_label='ARC-Challenge validation',
+            tqdm_label='ARC-Challenge eval',
             step_type=StepType.ARC_CHALLENGE
+        )
+
+    @torch.inference_mode()
+    def run_generation_eval(self, *, pbar, data, tqdm_label: str, step_type: StepType):
+        if not (self.is_instruct()):
+            return
+        ddp = self.trainer_ctx.distributed.ddp
+        is_master_process = self.trainer_ctx.distributed.is_master_process
+        device = self.trainer_ctx.device.device
+        device_type = self.trainer_ctx.device.device_type
+        autocast_dtype = self.trainer_ctx.precision.autocast_dtype
+        use_autocast = self.trainer_ctx.precision.use_autocast
+
+        num_prompt_correct = 0
+        num_prompts = 0
+        num_instruction_correct = 0
+        num_instructions = 0
+
+        self.model.eval()
+
+        prompts = [example['prompt'] for example in data]
+
+        with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
+            outputs = generate_and_decode(
+                prompts=prompts,
+                model=self.model,
+                tokenizer=self.tokenizer,
+                max_gen_len=self.config.evals.ifeval_no_external.max_gen_len,
+                temperature=0.0,
+                top_p=1.0,
+                repetition_penalty=None,
+                no_repeat_ngram_size=None,
+                full_seq=False,
+                device=device,
+                dtype=autocast_dtype,
+                is_instruct=True,
+                use_kv_cache=True,
+                batch_size=self.config.training.micro_batch_size,
+                show_progress=is_master_process,
+                progress_bar_label=f'{self.trainer_state.current_step:4d} | {tqdm_label}. Generating...'
+            )
+
+        assert len(outputs) == len(data)
+
+        for example, output in tqdm(
+            list(zip(data, outputs)),
+            f'{self.trainer_state.current_step:4d} | {tqdm_label}. Scoring...',
+            unit=' examples',
+            disable=not is_master_process,
+            leave=False,
+        ):
+            if not example['valid']:
+                continue
+
+            response = output['result_decoded']
+
+            result = score_ifeval_example(
+                example=example,
+                response=response
+            )
+
+            num_prompts += 1
+            num_prompt_correct += int(result['prompt_passed'])
+
+            for instruction_result in result['instruction_results']:
+                num_instructions += 1
+                num_instruction_correct += int(instruction_result['passed'])
+
+        if ddp:
+            counts = torch.tensor(
+                [
+                    num_prompts,
+                    num_prompt_correct,
+                    num_instructions,
+                    num_instruction_correct,
+                ],
+                dtype=torch.long,
+                device=device,
+            )
+            dist.all_reduce(counts, op=dist.ReduceOp.SUM)
+
+            num_prompts = counts[0].item()
+            num_prompt_correct = counts[1].item()
+            num_instructions = counts[2].item()
+            num_instruction_correct = counts[3].item()
+
+        prompt_accuracy = num_prompt_correct / num_prompts if num_prompts > 0 else 0.0
+        instruction_accuracy = (
+            num_instruction_correct / num_instructions
+            if num_instructions > 0
+            else 0.0
+        )
+
+        step_metrics = StepMetrics(
+            step_type=step_type,
+            prompt_accuracy=prompt_accuracy,
+            instruction_accuracy=instruction_accuracy
+        )
+        self.log_step_metrics(step_metrics=step_metrics, pbar=pbar)
+
+    @torch.inference_mode()
+    def run_if_eval_no_external(self, pbar):
+        self.run_generation_eval(
+            pbar=pbar,
+            data=self.ifeval_no_external_data,
+            tqdm_label='IFEval (no external knowledge) eval',
+            step_type=StepType.IFEVAL_NO_EXTERNAL
         )
 
     @torch.inference_mode()
@@ -1243,7 +1385,7 @@ class Trainer:
                 prompts=self.test_generation_prompts,
                 model=get_model(self.model),
                 tokenizer=self.tokenizer,
-                max_gen_len=self.config.generation.max_test_gen_len,
+                max_gen_len=self.config.generation.max_gen_len,
                 temperature=0.0,
                 top_p=1.0,
                 repetition_penalty=None,
@@ -1253,7 +1395,8 @@ class Trainer:
                 dtype=self.trainer_ctx.precision.autocast_dtype,
                 is_instruct=self.is_instruct(),
                 use_kv_cache=True,
-                batch_size=self.config.training.micro_batch_size
+                batch_size=self.config.training.micro_batch_size,
+                show_progress=self.trainer_ctx.distributed.is_master_process
             )
 
         if not self.trainer_ctx.distributed.is_master_process:
@@ -1276,6 +1419,8 @@ class Trainer:
             self.run_winogrande_eval(pbar)
         if self.should_run(run_config=self.config.evals.arc_challenge):
             self.run_arc_challenge_eval(pbar)
+        if self.should_run(run_config=self.config.evals.ifeval_no_external):
+            self.run_if_eval_no_external(pbar)
         if self.should_run(run_config=self.config.generation):
             self.run_generation(pbar)
 

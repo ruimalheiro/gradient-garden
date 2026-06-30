@@ -28,6 +28,7 @@ class RecipeEvalsDataConfig(BaseModel):
     hellaswag: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
     winogrande: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
     arc_challenge: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
+    ifeval_no_external: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
 
 class RecipeDataConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

@@ -1,4 +1,3 @@
-import os
 import json
 import torch
 
@@ -9,12 +8,12 @@ from datasets import load_dataset
 from logger import logger
 
 
-def prepare_hellaswag_dataset(*, config, num_proc):
-    current_dir = Path(__file__).resolve().parent.parent
+def prepare_winogrande_dataset(*, config, num_proc):
+    current_dir = Path(__file__).resolve().parent.parent.parent
 
-    data_cache_dir = current_dir / config.paths.evals.hellaswag_path
+    data_cache_dir = current_dir / config.paths.evals.winogrande_path
     data_cache_dir.mkdir(parents=True, exist_ok=True)
-    data_filename = data_cache_dir / 'hellaswag_val.jsonl'
+    data_filename = data_cache_dir / 'winogrande_val.jsonl'
 
     tokenizer = init_tokenizer(
         path=config.tokenizer.checkpoint_path,
@@ -25,42 +24,41 @@ def prepare_hellaswag_dataset(*, config, num_proc):
 
     def prepare_example(example):
         """
-        Sample example from hellaswag (without some of the metadata):
-            {
-            "ctx": "A man is sitting on a roof. he",
-            "label": 3,
-            "endings": [
-                "is using wrap to wrap a pair of skis.",
-                "is ripping level tiles off.",
-                "is holding a rubik's cube.",
-                "starts pulling up roofing on a roof."
-            ]
-            }
-        """
-        context = example['ctx']
-        label_index = int(example['label']) # Index for the correct completion
-        endings = example['endings'] # Candidates - always 4
-        num_choices = len(endings)
+        Sample example:
+        {
+            "sentence": "Only the bag got melted and not the wood when they were inside the flame. The _ is soft.",
+            "option1": "wood",
+            "option2": "bag",
+            "answer": "2",
+        }
 
-        context_tokens = tokenizer.encode(context)
+        """
+        sentence = example['sentence']
+        options = [example['option1'].strip(), example['option2'].strip()]
+        num_choices = len(options)
+        label_index = int(example['answer']) - 1
+
+        if sentence.count('_') != 1:
+            raise ValueError(f'Expected exactly one blank in sentence, got: {sentence}')
+        prefix, suffix = sentence.split('_', 1)
+        prefix_tokens = tokenizer.encode(prefix)
 
         tokens_rows = []
         mask_rows = []
-        for ending in endings:
-            candidate_text = context + ending
+        for option in options:
+            candidate_text = prefix + option + suffix
             candidate_tokens = tokenizer.encode(candidate_text)
-            tokens_rows.append(candidate_tokens)
 
             mask_row = torch.cat([
-                torch.zeros(len(context_tokens), dtype=torch.long),
-                torch.ones(len(candidate_tokens) - len(context_tokens), dtype=torch.long)
+                torch.zeros(len(prefix_tokens), dtype=torch.long),
+                torch.ones(len(candidate_tokens) - len(prefix_tokens), dtype=torch.long)
             ])
+
+            tokens_rows.append(candidate_tokens)
             mask_rows.append(mask_row)
 
-        # rows can have different lengths so pick max for row length.
         max_len = max(len(row) for row in tokens_rows)
 
-        # (num_choices candidates * max length)
         tokens = torch.zeros((num_choices, max_len), dtype=torch.long)
         mask = torch.zeros((num_choices, max_len), dtype=torch.long)
         for i, (tokens_row, mask_row) in enumerate(zip(tokens_rows, mask_rows)):
@@ -77,17 +75,18 @@ def prepare_hellaswag_dataset(*, config, num_proc):
 
     if not data_filename.exists():
         ds = load_dataset(
-            'Rowan/hellaswag',
+            'allenai/winogrande',
+            name='winogrande_debiased',
             split='validation',
             num_proc=num_proc,
             token=config.third_party.hf_token
         )
 
         with open(data_filename, 'w', encoding='utf-8') as file:
-            for example in tqdm(ds, desc='Preparing HellaSwag eval dataset'):
+            for example in tqdm(ds, desc='Preparing WinoGrande eval dataset'):
                 processed_example = prepare_example(example)
                 json.dump(processed_example, file, ensure_ascii=False)
                 file.write('\n')
-        logger.info(f'HellaSwag preprocessing completed and stored at: {data_filename}')
+        logger.info(f'WinoGrande preprocessing completed and stored at: {data_filename}')
     else:
-        logger.info(f'HellaSwag preprocessed file already exists: {data_filename}')
+        logger.info(f'WinoGrande preprocessed file already exists: {data_filename}')

@@ -8,6 +8,7 @@ class StepType(str, Enum):
     HELLASWAG = 'hellaswag'
     WINOGRANDE = 'winogrande'
     ARC_CHALLENGE = 'arc_challenge'
+    IFEVAL_NO_EXTERNAL = 'ifeval_no_external'
 
 @dataclass(frozen=True)
 class StepMetrics:
@@ -17,3 +18,5 @@ class StepMetrics:
     tokens_per_sec: int = None
     scheduler_metadata: dict[str, dict] = None
     accuracy: float = None
+    prompt_accuracy: float = None
+    instruction_accuracy: float = None
