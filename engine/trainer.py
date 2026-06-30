@@ -762,9 +762,7 @@ class Trainer:
                 step_metrics=step_metrics,
                 trainer_state=self.trainer_state
             )
-        elif step_metrics.step_type in (
-            StepType.IFEVAL_NO_EXTERNAL
-        ):
+        elif step_metrics.step_type in (StepType.IFEVAL_NO_EXTERNAL,):
             console_logs, wanb_log = prepare_generation_eval_log(
                 step_metrics=step_metrics,
                 trainer_state=self.trainer_state
