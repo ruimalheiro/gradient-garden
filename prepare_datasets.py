@@ -46,6 +46,7 @@ if __name__ == '__main__':
         args.hellaswag or
         args.winogrande or
         args.arc_challenge or
+        args.ifeval_no_external or
         args.pretraining or
         args.instruct or
         args.dpo
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     if args.recipe:
         prepare_recipe_data(recipe=recipe, num_proc=num_proc)
     else:
-        if (args.hellaswag or args.winogrande or args.arc_challenge) and args.mix_file:
+        if (args.hellaswag or args.winogrande or args.arc_challenge or args.ifeval_no_external) and args.mix_file:
             parser.error('"--mix-file" is only supported for training datasets.')
 
         datasets_mix = load_json_file(args.mix_file) if args.mix_file is not None else None

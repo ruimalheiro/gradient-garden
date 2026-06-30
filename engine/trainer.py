@@ -375,10 +375,7 @@ class Trainer:
 
     def load_hellaswag_eval_data(self):
         if (
-            not (
-                self.config.training.stage != TrainingStage.PRETRAINING or
-                self.config.training.stage != TrainingStage.INSTRUCT
-            ) or
+            self.config.training.stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT) or
             not self.can_run_scheduled_action(self.config.evals.hellaswag)
         ):
             return
@@ -391,10 +388,7 @@ class Trainer:
 
     def load_winogrande_eval_data(self):
         if (
-            not (
-                self.config.training.stage != TrainingStage.PRETRAINING or
-                self.config.training.stage != TrainingStage.INSTRUCT
-            ) or
+            self.config.training.stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT) or
             not self.can_run_scheduled_action(self.config.evals.winogrande)
         ):
             return
@@ -407,10 +401,7 @@ class Trainer:
 
     def load_arc_challenge_eval_data(self):
         if (
-            not (
-                self.config.training.stage != TrainingStage.PRETRAINING or
-                self.config.training.stage != TrainingStage.INSTRUCT
-            ) or
+            self.config.training.stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT) or
             not self.can_run_scheduled_action(self.config.evals.arc_challenge)
         ):
             return
