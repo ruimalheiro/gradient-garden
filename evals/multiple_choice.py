@@ -32,9 +32,10 @@ def load_multiple_choice_eval_file(
         }
 
     def prepare_dummy_line_fn():
+        tokens = torch.full((1, 2), pad_token_id, dtype=torch.long)
         return {
-            'tokens': torch.zeros((1, 2), dtype=torch.long),
-            'mask': torch.zeros((1, 2), dtype=torch.long),
+            'tokens': tokens,
+            'mask': torch.zeros_like(tokens),
             'attention_mask': torch.ones_like(tokens),
             'label_index': -1,
             'valid': False

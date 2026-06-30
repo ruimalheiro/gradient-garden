@@ -1206,6 +1206,7 @@ class Trainer:
 
             tokens = tokens.to(device)
             mask = mask.to(device)
+            attention_mask = attention_mask.to(device)
 
             with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
                 logits = self.model(tokens, attention_mask=attention_mask)['logits']
