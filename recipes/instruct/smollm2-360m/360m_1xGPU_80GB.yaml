@@ -63,7 +63,7 @@ config:
 
   generation:
     every_x_steps: 50
-    max_test_gen_len: 64
+    max_gen_len: 64
     run_on_first_step: true
     run_on_last_step: true
 
