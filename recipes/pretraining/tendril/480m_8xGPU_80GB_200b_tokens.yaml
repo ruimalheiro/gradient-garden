@@ -1,23 +1,23 @@
-name: tendril_480m_8xGPU_80GB_pretraining_smoke_test
-description: 8xGPU_80GB pretraining smoke test recipe for Tendril 480M with over ~5B tokens.
+name: tendril_480m_8xGPU_80GB_pretraining_200b
+description: 8xGPU_80GB pretraining recipe for Tendril 480M with over ~200B tokens.
 
 config:
   run:
-    name: tendril_480m_8xGPU_80GB_pretraining_smoke_test
+    name: tendril_480m_8xGPU_80GB_pretraining_200b
 
   runtime:
     device_type: cuda
     training_precision: bf16
     use_torch_compile: true
     use_fsdp: false
-    number_of_cpu_processes: 16
+    number_of_cpu_processes: 24
 
   training:
     stage: pretraining
     seed: 42
     total_batch_size: 1048576
     micro_batch_size: 8
-    max_steps: 4769
+    max_steps: 381470
     early_stopping_patience: 1000000
     early_stopping_patience_skip_steps: 0
 
@@ -40,7 +40,7 @@ config:
 
   paths:
     datasets:
-      pretraining_path: ./datasets/pretraining_5b_climbmix_smoke
+      pretraining_path: ./datasets/pretraining_200b_climbmix
     evals:
       hellaswag_path: ./datasets/hellaswag
       winogrande_path: ./datasets/winogrande
@@ -61,9 +61,9 @@ config:
           warmup_steps: 1000
         wsd:
           start_step: 0
-          warmup_steps: 200
-          stable_steps: 3600
-          decay_steps: 969
+          warmup_steps: 1000
+          stable_steps: 342323
+          decay_steps: 38147
     muon:
       enabled: false
 
@@ -74,32 +74,32 @@ config:
     run_on_last_step: true
 
   generation:
-    every_x_steps: 500
+    every_x_steps: 1000
     max_test_gen_len: 64
     run_on_first_step: true
     run_on_last_step: true
 
   evals:
     hellaswag:
-      every_x_steps: 500
+      every_x_steps: 5000
       number_of_examples: 1000
       run_on_first_step: true
       run_on_last_step: true
     winogrande:
-      every_x_steps: 500
+      every_x_steps: 5000
       number_of_examples: 1000
       run_on_first_step: true
       run_on_last_step: true
     arc_challenge:
-      every_x_steps: 500
+      every_x_steps: 5000
       number_of_examples: 299
       run_on_first_step: true
       run_on_last_step: true
 
   checkpointing:
     save_checkpoints: true
-    every_x_steps: 500
-    max_number_checkpoints: 8
+    every_x_steps: 2000
+    max_number_checkpoints: 30
     run_on_first_step: true
     run_on_last_step: true
 
@@ -111,7 +111,7 @@ data:
 
   datasets_common_settings:
     shard_size: 100_000_000
-    target_tokens: 5_100_000_000
+    target_tokens: 400_000_000_000
     validation_ratio: 0.002
     interleave_stopping_strategy: first_exhausted
 
