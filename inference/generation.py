@@ -1,8 +1,10 @@
 import torch
+import math
 
 from collections import defaultdict
 from inference.kv_cache import KVCache
 from utils import batch_generator
+from tqdm.auto import tqdm
 
 
 def sample_top_p(probs, p):
@@ -305,7 +307,9 @@ def generate_and_decode(
         is_instruct,
         use_kv_cache,
         batch_size,
-        skip_encoding=False
+        skip_encoding=False,
+        show_progress=False,
+        progress_bar_label=None
     ):
         vocab_size = tokenizer.vocab_size
         pad_token_id = tokenizer.pad_id
@@ -323,9 +327,20 @@ def generate_and_decode(
             ]
         else:
             prompt_tokens = prompts
+
+        batches = batch_generator(prompt_tokens, batch_size)
+        if show_progress:
+            total_batches = math.ceil(len(prompt_tokens) / batch_size)
+            batches = tqdm(
+                batches,
+                total=total_batches,
+                desc=progress_bar_label if progress_bar_label is not None else 'Generating...',
+                unit=' batch',
+                leave=False,
+            )
         
         outputs = []
-        for prompt_tokens_batches in batch_generator(prompt_tokens, batch_size):
+        for prompt_tokens_batches in batches:
             output = generate(
                 prompt_tokens=prompt_tokens_batches,
                 model=model,

@@ -1,7 +1,8 @@
 import json
 import torch
 import torch.nn.functional as F
-import torch.distributed as dist
+
+from engine.distributed import load_jsonl_file_and_scatter
 
 
 def load_multiple_choice_eval_file(
@@ -9,65 +10,45 @@ def load_multiple_choice_eval_file(
     filepath,
     ddp,
     is_master_process,
+    pad_token_id,
     size=None
 ):
-    # Loads the file and broadcasts to other ranks
-    def prepare_line(line):
+    def prepare_line_fn(line):
         example = json.loads(line)
         tokens = torch.tensor(example['tokens'], dtype=torch.long)
-        mask = torch.tensor(example['mask'], dtype=torch.long)
+        scoring_mask = torch.tensor(example['mask'], dtype=torch.long)
+        attention_mask = (tokens != pad_token_id).long()
         label_index = int(example['label_index'])
 
         assert tokens.ndim == 2
-        assert mask.shape == tokens.shape
+        assert scoring_mask.shape == tokens.shape
         assert 0 <= label_index < tokens.size(0)
         return {
             'tokens': tokens,
-            'mask': mask,
+            'mask': scoring_mask,
+            'attention_mask': attention_mask,
             'label_index': label_index,
             'valid': True
         }
 
-    def create_dummy():
+    def prepare_dummy_line_fn():
+        tokens = torch.full((1, 2), pad_token_id, dtype=torch.long)
         return {
-            'tokens': torch.zeros((1, 2), dtype=torch.long),
-            'mask': torch.zeros((1, 2), dtype=torch.long),
+            'tokens': tokens,
+            'mask': torch.zeros_like(tokens),
+            'attention_mask': torch.ones_like(tokens),
             'label_index': -1,
             'valid': False
         }
 
-    world_size = dist.get_world_size() if ddp else 1
-
-    shards = [None]
-    if is_master_process:
-        # master builds the shards
-        with open(filepath, 'r', encoding='utf-8') as f:
-            data = [prepare_line(line) for line in f]
-            if size is not None:
-                data = data[:size]
-
-        shard_size = (len(data) + world_size - 1) // world_size
-        shards = [data[i * shard_size : (i+1) * shard_size] for i in range(world_size)]
-
-        while len(shards) < world_size: # number of shards must be equal to the world size
-            shards.append([])
-
-        # need to pad as each shard needs to have same size so all ranks call forward()
-        dummy = create_dummy()
-        for i in range(world_size):
-            target = shard_size - len(shards[i])
-            if target > 0:
-                shards[i].extend(target * [dummy])
-
-    if ddp:
-        # scatter the shards for respective rank
-        buffer_obj = [None]
-        dist.scatter_object_list(buffer_obj, scatter_object_input_list=shards if is_master_process else None, src=0)
-        data = buffer_obj[0]
-    else:
-        data = shards[0]
-
-    return data
+    return load_jsonl_file_and_scatter(
+        filepath=filepath,
+        ddp=ddp,
+        is_master_process=is_master_process,
+        prepare_line_fn=prepare_line_fn,
+        prepare_dummy_line_fn=prepare_dummy_line_fn,
+        size=size
+    )
 
 def estimate_best_candidate_index_from_logits(tokens, mask, logits):
     # align tokens mask and logits (remove first token in tokens/mask and last logit in logits)
