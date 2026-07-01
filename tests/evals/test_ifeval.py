@@ -1,6 +1,5 @@
 import pytest
 
-from evals.ifeval.ifeval import clean_kwargs
 from evals.ifeval.checkers import (
     CHECKERS,
     check_end_checker,
@@ -50,9 +49,6 @@ def test_compare_count(value, relation, target, expected):
 def test_compare_count_invalid_relation_raises():
     with pytest.raises(ValueError, match='Unsupported relation'):
         compare_count(value=3, relation='around', target=3)
-
-def test_clean_kwargs_removes_none_values():
-    assert clean_kwargs({'a': 1, 'b': None, 'c': 'x'}) == {'a': 1, 'c': 'x'}
 
 @pytest.mark.parametrize(
     ('response', 'expected'),

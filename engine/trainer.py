@@ -2,6 +2,7 @@ import math
 import torch
 import torch.distributed as dist
 
+from collections.abc import Callable
 from torch.distributed import (
     destroy_process_group,
     broadcast
@@ -94,6 +95,10 @@ from evals.ifeval.ifeval import (
     load_ifeval_eval_file,
     score_ifeval_example
 )
+from evals.custom_sft_smoke.custom_sft_smoke import (
+    load_custom_sft_smoke_eval_file,
+    score_custom_sft_smoke_example
+)
 from utils import (
     generate_name,
     set_seed,
@@ -115,6 +120,7 @@ class Trainer:
         self.winogrande_data = None
         self.arc_challenge_data = None
         self.ifeval_no_external_data = None
+        self.custom_sft_smoke_data = None
         self.test_generation_prompts = None
         self.tokenizer = None
         self.model = None
@@ -218,6 +224,7 @@ class Trainer:
         self.load_winogrande_eval_data()
         self.load_arc_challenge_eval_data()
         self.load_ifeval_no_external_eval_data()
+        self.load_custom_sft_smoke_eval_data()
 
     def load_generation_assets(self):
         self.load_test_generation_prompts()
@@ -381,7 +388,7 @@ class Trainer:
         ):
             return
         self.hellaswag_data = load_multiple_choice_eval_file(
-            filepath=f'{self.config.paths.evals.hellaswag_path}/hellaswag_val.jsonl',
+            filepath=f'{self.config.paths.evals.hellaswag_path}/{self.config.paths.evals.data_filename}',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
             pad_token_id=self.tokenizer.pad_id,
@@ -395,7 +402,7 @@ class Trainer:
         ):
             return
         self.winogrande_data = load_multiple_choice_eval_file(
-            filepath=f'{self.config.paths.evals.winogrande_path}/winogrande_val.jsonl',
+            filepath=f'{self.config.paths.evals.winogrande_path}/{self.config.paths.evals.data_filename}',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
             pad_token_id=self.tokenizer.pad_id,
@@ -409,7 +416,7 @@ class Trainer:
         ):
             return
         self.arc_challenge_data = load_multiple_choice_eval_file(
-            filepath=f'{self.config.paths.evals.arc_challenge_path}/arc_challenge_val.jsonl',
+            filepath=f'{self.config.paths.evals.arc_challenge_path}/{self.config.paths.evals.data_filename}',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
             pad_token_id=self.tokenizer.pad_id,
@@ -423,10 +430,23 @@ class Trainer:
         ):
             return
         self.ifeval_no_external_data = load_ifeval_eval_file(
-            filepath=f'{self.config.paths.evals.ifeval_no_external_path}/ifeval_no_external_val.jsonl',
+            filepath=f'{self.config.paths.evals.ifeval_no_external_path}/{self.config.paths.evals.data_filename}',
             ddp=self.distributed_ctx.ddp,
             is_master_process=self.distributed_ctx.is_master_process,
             size=self.config.evals.ifeval_no_external.number_of_examples
+        )
+
+    def load_custom_sft_smoke_eval_data(self):
+        if (
+            self.config.training.stage != TrainingStage.INSTRUCT or
+            not self.can_run_scheduled_action(self.config.evals.custom_sft_smoke)
+        ):
+            return
+        self.custom_sft_smoke_data = load_custom_sft_smoke_eval_file(
+            filepath=f'{self.config.paths.evals.custom_sft_smoke_path}/{self.config.paths.evals.data_filename}',
+            ddp=self.distributed_ctx.ddp,
+            is_master_process=self.distributed_ctx.is_master_process,
+            size=self.config.evals.custom_sft_smoke.number_of_examples
         )
     
     def build_tokenizer(self):
@@ -766,7 +786,10 @@ class Trainer:
                 step_metrics=step_metrics,
                 trainer_state=self.trainer_state
             )
-        elif step_metrics.step_type in (StepType.IFEVAL_NO_EXTERNAL,):
+        elif step_metrics.step_type in (
+            StepType.IFEVAL_NO_EXTERNAL,
+            StepType.CUSTOM_SFT_SMOKE
+        ):
             console_logs, wanb_log = prepare_generation_eval_log(
                 step_metrics=step_metrics,
                 trainer_state=self.trainer_state
@@ -1260,7 +1283,17 @@ class Trainer:
         )
 
     @torch.inference_mode()
-    def run_generation_eval(self, *, pbar, data, tqdm_label: str, step_type: StepType):
+    def run_generation_eval(
+        self,
+        *,
+        pbar,
+        data,
+        tqdm_label: str,
+        step_type: StepType,
+        scorer_fn: Callable[..., dict],
+        max_gen_len: int,
+        batch_size: int
+    ):
         if not (self.is_instruct()):
             return
         ddp = self.trainer_ctx.distributed.ddp
@@ -1284,7 +1317,7 @@ class Trainer:
                 prompts=prompts,
                 model=get_model(self.model),
                 tokenizer=self.tokenizer,
-                max_gen_len=self.config.evals.ifeval_no_external.max_gen_len,
+                max_gen_len=max_gen_len,
                 temperature=0.0,
                 top_p=1.0,
                 repetition_penalty=None,
@@ -1294,7 +1327,7 @@ class Trainer:
                 dtype=autocast_dtype,
                 is_instruct=True,
                 use_kv_cache=True,
-                batch_size=self.config.training.micro_batch_size,
+                batch_size=batch_size,
                 show_progress=is_master_process,
                 progress_bar_label=f'{self.trainer_state.current_step:4d} | {tqdm_label}. Generating...'
             )
@@ -1313,7 +1346,7 @@ class Trainer:
 
             response = output['result_decoded']
 
-            result = score_ifeval_example(
+            result = scorer_fn(
                 example=example,
                 response=response
             )
@@ -1362,8 +1395,23 @@ class Trainer:
         self.run_generation_eval(
             pbar=pbar,
             data=self.ifeval_no_external_data,
-            tqdm_label='IFEval (no external knowledge) eval',
-            step_type=StepType.IFEVAL_NO_EXTERNAL
+            tqdm_label='IFEval (no external)',
+            step_type=StepType.IFEVAL_NO_EXTERNAL,
+            scorer_fn=score_ifeval_example,
+            max_gen_len=self.config.evals.ifeval_no_external.max_gen_len,
+            batch_size=self.config.evals.ifeval_no_external.batch_size
+        )
+
+    @torch.inference_mode()
+    def run_custom_sft_smoke(self, pbar):
+        self.run_generation_eval(
+            pbar=pbar,
+            data=self.custom_sft_smoke_data,
+            tqdm_label='Custom SFT smoke',
+            step_type=StepType.CUSTOM_SFT_SMOKE,
+            scorer_fn=score_custom_sft_smoke_example,
+            max_gen_len=self.config.evals.custom_sft_smoke.max_gen_len,
+            batch_size=self.config.evals.custom_sft_smoke.batch_size
         )
 
     @torch.inference_mode()
@@ -1415,6 +1463,8 @@ class Trainer:
             self.run_arc_challenge_eval(pbar)
         if self.should_run(run_config=self.config.evals.ifeval_no_external):
             self.run_if_eval_no_external(pbar)
+        if self.should_run(run_config=self.config.evals.custom_sft_smoke):
+            self.run_custom_sft_smoke(pbar)
         if self.should_run(run_config=self.config.generation):
             self.run_generation(pbar)
 

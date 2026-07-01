@@ -29,6 +29,7 @@ class RecipeEvalsDataConfig(BaseModel):
     winogrande: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
     arc_challenge: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
     ifeval_no_external: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
+    custom_sft_smoke: RecipeEvalDatasetConfig = Field(default_factory=RecipeEvalDatasetConfig)
 
 class RecipeDataConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

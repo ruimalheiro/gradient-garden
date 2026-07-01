@@ -45,10 +45,11 @@ config:
     datasets:
       instruct_path: ./datasets/debug/instruct
     evals:
-      ifeval_no_external_path: ./datasets/debug/ifeval_no_external
-      hellaswag_path: ./datasets/debug/hellaswag
-      winogrande_path: ./datasets/debug/winogrande
-      arc_challenge_path: ./datasets/debug/arc_challenge
+      hellaswag_path: ./datasets/debug/evals/hellaswag
+      winogrande_path: ./datasets/debug/evals/winogrande
+      arc_challenge_path: ./datasets/debug/evals/arc_challenge
+      ifeval_no_external_path: ./datasets/debug/evals/ifeval_no_external
+      custom_sft_smoke_path: ./datasets/debug/evals/custom_sft_smoke
     runs:
       output_dir_path: ./runs
 
@@ -100,6 +101,12 @@ config:
       number_of_examples: 10
       run_on_first_step: true
       run_on_last_step: true
+    custom_sft_smoke:
+      every_x_steps: -1
+      max_gen_len: 64
+      number_of_examples: 10
+      run_on_first_step: true
+      run_on_last_step: true
 
   checkpointing:
     save_checkpoints: true
@@ -141,4 +148,6 @@ data:
       arc_challenge:
         enabled: true
       ifeval_no_external:
+        enabled: true
+      custom_sft_smoke:
         enabled: true
