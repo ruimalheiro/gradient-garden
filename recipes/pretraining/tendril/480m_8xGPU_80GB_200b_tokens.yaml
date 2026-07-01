@@ -111,7 +111,7 @@ data:
 
   datasets_common_settings:
     shard_size: 100_000_000
-    target_tokens: 400_000_000_000
+    target_tokens: 200_000_000_000
     validation_ratio: 0.002
     interleave_stopping_strategy: first_exhausted
 
