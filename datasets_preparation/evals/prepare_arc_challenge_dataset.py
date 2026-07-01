@@ -13,7 +13,7 @@ def prepare_arc_challenge_dataset(*, config, num_proc):
 
     data_cache_dir = current_dir / config.paths.evals.arc_challenge_path
     data_cache_dir.mkdir(parents=True, exist_ok=True)
-    data_filename = data_cache_dir / 'arc_challenge_val.jsonl'
+    data_filename = data_cache_dir / config.paths.evals.data_filename
 
     tokenizer = init_tokenizer(
         path=config.tokenizer.checkpoint_path,

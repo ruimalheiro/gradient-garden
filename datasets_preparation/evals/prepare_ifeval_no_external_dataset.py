@@ -13,7 +13,7 @@ def prepare_ifeval_no_external_dataset(*, config, num_proc):
 
     data_cache_dir = current_dir / config.paths.evals.ifeval_no_external_path
     data_cache_dir.mkdir(parents=True, exist_ok=True)
-    data_filename = data_cache_dir / 'ifeval_no_external_val.jsonl'
+    data_filename = data_cache_dir / config.paths.evals.data_filename
 
     if not data_filename.exists():
         ds = load_dataset(

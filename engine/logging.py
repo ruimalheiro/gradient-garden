@@ -254,6 +254,8 @@ def get_generation_eval_log_labels(step_metrics: StepMetrics):
     """ Gets console log and wandb labels"""
     if step_metrics.step_type == StepType.IFEVAL_NO_EXTERNAL:
         return 'ifeval (no external knowledge)', 'IFEval (No external knowledge)'
+    elif step_metrics.step_type == StepType.CUSTOM_SFT_SMOKE:
+        return 'custom sft smoke', 'Custom SFT smoke'
     else:
         raise ValueError(f'Invalid step type for generation eval labels: {step_metrics.step_type.value}')
 
@@ -262,7 +264,10 @@ def prepare_generation_eval_log(
     step_metrics: StepMetrics,
     trainer_state: TrainerState
 ):
-    if step_metrics.step_type not in (StepType.IFEVAL_NO_EXTERNAL,):
+    if step_metrics.step_type not in (
+        StepType.IFEVAL_NO_EXTERNAL,
+        StepType.CUSTOM_SFT_SMOKE
+    ):
         raise ValueError(f'Invalid step type for logging: {step_metrics.step_type.value}')
 
     console_log_label, wandb_label = get_generation_eval_log_labels(step_metrics)

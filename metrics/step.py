@@ -9,6 +9,7 @@ class StepType(str, Enum):
     WINOGRANDE = 'winogrande'
     ARC_CHALLENGE = 'arc_challenge'
     IFEVAL_NO_EXTERNAL = 'ifeval_no_external'
+    CUSTOM_SFT_SMOKE = 'custom_sft_smoke'
 
 @dataclass(frozen=True)
 class StepMetrics:

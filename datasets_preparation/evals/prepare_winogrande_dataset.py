@@ -13,7 +13,7 @@ def prepare_winogrande_dataset(*, config, num_proc):
 
     data_cache_dir = current_dir / config.paths.evals.winogrande_path
     data_cache_dir.mkdir(parents=True, exist_ok=True)
-    data_filename = data_cache_dir / 'winogrande_val.jsonl'
+    data_filename = data_cache_dir / config.paths.evals.data_filename
 
     tokenizer = init_tokenizer(
         path=config.tokenizer.checkpoint_path,

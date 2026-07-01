@@ -23,7 +23,7 @@ def evaluate_hellaswag(
 ):
     return evaluate_multiple_choice_task(
         task=EvalTask.HELLASWAG,
-        filepath=f'{config.paths.evals.hellaswag_path}/hellaswag_val.jsonl',
+        filepath=f'{config.paths.evals.hellaswag_path}/{self.config.paths.evals.data_filename}',
         inference_runtime=inference_runtime,
         batch_size=batch_size,
         num_examples=num_examples
@@ -37,7 +37,7 @@ def evaluate_winogrande(
 ):
     return evaluate_multiple_choice_task(
         task=EvalTask.WINOGRANDE,
-        filepath=f'{config.paths.evals.winogrande_path}/winogrande_val.jsonl',
+        filepath=f'{config.paths.evals.winogrande_path}/{self.config.paths.evals.data_filename}',
         inference_runtime=inference_runtime,
         batch_size=batch_size,
         num_examples=num_examples
@@ -51,7 +51,7 @@ def evaluate_arc_challenge(
 ):
     return evaluate_multiple_choice_task(
         task=EvalTask.ARC_CHALLENGE,
-        filepath=f'{config.paths.evals.arc_challenge_path}/arc_challenge_val.jsonl',
+        filepath=f'{config.paths.evals.arc_challenge_path}/{self.config.paths.evals.data_filename}',
         inference_runtime=inference_runtime,
         batch_size=batch_size,
         num_examples=num_examples

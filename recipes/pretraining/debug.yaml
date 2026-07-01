@@ -42,9 +42,9 @@ config:
     datasets:
       pretraining_path: ./datasets/debug/pretraining
     evals:
-      hellaswag_path: ./datasets/debug/hellaswag
-      winogrande_path: ./datasets/debug/winogrande
-      arc_challenge_path: ./datasets/debug/arc_challenge
+      hellaswag_path: ./datasets/debug/evals/hellaswag
+      winogrande_path: ./datasets/debug/evals/winogrande
+      arc_challenge_path: ./datasets/debug/evals/arc_challenge
     runs:
       output_dir_path: ./runs
 
