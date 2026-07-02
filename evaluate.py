@@ -79,6 +79,13 @@ if __name__ == '__main__':
 
     validate_runtime_args(args, parser)
 
+    if args.ifeval_no_external or args.custom_sft_smoke:
+        logger.warning(
+            '--batch-size does not affect --ifeval-no-external or --custom-sft-smoke. '
+            'Instruction following evals use the batch_size saved in the checkpoint config '
+            'for their respective eval task.'
+        )
+
     if not any([
         args.validation,
         args.hellaswag,
