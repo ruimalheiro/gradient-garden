@@ -29,16 +29,23 @@ def check_stage_for_validation(stage: TrainingStage, parser: argparse.ArgumentPa
     if stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT):
         parser.error('--validation is only supported for pretraining and instruct checkpoints.')
 
-def check_stage_for_evals(stage: TrainingStage, parser: argparse.ArgumentParser):
-    if stage not in (TrainingStage.PRETRAINING , TrainingStage.INSTRUCT):
+def check_stage_for_multiple_choice_evals(stage: TrainingStage, parser: argparse.ArgumentParser):
+    if stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT):
         parser.error(
-            '--hellaswag, '
-            '--winogrande, '
-            '--arc-challenge, '
-            '--ifeval-no-external or '
-            '--custom-sft-smoke '
+            '--hellaswag, --winogrande, and --arc-challenge '
             'are only supported for pretraining and instruct checkpoints.'
         )
+
+def check_stage_for_instruction_following_evals(stage: TrainingStage, parser: argparse.ArgumentParser):
+    if stage != TrainingStage.INSTRUCT:
+        parser.error(
+            '--ifeval-no-external and --custom-sft-smoke '
+            'are only supported for instruct checkpoints.'
+        )
+
+def check_num_examples(*, enabled: bool, flag_name: str, value: int, parser: argparse.ArgumentParser):
+    if enabled and (value == 0 or value < -1):
+        parser.error(f'{flag_name} must be -1 or greater than 0')
 
 if __name__ == '__main__':
     logger.set_master(True)
@@ -72,17 +79,28 @@ if __name__ == '__main__':
 
     validate_runtime_args(args, parser)
 
-    if not any([args.validation, args.hellaswag, args.winogrande, args.arc_challenge]):
-        parser.error('Select at least one eval: --validation, --hellaswag, --winogrande, or --arc-challenge')
+    if not any([
+        args.validation,
+        args.hellaswag,
+        args.winogrande,
+        args.arc_challenge,
+        args.ifeval_no_external,
+        args.custom_sft_smoke
+    ]):
+        parser.error(
+            'Select at least one eval: '
+            '--validation, --hellaswag, --winogrande, --arc-challenge, '
+            '--ifeval-no-external, or --custom-sft-smoke'
+        )
 
     if args.validation and args.validation_steps <= 0:
         parser.error('--validation-steps must be greater than 0')
-    if args.hellaswag and (args.hellaswag_examples == 0 or args.hellaswag_examples < -1):
-        parser.error('--hellaswag-examples must be -1 or greater than 0')
-    if args.winogrande and (args.winogrande_examples == 0 or args.winogrande_examples < -1):
-        parser.error('--winogrande-examples must be -1 or greater than 0')
-    if args.arc_challenge and (args.arc_challenge_examples == 0 or args.arc_challenge_examples < -1):
-        parser.error('--arc-challenge-examples must be -1 or greater than 0')
+
+    check_num_examples(enabled=args.hellaswag, flag_name='--hellaswag-examples', value=args.hellaswag_examples, parser=parser)
+    check_num_examples(enabled=args.winogrande, flag_name='--winogrande-examples', value=args.winogrande_examples, parser=parser)
+    check_num_examples(enabled=args.arc_challenge, flag_name='--arc-challenge-examples', value=args.arc_challenge_examples, parser=parser)
+    check_num_examples(enabled=args.ifeval_no_external, flag_name='--ifeval-no-external-examples', value=args.ifeval_no_external_examples, parser=parser)
+    check_num_examples(enabled=args.custom_sft_smoke, flag_name='--custom-sft-smoke-examples', value=args.custom_sft_smoke_examples, parser=parser)
 
     validate_file_path(args.checkpoint, parser)
 
@@ -117,7 +135,7 @@ if __name__ == '__main__':
             ignore_index=checkpoint_data.config.tokenizer.ignore_index
         )
     if args.hellaswag:
-        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
+        check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
         results['hellaswag'] = evaluate_hellaswag(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
@@ -125,7 +143,7 @@ if __name__ == '__main__':
             num_examples=args.hellaswag_examples
         )
     if args.winogrande:
-        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
+        check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
         results['winogrande'] = evaluate_winogrande(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
@@ -133,7 +151,7 @@ if __name__ == '__main__':
             num_examples=args.winogrande_examples
         )
     if args.arc_challenge:
-        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
+        check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
         results['arc_challenge'] = evaluate_arc_challenge(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
@@ -141,7 +159,7 @@ if __name__ == '__main__':
             num_examples=args.arc_challenge_examples
         )
     if args.ifeval_no_external:
-        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
+        check_stage_for_instruction_following_evals(checkpoint_data.config.training.stage, parser)
         results['ifeval_no_external'] = evaluate_ifeval_no_external(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
@@ -149,7 +167,7 @@ if __name__ == '__main__':
             num_examples=args.ifeval_no_external_examples
         )
     if args.custom_sft_smoke:
-        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
+        check_stage_for_instruction_following_evals(checkpoint_data.config.training.stage, parser)
         results['custom_sft_smoke'] = evaluate_custom_sft_smoke(
             inference_runtime=inference_runtime,
             config=checkpoint_data.config,
