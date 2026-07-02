@@ -55,16 +55,19 @@ The project began with a decoder-only transformer baseline and has evolved into 
 - KV cache for autoregressive decoding
 
 ### Evaluation
-- Shared multiple-choice evaluation path
+- Multiple choice evals. These are scored as plain causal language model likelihood tasks, without the instruct chat template.
   - HellaSwag
   - WinoGrande
   - ARC-Challenge
-- Additional benchmarks can be added through the same multiple-choice evaluation flow
+- Instruction following evals. These generate responses with the instruct chat template and score the decoded outputs with deterministic checkers.
+  - IFEval (no external): A filtered subset of IFEval that excludes prompts requiring external pages, links or articles.
+  - Custom SFT smoke: A small synthetic eval for SFT sanity checks, including exact answers, formatting constraints, short rewrites, summarization, and role leak detection.
+- Additional benchmarks can be added through the same multiple choice or instruction list evaluation flows.
 
 ## Notes
 - The project is currently focused on CUDA-based training workflows.
 - Additional model architectures can be added through the model registry.
-- By default, the project uses a Hugging Face tokenizer. Future work will add mechanism to build and train a tokenizer.
+- By default, the project uses a Hugging Face tokenizer. Future work will add a mechanism to build and train a tokenizer.
 
 ## Project structure
 - `cli/` Common cli related logic.
@@ -91,6 +94,9 @@ The project began with a decoder-only transformer baseline and has evolved into 
     - HellaSwag
     - WinoGrande
     - ARC-Challenge
+  - Instruction following evals:
+    - IFEval (no external)
+    - Custom SFT smoke
 - `examples/` Templates for local setup files like the `.env` secrets file and dataset mix.
 - `inference/` Contains inference related components like KV cache implementation and logic for sampling and text generation.
 - `metrics/` Utilities for metric aggregation.
@@ -138,6 +144,8 @@ The project began with a decoder-only transformer baseline and has evolved into 
       - HellaSwag: `python prepare_datasets.py --hellaswag`
       - WinoGrande: `python prepare_datasets.py --winogrande`
       - ARC-Challenge: `python prepare_datasets.py --arc-challenge`
+      - IFEval (no external): `python prepare_datasets.py --ifeval-no-external`
+      - Custom SFT smoke: `python prepare_datasets.py --custom-sft-smoke`
     - Training and validation:
       - Pretraining: `python prepare_datasets.py --pretraining`
       - Instruct: `python prepare_datasets.py --instruct`
@@ -166,7 +174,7 @@ The main sections are:
 - `optimizers`: AdamW and optional Muon configuration
 - `paths`: dataset, evaluation, runs, and prompt paths
 - `validation`: validation frequency and number of validation steps
-- `evals`: HellaSwag, WinoGrande, and ARC-Challenge settings
+- `evals`: what evals to run and respective settings
 - `generation`: text generation frequency and max generation length
 - `checkpointing`: checkpoint save frequency and retention
 - `tokenizer`: tokenizer backend and checkpoint path
@@ -337,6 +345,10 @@ python train.py --recipe recipes/pretraining/debug.yaml
       --winogrande-examples 100 \
       --arc-challenge \
       --arc-challenge-examples 100 \
+      --ifeval-no-external \
+      --ifeval-no-external-examples 100 \
+      --custom-sft-smoke \
+      --custom-sft-smoke-examples 100 \
       --batch-size 4 \
       --device cuda \
       --dtype bf16 \
@@ -354,7 +366,7 @@ pytest
 ```
 
 ## Local files
-For convenience local configurations, recipes or other files should use the naming convention as defined in `.gitignore`:
+For convenience, local configurations, recipes or other files should use the naming convention as defined in `.gitignore`:
 ```
 *.local.json
 *.private.json

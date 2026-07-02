@@ -18,7 +18,9 @@ from evals.validation import evaluate_validation_ppl
 from evals.evaluation import (
     evaluate_hellaswag,
     evaluate_winogrande,
-    evaluate_arc_challenge
+    evaluate_arc_challenge,
+    evaluate_ifeval_no_external,
+    evaluate_custom_sft_smoke
 )
 from config import TrainingStage
 
@@ -28,8 +30,15 @@ def check_stage_for_validation(stage: TrainingStage, parser: argparse.ArgumentPa
         parser.error('--validation is only supported for pretraining and instruct checkpoints.')
 
 def check_stage_for_evals(stage: TrainingStage, parser: argparse.ArgumentParser):
-    if stage != TrainingStage.PRETRAINING:
-        parser.error('--hellaswag, --winogrande, or --arc-challenge are only supported for pretraining checkpoints.')
+    if stage not in (TrainingStage.PRETRAINING , TrainingStage.INSTRUCT):
+        parser.error(
+            '--hellaswag, '
+            '--winogrande, '
+            '--arc-challenge, '
+            '--ifeval-no-external or '
+            '--custom-sft-smoke '
+            'are only supported for pretraining and instruct checkpoints.'
+        )
 
 if __name__ == '__main__':
     logger.set_master(True)
@@ -49,6 +58,12 @@ if __name__ == '__main__':
 
     parser.add_argument('--arc-challenge', action='store_true', help='Run ARC-Challenge eval.')
     parser.add_argument('--arc-challenge-examples', type=int, default=-1, help='Number of ARC-Challenge examples to run. Use -1 for all.')
+
+    parser.add_argument('--ifeval-no-external', action='store_true', help='Run IFEval (no external) eval.')
+    parser.add_argument('--ifeval-no-external-examples', type=int, default=-1, help='Number of IFEval (no external) examples to run. Use -1 for all.')
+
+    parser.add_argument('--custom-sft-smoke', action='store_true', help='Run custom SFT smoke eval.')
+    parser.add_argument('--custom-sft-smoke-examples', type=int, default=-1, help='Number of custom SFT smoke examples to run. Use -1 for all.')
 
     add_runtime_args(parser)
     add_output_args(parser, default_dir='outputs/evals')
@@ -125,6 +140,22 @@ if __name__ == '__main__':
             batch_size=args.batch_size,
             num_examples=args.arc_challenge_examples
         )
+    if args.ifeval_no_external:
+        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
+        results['ifeval_no_external'] = evaluate_ifeval_no_external(
+            inference_runtime=inference_runtime,
+            config=checkpoint_data.config,
+            batch_size=args.batch_size,
+            num_examples=args.ifeval_no_external_examples
+        )
+    if args.custom_sft_smoke:
+        check_stage_for_evals(checkpoint_data.config.training.stage, parser)
+        results['custom_sft_smoke'] = evaluate_custom_sft_smoke(
+            inference_runtime=inference_runtime,
+            config=checkpoint_data.config,
+            batch_size=args.batch_size,
+            num_examples=args.custom_sft_smoke_examples
+        )
 
     data = {
         'name': name,
@@ -146,6 +177,10 @@ if __name__ == '__main__':
             'winogrande_examples': args.winogrande_examples,
             'arc_challenge': args.arc_challenge,
             'arc_challenge_examples': args.arc_challenge_examples,
+            'ifeval_no_external': args.ifeval_no_external,
+            'ifeval_no_external_examples': args.ifeval_no_external_examples,
+            'custom_sft_smoke': args.custom_sft_smoke,
+            'custom_sft_smoke_examples': args.custom_sft_smoke_examples,
         },
         'results': results,
     }
