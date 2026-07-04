@@ -159,13 +159,6 @@ class Trainer:
                 f'{asset_path}. Please run `prepare_datasets.py` first to build the assets.'
             )
 
-    def eval_asset_is_required(self, eval_config):
-        return (
-            eval_config.every_x_steps > 0 or
-            eval_config.run_on_first_step or
-            eval_config.run_on_last_step
-        )
-
     def validate_common_config(self):
         config = self.config
 
@@ -175,15 +168,15 @@ class Trainer:
 
         # validate assets exist
         self.validate_training_asset_exists(self.config.paths.datasets.training_path)
-        if self.eval_asset_is_required(self.config.evals.hellaswag):
+        if self.can_run_scheduled_action(self.config.evals.hellaswag):
             self.validate_eval_asset_exists(self.config.paths.evals.hellaswag_path)
-        if self.eval_asset_is_required(self.config.evals.winogrande):
+        if self.can_run_scheduled_action(self.config.evals.winogrande):
             self.validate_eval_asset_exists(self.config.paths.evals.winogrande_path)
-        if self.eval_asset_is_required(self.config.evals.arc_challenge):
+        if self.can_run_scheduled_action(self.config.evals.arc_challenge):
             self.validate_eval_asset_exists(self.config.paths.evals.arc_challenge_path)
-        if self.eval_asset_is_required(self.config.evals.ifeval_no_external):
+        if self.can_run_scheduled_action(self.config.evals.ifeval_no_external):
             self.validate_eval_asset_exists(self.config.paths.evals.ifeval_no_external_path)
-        if self.eval_asset_is_required(self.config.evals.custom_sft_smoke):
+        if self.can_run_scheduled_action(self.config.evals.custom_sft_smoke):
             self.validate_eval_asset_exists(self.config.paths.evals.custom_sft_smoke_path)
 
     def setup(self):
