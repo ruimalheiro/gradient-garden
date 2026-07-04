@@ -7,17 +7,6 @@ from engine.dataloaders.dataloader import init_data_loaders
 from tqdm.auto import tqdm
 
 
-def get_dataloader_root_path(config):
-    datasets_paths = config.paths.datasets
-    if config.training.stage == TrainingStage.PRETRAINING:
-        return datasets_paths.pretraining_path
-    elif config.training.stage == TrainingStage.INSTRUCT:
-        return datasets_paths.instruct_path
-    elif config.training.stage == TrainingStage.DPO:
-        return datasets_paths.dpo_path
-    else:
-        raise ValueError('No valid dataloader root path')
-
 @torch.inference_mode()
 def evaluate_validation_ppl(
     inference_runtime: InferenceRuntime,
@@ -35,7 +24,7 @@ def evaluate_validation_ppl(
         is_master_process=True,
         ddp_rank=0,
         ddp_world_size=1,
-        data_root=get_dataloader_root_path(config),
+        data_root=config.paths.datasets.training_path,
         pad_id=inference_runtime.tokenizer.pad_id,
         training_stage=config.training.stage,
         number_of_cpu_processes=config.runtime.number_of_cpu_processes,

@@ -275,8 +275,8 @@ def download_and_prepare_data(
 
     logger.info(f'- Train len: {len(splits["train"])} Val len: {len(splits["test"])}\n')
 
-    splits['train'].save_to_disk(os.path.join(config.paths.datasets.dpo_path, 'train'))
-    splits['test'] .save_to_disk(os.path.join(config.paths.datasets.dpo_path, 'val'))
+    splits['train'].save_to_disk(os.path.join(config.paths.datasets.training_path, 'train'))
+    splits['test'] .save_to_disk(os.path.join(config.paths.datasets.training_path, 'val'))
 
 
 def prepare_dpo_dataset(

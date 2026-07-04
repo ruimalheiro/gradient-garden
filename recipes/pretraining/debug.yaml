@@ -40,7 +40,7 @@ config:
 
   paths:
     datasets:
-      pretraining_path: ./datasets/debug/pretraining
+      training_path: ./datasets/debug/pretraining
     evals:
       hellaswag_path: ./datasets/debug/evals/hellaswag
       winogrande_path: ./datasets/debug/evals/winogrande

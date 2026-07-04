@@ -43,7 +43,7 @@ config:
 
   paths:
     datasets:
-      dpo_path: ./datasets/debug/dpo
+      training_path: ./datasets/debug/dpo
     runs:
       output_dir_path: ./runs
 
