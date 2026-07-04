@@ -137,12 +137,46 @@ class Trainer:
 
         self.validate_common_config()
 
+    def validate_training_asset_exists(self, path):
+        training_path = Path(path)
+        if not training_path.exists():
+            raise FileNotFoundError(f'Training dataset path does not exist: {training_path}. Please run `prepare_datasets.py` first to build the assets.')
+        training_split = training_path / 'train'
+        if not training_split.exists():
+            raise FileNotFoundError(f'Training dataset path does not contain the "train" split: {training_path}. Please run `prepare_datasets.py` first to build the assets.')
+        validation_split = training_path / 'val'
+        if not validation_split.exists():
+            raise FileNotFoundError(f'Training dataset path does not contain the "val" split: {training_path}. Please run `prepare_datasets.py` first to build the assets.')
+
+    def validate_eval_asset_exists(self, path):
+        asset_path = Path(path)
+        if not asset_path.exists():
+            raise FileNotFoundError(f'Eval dataset path does not exist: {asset_path}. Please run `prepare_datasets.py` first to build the assets.')
+        asset_data_path = asset_path / self.config.paths.evals.data_filename
+        if not asset_data_path.exists():
+            raise FileNotFoundError(
+                f'Eval dataset path does not contain the {self.config.paths.evals.data_filename} : '
+                f'{asset_path}. Please run `prepare_datasets.py` first to build the assets.')
+
     def validate_common_config(self):
         config = self.config
 
         # device type
         if self.config.runtime.device_type != DeviceType.CUDA:
             raise ValueError('Only cuda is supported at the moment.')
+
+        # validate assets exist
+        self.validate_training_asset_exists(self.config.paths.datasets.training_path)
+        if self.should_run(run_config=self.config.evals.hellaswag):
+            self.validate_eval_asset_exists(self.config.paths.evals.hellaswag_path)
+        if self.should_run(run_config=self.config.evals.winogrande):
+            self.validate_eval_asset_exists(self.config.paths.evals.winogrande_path)
+        if self.should_run(run_config=self.config.evals.arc_challenge):
+            self.validate_eval_asset_exists(self.config.paths.evals.arc_challenge_path)
+        if self.should_run(run_config=self.config.evals.ifeval_no_external):
+            self.validate_eval_asset_exists(self.config.paths.evals.ifeval_no_external_path)
+        if self.should_run(run_config=self.config.evals.custom_sft_smoke):
+            self.validate_eval_asset_exists(self.config.paths.evals.custom_sft_smoke_path)
 
     def setup(self):
         self.set_seed()
@@ -474,17 +508,6 @@ class Trainer:
     def is_dpo(self):
         return self.config.training.stage == TrainingStage.DPO
 
-    def get_dataloader_root_path(self):
-        datasets_paths = self.config.paths.datasets
-        if self.is_pretraining():
-            return datasets_paths.pretraining_path
-        elif self.is_instruct():
-            return datasets_paths.instruct_path
-        elif self.is_dpo():
-            return datasets_paths.dpo_path
-        else:
-            raise ValueError('No valid dataloader root path')
-
     def build_data_loaders(self):
         self.train_loader, self.val_loader = init_data_loaders(
             batch_size=self.config.training.micro_batch_size,
@@ -492,7 +515,7 @@ class Trainer:
             is_master_process=self.distributed_ctx.is_master_process,
             ddp_rank=self.distributed_ctx.ddp_rank,
             ddp_world_size=self.distributed_ctx.ddp_world_size,
-            data_root=self.get_dataloader_root_path(),
+            data_root=self.config.paths.datasets.training_path,
             pad_id=self.tokenizer.pad_id,
             training_stage=self.config.training.stage,
             number_of_cpu_processes=self.config.runtime.number_of_cpu_processes,

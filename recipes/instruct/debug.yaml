@@ -43,7 +43,7 @@ config:
 
   paths:
     datasets:
-      instruct_path: ./datasets/debug/instruct
+      training_path: ./datasets/debug/instruct
     evals:
       hellaswag_path: ./datasets/debug/evals/hellaswag
       winogrande_path: ./datasets/debug/evals/winogrande

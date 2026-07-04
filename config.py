@@ -113,9 +113,7 @@ class DatasetSourcePathsConfig(BaseModel):
 
 class DatasetPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    pretraining_path: str = './datasets/pretraining'
-    instruct_path: str = './datasets/instruct'
-    dpo_path: str = './datasets/dpo'
+    training_path: str = './datasets/training'
 
 class EvalPathsConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
