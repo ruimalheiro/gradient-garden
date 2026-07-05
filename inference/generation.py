@@ -132,6 +132,7 @@ def generate(
     use_kv_cache
 ):
     if hasattr(model, 'inner') and hasattr(model.inner, 'generate'):
+        old_padding_side = tokenizer.model.padding_side
         tokenizer.model.padding_side = 'left'
         batch_encoding = tokenizer.model.pad(
             [{'input_ids': ids} for ids in prompt_tokens],
@@ -178,6 +179,7 @@ def generate(
                     'stopped_by_stop_token': stop_idx is not None,
                 }
             })
+        tokenizer.model.padding_side = old_padding_side
         return results
 
     if temperature < 0.0:
