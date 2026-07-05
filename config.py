@@ -77,6 +77,7 @@ class ModelConfig(BaseModel):
     norm_eps: float = 1e-5
     rope_theta: float = 500000.0
     max_seq_len: int = 1024
+    tied_embeddings: bool = False
     moe: MoEConfig | None = None
 
 class PromptConfig(BaseModel):

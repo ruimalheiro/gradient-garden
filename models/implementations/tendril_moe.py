@@ -359,6 +359,9 @@ class TendrilMoETransformer(BaseModel):
 
         self.init_model_weights()
 
+        if config.tied_embeddings:
+            self.output.weight = self.tok_embeddings.weight
+
     def init_model_weights(self):
         default_std = 0.02
         residual_std = default_std / math.sqrt(2 * self.config.n_layers)
