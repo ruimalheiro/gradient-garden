@@ -86,5 +86,7 @@ def batch_generator(items, batch_size):
 
 def get_architecture_name(config: ModelConfig):
     if config.model.architecture == ModelArchitecture.HF_WRAPPER:
-        return config.model.model_name.split('/')[-1].lower()
+        if config.model.hf_config is None or config.model.hf_config.model_name is None:
+            raise ValueError('Cannot use hf_wrapper architecture without model.hf_config.model_name.')
+        return config.model.hf_config.model_name.split('/')[-1].lower()
     return config.model.architecture.value

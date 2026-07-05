@@ -1,8 +1,9 @@
 import torch
 
-from transformers import AutoModelForCausalLM
+from transformers import AutoConfig, AutoModelForCausalLM
 from config import ModelConfig
 from models.base import BaseModel
+from logger import logger
 
 
 class HFModelWrapper(BaseModel):
@@ -21,7 +22,13 @@ class HFModelWrapper(BaseModel):
             ignore_index=ignore_index,
         )
 
-        self.inner = AutoModelForCausalLM.from_pretrained(config.model_name)
+        self.validate_config(config)
+
+        if config.hf_config.random_init:
+            logger.warning('"random_init" flag set. The weights will be randomly initialized.')
+            self.inner = AutoModelForCausalLM.from_config(AutoConfig.from_pretrained(config.hf_config.model_name))
+        else:
+            self.inner = AutoModelForCausalLM.from_pretrained(config.hf_config.model_name)
         if self.inner.config.vocab_size != vocab_size:
             raise ValueError(
                 f'Tokenizer vocab_size={vocab_size} != HF model vocab_size={self.inner.config.vocab_size}. '
@@ -42,8 +49,10 @@ class HFModelWrapper(BaseModel):
 
     @classmethod
     def validate_config(cls, config: ModelConfig):
-        if config.model_name is None:
-            raise ValueError('Cannot use hf_wrapper architecture without model.model_name.')
+        if config.hf_config is None:
+            raise ValueError('Cannot use hf_wrapper architecture without model.hf_config.')
+        if config.hf_config.model_name is None:
+            raise ValueError('Cannot use hf_wrapper architecture without model.hf_config.model_name.')
 
     def get_input_embeddings(self):
         return self.inner.get_input_embeddings()
