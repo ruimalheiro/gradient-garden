@@ -218,6 +218,8 @@ class TendrilTransformer(BaseModel):
 
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.output = nn.Linear(config.dim, self.vocab_size, bias=False)
+        if config.tied_embeddings:
+            self.output.weight = self.tok_embeddings.weight
 
         rope_freqs = precompute_rope_freqs(
             config.dim // config.n_heads,
