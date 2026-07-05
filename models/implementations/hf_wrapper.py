@@ -22,6 +22,8 @@ class HFModelWrapper(BaseModel):
             ignore_index=ignore_index,
         )
 
+        self.validate_config(config)
+
         if config.hf_config.random_init:
             logger.warning('"random_init" flag set. The weights will be randomly initialized.')
             self.inner = AutoModelForCausalLM.from_config(AutoConfig.from_pretrained(config.hf_config.model_name))
