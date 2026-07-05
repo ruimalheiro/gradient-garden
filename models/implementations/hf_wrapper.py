@@ -47,8 +47,10 @@ class HFModelWrapper(BaseModel):
 
     @classmethod
     def validate_config(cls, config: ModelConfig):
+        if config.hf_config is None:
+            raise ValueError('Cannot use hf_wrapper architecture without model.hf_config.')
         if config.hf_config.model_name is None:
-            raise ValueError('Cannot use hf_wrapper architecture without model.model_name.')
+            raise ValueError('Cannot use hf_wrapper architecture without model.hf_config.model_name.')
 
     def get_input_embeddings(self):
         return self.inner.get_input_embeddings()
