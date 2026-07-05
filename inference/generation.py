@@ -134,53 +134,55 @@ def generate(
     if hasattr(model, 'inner') and hasattr(model.inner, 'generate'):
         old_padding_side = tokenizer.model.padding_side
         tokenizer.model.padding_side = 'left'
-        batch_encoding = tokenizer.model.pad(
-            [{'input_ids': ids} for ids in prompt_tokens],
-            padding=True,
-            return_attention_mask=True
-        )
-        padded = torch.tensor(batch_encoding['input_ids'], device=device)
-        attn_mask = torch.tensor(batch_encoding['attention_mask'], device=device)
+        try:
+            batch_encoding = tokenizer.model.pad(
+                [{'input_ids': ids} for ids in prompt_tokens],
+                padding=True,
+                return_attention_mask=True
+            )
+            padded = torch.tensor(batch_encoding['input_ids'], device=device)
+            attn_mask = torch.tensor(batch_encoding['attention_mask'], device=device)
 
-        gen_kwargs = dict(
-            max_new_tokens=max_gen_len,
-            pad_token_id=tokenizer.pad_id,
-            eos_token_id=tokenizer.eos_id,
-            do_sample=temperature > 0,
-            temperature=temperature if temperature > 0 else 1.0,
-            top_p=top_p if temperature > 0 else 1.0,
-            repetition_penalty=repetition_penalty,
-            no_repeat_ngram_size=no_repeat_ngram_size
-        )
-        gen_kwargs = {k: v for k, v in gen_kwargs.items() if v is not None}
+            gen_kwargs = dict(
+                max_new_tokens=max_gen_len,
+                pad_token_id=tokenizer.pad_id,
+                eos_token_id=tokenizer.eos_id,
+                do_sample=temperature > 0,
+                temperature=temperature if temperature > 0 else 1.0,
+                top_p=top_p if temperature > 0 else 1.0,
+                repetition_penalty=repetition_penalty,
+                no_repeat_ngram_size=no_repeat_ngram_size
+            )
+            gen_kwargs = {k: v for k, v in gen_kwargs.items() if v is not None}
 
-        outputs = model.inner.generate(
-            padded,
-            attention_mask=attn_mask,
-            **gen_kwargs,
-        )
+            outputs = model.inner.generate(
+                padded,
+                attention_mask=attn_mask,
+                **gen_kwargs,
+            )
 
-        results = []
-        for i in range(len(prompt_tokens)):
-            input_len = padded.shape[1]
-            gen_ids = outputs[i, input_len:].tolist()
+            results = []
+            for i in range(len(prompt_tokens)):
+                input_len = padded.shape[1]
+                gen_ids = outputs[i, input_len:].tolist()
 
-            stop_idx = None
-            for j, tid in enumerate(gen_ids):
-                if tid in tokenizer.stop_tokens:
-                    stop_idx = j
-                    break
-            result_ids = gen_ids[:stop_idx] if stop_idx is not None else gen_ids
-            effective_ids = gen_ids[:stop_idx+1] if stop_idx is not None else gen_ids
-            results.append({
-                'result': result_ids,
-                'metadata': {
-                    'generated_tokens_before_stop_or_limit': len(effective_ids),
-                    'stopped_by_stop_token': stop_idx is not None,
-                }
-            })
-        tokenizer.model.padding_side = old_padding_side
-        return results
+                stop_idx = None
+                for j, tid in enumerate(gen_ids):
+                    if tid in tokenizer.stop_tokens:
+                        stop_idx = j
+                        break
+                result_ids = gen_ids[:stop_idx] if stop_idx is not None else gen_ids
+                effective_ids = gen_ids[:stop_idx+1] if stop_idx is not None else gen_ids
+                results.append({
+                    'result': result_ids,
+                    'metadata': {
+                        'generated_tokens_before_stop_or_limit': len(effective_ids),
+                        'stopped_by_stop_token': stop_idx is not None,
+                    }
+                })
+            return results
+        finally:
+            tokenizer.model.padding_side = old_padding_side
 
     if temperature < 0.0:
         raise ValueError(f'temperature must be >= 0.0, got {temperature}')
