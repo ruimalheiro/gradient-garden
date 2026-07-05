@@ -348,8 +348,6 @@ class TendrilMoETransformer(BaseModel):
 
         self.norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.output = nn.Linear(config.dim, self.vocab_size, bias=False)
-        if config.tied_embeddings:
-            self.output.weight = self.tok_embeddings.weight
 
         rope_freqs = precompute_rope_freqs(
             config.dim // config.n_heads,
@@ -360,6 +358,9 @@ class TendrilMoETransformer(BaseModel):
         self.register_buffer('rope_freqs', rope_freqs, persistent=False)
 
         self.init_model_weights()
+
+        if config.tied_embeddings:
+            self.output.weight = self.tok_embeddings.weight
 
     def init_model_weights(self):
         default_std = 0.02
