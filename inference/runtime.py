@@ -1,7 +1,7 @@
 import torch
 
 from dataclasses import dataclass
-from config import TrainingPrecision, GlobalConfig, ModelConfig, HFModelConfig
+from config import TrainingPrecision, GlobalConfig
 from tokenization.tokenizer import init_tokenizer
 from models.registry import build_model
 from models.adapters.lora import apply_lora

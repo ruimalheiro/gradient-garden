@@ -16,7 +16,6 @@ class CheckpointInspector:
         *,
         checkpoint_path=None,
         hf_checkpoint_path=None,
-        hf_tokenizer_path=None,
         dtype=None,
         device=None,
         use_torch_compile=False,
@@ -34,13 +33,13 @@ class CheckpointInspector:
         if checkpoint_path is not None:
             checkpoint_data = load_checkpoint_for_inference(self.checkpoint_path)
         elif hf_checkpoint_path is not None:
-            checkpoint_data = load_shallow_hf_checkpoint_for_inference(
-                hf_checkpoint_path=hf_checkpoint_path,
-                hf_tokenizer_path=hf_tokenizer_path,
-            )
+            checkpoint_data = load_shallow_hf_checkpoint_for_inference(hf_checkpoint_path=hf_checkpoint_path)
             checkpoint_data.config.third_party.hf_token=hf_token
         else:
             raise ValueError('"checkpoint_path" or "hf_checkpoint_path" must be set.')
+
+        self.checkpoint_data = checkpoint_data
+        self.config = checkpoint_data.config
 
         self.inference_runtime = prepare_runtime_for_inference(
             checkpoint_data=checkpoint_data,
