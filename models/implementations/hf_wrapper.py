@@ -14,6 +14,7 @@ class HFModelWrapper(BaseModel):
         pad_token_id: int,
         vocab_size: int,
         ignore_index: int,
+        hf_token: str
     ):
         super().__init__(
             config=config,
@@ -26,9 +27,9 @@ class HFModelWrapper(BaseModel):
 
         if config.hf_config.random_init:
             logger.warning('"random_init" flag set. The weights will be randomly initialized.')
-            self.inner = AutoModelForCausalLM.from_config(AutoConfig.from_pretrained(config.hf_config.model_name))
+            self.inner = AutoModelForCausalLM.from_config(AutoConfig.from_pretrained(config.hf_config.model_name, token=hf_token))
         else:
-            self.inner = AutoModelForCausalLM.from_pretrained(config.hf_config.model_name)
+            self.inner = AutoModelForCausalLM.from_pretrained(config.hf_config.model_name, token=hf_token)
         if self.inner.config.vocab_size != vocab_size:
             raise ValueError(
                 f'Tokenizer vocab_size={vocab_size} != HF model vocab_size={self.inner.config.vocab_size}. '

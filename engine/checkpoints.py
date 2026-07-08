@@ -15,7 +15,7 @@ from torch.distributed.checkpoint.state_dict import (
 from logger import logger
 from dataclasses import dataclass, field
 from typing import Any
-from config import GlobalConfig
+from config import GlobalConfig, ModelConfig, HFModelConfig
 
 
 def state_to_cpu(obj):
@@ -211,13 +211,18 @@ def load_checkpoint(file_path) -> CheckpointData:
     )
 
 @dataclass
-class CheckpointDataInference:
+class BaseCheckpointDataInference:
+    pass
+
+@dataclass
+class CheckpointDataInference(BaseCheckpointDataInference):
     file_path: str
     config: GlobalConfig
     model_state: dict[str, Any]
     step: int
     is_lora_checkpoint: bool = False
     metadata: dict = field(default_factory=dict)
+    is_hf_direct_load: bool = False
 
     def to_dict(self):
         return {
@@ -225,7 +230,22 @@ class CheckpointDataInference:
             'config': self.config,
             'step': self.step,
             'is_lora_checkpoint': self.is_lora_checkpoint,
-            'metadata': self.metadata
+            'metadata': self.metadata,
+            'is_hf_direct_load': self.is_hf_direct_load
+        }
+
+    def __repr__(self):
+        return json.dumps(self.to_dict(), indent=4)
+
+@dataclass
+class HFCheckpointDataInference(BaseCheckpointDataInference):
+    config: GlobalConfig
+    is_hf_direct_load: bool = True
+
+    def to_dict(self):
+        return {
+            'config': self.config,
+            'is_hf_direct_load': self.is_hf_direct_load
         }
 
     def __repr__(self):
@@ -249,6 +269,17 @@ def load_checkpoint_for_inference(file_path) -> CheckpointDataInference:
         is_lora_checkpoint=metadata.get('lora_enabled', False),
         metadata=metadata
     )
+
+def load_shallow_hf_checkpoint_for_inference(hf_checkpoint_path: str) -> HFCheckpointDataInference:
+    # The purpose of this function is just to prepare the config abstraction.
+    config = GlobalConfig()
+    config.model = ModelConfig()
+    config.model.architecture = 'hf_wrapper'
+    config.model.hf_config = HFModelConfig()
+    config.model.hf_config.model_name = hf_checkpoint_path
+    config.tokenizer.checkpoint_path = hf_checkpoint_path
+
+    return HFCheckpointDataInference(config=GlobalConfig.model_validate(config))
 
 def load_model_state(model, checkpoint_state_dict):
     if dist.is_initialized():

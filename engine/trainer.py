@@ -497,7 +497,8 @@ class Trainer:
             config=self.config.model,
             pad_token_id=self.tokenizer.pad_id,
             vocab_size=self.tokenizer.vocab_size,
-            ignore_index=self.config.tokenizer.ignore_index
+            ignore_index=self.config.tokenizer.ignore_index,
+            hf_token=self.config.third_party.hf_token if self.config.tokenizer.huggingface_tokenizer else None
         )
 
     def is_pretraining(self):
