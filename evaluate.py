@@ -50,17 +50,7 @@ def check_num_examples(*, enabled: bool, flag_name: str, value: int, parser: arg
     if enabled and (value == 0 or value < -1):
         parser.error(f'{flag_name} must be -1 or greater than 0')
 
-def resolve_stage(stage: str):
-    if stage == 'pretraining':
-        return TrainingStage.PRETRAINING
-    elif stage == 'instruct':
-        return TrainingStage.INSTRUCT
-    elif stage == 'dpo':
-        return TrainingStage.DPO
-    else:
-        raise ValueError('Stage not supported')
-
-def check_dataset_path_is_set(*, enabled: bool, flag_name: str, value: int, parser: argparse.ArgumentParser):
+def check_dataset_path_is_set(*, enabled: bool, flag_name: str, value: str, parser: argparse.ArgumentParser):
     if enabled and not value:
         parser.error(f'{flag_name} must be set.')
 
@@ -140,7 +130,7 @@ if __name__ == '__main__':
         if not args.stage:
             parser.error(f'--stage must be set when using --hf-checkpoint')
 
-        checkpoint_data.config.training.stage = resolve_stage(args.stage)
+        checkpoint_data.config.training.stage = TrainingStage(args.stage)
 
         if args.validation:
             check_dataset_path_is_set(enabled=args.validation, flag_name='--validation-path', value=args.validation_path, parser=parser)
