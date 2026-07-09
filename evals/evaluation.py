@@ -151,7 +151,6 @@ def evaluate_multiple_choice_task(
         'skipped': skipped,
         'num_examples_requested': num_examples,
         'num_examples_loaded': len(examples),
-        'eval_file_path': str(filepath),
         'batch_size': batch_size,
     }
 
