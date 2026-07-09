@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     checkpoint_group = parser.add_mutually_exclusive_group(required=True)
     checkpoint_group.add_argument('--checkpoint', type=str, help='Checkpoint file path to load.')
-    checkpoint_group.add_argument('--hf-checkpoint', type=str, help='Hugging Face checkpoint file path to load.')
+    checkpoint_group.add_argument('--hf-checkpoint', type=str, help='Hugging Face model id or checkpoint path to load.')
 
     parser.add_argument('--prompts', type=str, required=True, help='Path to the prompts file.')
 
