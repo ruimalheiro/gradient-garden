@@ -60,6 +60,8 @@ def evaluate_validation_ppl(
     perplexity = math.exp(val_loss)
 
     return {
+        'task': 'validation',
+        'eval_path': config.paths.datasets.training_path,
         'mean_cross_entropy_loss': val_loss,
         'perplexity': perplexity,
         'total_cross_entropy_loss': loss_sum,
