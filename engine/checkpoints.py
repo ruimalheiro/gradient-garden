@@ -15,7 +15,7 @@ from torch.distributed.checkpoint.state_dict import (
 from logger import logger
 from dataclasses import dataclass, field
 from typing import Any
-from config import GlobalConfig, ModelConfig, HFModelConfig
+from config import GlobalConfig, ModelConfig, HFModelConfig, TokenizerPromptFormat
 
 
 def state_to_cpu(obj):
@@ -278,6 +278,7 @@ def load_shallow_hf_checkpoint_for_inference(hf_checkpoint_path: str) -> HFCheck
     config.model.hf_config = HFModelConfig()
     config.model.hf_config.model_name = hf_checkpoint_path
     config.tokenizer.checkpoint_path = hf_checkpoint_path
+    config.tokenizer.prompt_format = TokenizerPromptFormat.HF_CHAT_TEMPLATE
 
     return HFCheckpointDataInference(config=GlobalConfig.model_validate(config))
 

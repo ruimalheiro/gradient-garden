@@ -32,30 +32,6 @@ class HFTokenizer(BaseTokenizer):
     def decode(self, tokens, skip_special_tokens=False):
         return self.model.decode(tokens, skip_special_tokens=skip_special_tokens)
 
-    def encode_instruct_inference(self, text: str, system_msg: bool = True):
-        if self.prompt_format == TokenizerPromptFormat.HF_CHAT_TEMPLATE:
-            messages = []
-
-            if system_msg:
-                messages.append({
-                    'role': 'system',
-                    'content': self.system_prompt,
-                })
-
-            messages.append({
-                'role': 'user',
-                'content': text,
-            })
-
-            return self.model.apply_chat_template(
-                messages,
-                tokenize=True,
-                add_generation_prompt=True,
-                return_dict=False
-            )
-
-        return super().encode_instruct_inference(text, system_msg=system_msg)
-
     def encode_instruct_messages_inference(self, messages):
         if self.prompt_format == TokenizerPromptFormat.HF_CHAT_TEMPLATE:
             return self.model.apply_chat_template(
