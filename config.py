@@ -9,19 +9,6 @@ from typing import Any, Annotated, Literal
 from logger import logger
 
 
-class DeviceType(str, Enum):
-    CUDA = 'cuda'
-
-class TrainingStage(str, Enum):
-    PRETRAINING = 'pretraining'
-    INSTRUCT = 'instruct'
-    DPO = 'dpo'
-
-class TrainingPrecision(str, Enum):
-    BF16 = 'bf16'
-    FP16 = 'fp16'
-    FP32 = 'fp32'
-
 class RunConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str | None = None
@@ -37,6 +24,14 @@ class DatasetPreparationConfig(BaseModel):
     mp_pool_chunk_size: int = 64
     hf_map_batch_size: int = 1000
     hf_map_writer_batch_size: int = 1000
+
+class DeviceType(str, Enum):
+    CUDA = 'cuda'
+
+class TrainingPrecision(str, Enum):
+    BF16 = 'bf16'
+    FP16 = 'fp16'
+    FP32 = 'fp32'
 
 class RuntimeConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -83,6 +78,11 @@ class ModelConfig(BaseModel):
 class PromptConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     system_prompt: str = 'You are a helpful AI assistant.'
+
+class TrainingStage(str, Enum):
+    PRETRAINING = 'pretraining'
+    INSTRUCT = 'instruct'
+    DPO = 'dpo'
 
 class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -150,11 +150,16 @@ class GenerationConfig(BaseModel):
     run_on_last_step: bool = False
     test_prompts: list[str] | None = None
 
+class TokenizerPromptFormat(str, Enum):
+    GRADIENT_GARDEN = 'gradient_garden'
+    HF_CHAT_TEMPLATE = 'hf_chat_template'
+
 class TokenizerConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     checkpoint_path: str = 'HuggingFaceTB/SmolLM2-360M'
     huggingface_tokenizer: bool = True
     ignore_index: int = -100
+    prompt_format: TokenizerPromptFormat = TokenizerPromptFormat.GRADIENT_GARDEN
 
 class LoRAConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

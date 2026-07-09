@@ -313,8 +313,14 @@ def generate_and_decode(
         batch_size,
         skip_encoding=False,
         show_progress=False,
-        progress_bar_label=None
+        progress_bar_label=None,
+        prompts_are_messages=False
     ):
+        if full_seq and prompts_are_messages:
+            raise ValueError('full_seq=True is not supported with prompts_are_messages=True')
+        if not is_instruct and prompts_are_messages:
+            raise ValueError('prompts_are_messages=True requires is_instruct=True')
+
         vocab_size = tokenizer.vocab_size
         pad_token_id = tokenizer.pad_id
 
@@ -325,10 +331,19 @@ def generate_and_decode(
             batch_size = len(prompts)
 
         if not skip_encoding:
-            prompt_tokens = [
-                tokenizer.encode_instruct_inference(prompt) if is_instruct else tokenizer.encode(prompt)
-                for prompt in prompts
-            ]
+            if is_instruct:
+                if prompts_are_messages:
+                    prompt_tokens = [
+                        tokenizer.encode_instruct_messages_inference(prompt)
+                        for prompt in prompts
+                    ]
+                else:
+                    prompt_tokens = [
+                        tokenizer.encode_instruct_inference(prompt)
+                        for prompt in prompts
+                    ]
+            else:
+                prompt_tokens = [tokenizer.encode(prompt) for prompt in prompts]
         else:
             prompt_tokens = prompts
 

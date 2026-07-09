@@ -10,6 +10,7 @@ from engine.checkpoints import (
     BaseCheckpointDataInference,
     load_model_state
 )
+from config import TokenizerPromptFormat
 
 
 @dataclass(frozen=True)
@@ -28,7 +29,12 @@ def init_tokenizer_and_model(checkpoint_data: BaseCheckpointDataInference):
         path=config.tokenizer.checkpoint_path,
         system_prompt=config.prompts.system_prompt,
         is_huggingface_tokenizer=config.tokenizer.huggingface_tokenizer,
-        hf_token=hf_token
+        hf_token=hf_token,
+        prompt_format=(
+            TokenizerPromptFormat.HF_CHAT_TEMPLATE
+            if checkpoint_data.is_hf_direct_load
+            else TokenizerPromptFormat.GRADIENT_GARDEN
+        )
     )
 
     model = build_model(
