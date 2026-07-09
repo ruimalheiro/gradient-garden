@@ -28,7 +28,8 @@ def init_tokenizer_and_model(checkpoint_data: BaseCheckpointDataInference):
         path=config.tokenizer.checkpoint_path,
         system_prompt=config.prompts.system_prompt,
         is_huggingface_tokenizer=config.tokenizer.huggingface_tokenizer,
-        hf_token=hf_token
+        hf_token=hf_token,
+        prompt_format=config.tokenizer.prompt_format
     )
 
     model = build_model(

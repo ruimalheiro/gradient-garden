@@ -86,16 +86,34 @@ class BaseTokenizer(ABC):
     def decode(self, ids):
         ...
 
-    def encode_instruct_inference(self, text: str, system_msg: bool = True):
+    def encode_instruct_messages_inference(self, messages):
         builder = PromptBuilder(self, no_labels=True)
 
-        if system_msg:
-            builder.add_message('system', self.system_prompt)
+        for message in messages:
+            builder.add_message(
+                message['role'],
+                message['content'],
+            )
 
-        builder.add_message('user', text)
         builder.add_assistant_prefix()
 
         return builder.build()
+
+    def encode_instruct_inference(self, text: str, system_msg: bool = True):
+        messages = []
+
+        if system_msg:
+            messages.append({
+                'role': 'system',
+                'content': self.system_prompt,
+            })
+
+        messages.append({
+            'role': 'user',
+            'content': text,
+        })
+
+        return self.encode_instruct_messages_inference(messages)
 
     def encode_instruct_chat(
         self,

@@ -70,7 +70,8 @@ class CheckpointInspector:
         use_kv_cache=False,
         batch_size=1,
         skip_encoding=False,
-        print_text=True
+        print_text=True,
+        prompts_are_messages=False
     ):
         with torch.autocast(
             device_type=self.device_type,
@@ -92,7 +93,8 @@ class CheckpointInspector:
                 is_instruct=instruct,
                 use_kv_cache=use_kv_cache,
                 batch_size=batch_size,
-                skip_encoding=skip_encoding
+                skip_encoding=skip_encoding,
+                prompts_are_messages=prompts_are_messages
             )
 
         results = [
