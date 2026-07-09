@@ -270,13 +270,14 @@ def load_checkpoint_for_inference(file_path) -> CheckpointDataInference:
         metadata=metadata
     )
 
-def load_shallow_hf_checkpoint_for_inference(hf_checkpoint_path: str) -> HFCheckpointDataInference:
+def load_shallow_hf_checkpoint_for_inference(hf_checkpoint_path: str, *, system_prompt='You are a helpful AI assistant.') -> HFCheckpointDataInference:
     # The purpose of this function is just to prepare the config abstraction.
     config = GlobalConfig()
     config.model = ModelConfig()
     config.model.architecture = 'hf_wrapper'
     config.model.hf_config = HFModelConfig()
     config.model.hf_config.model_name = hf_checkpoint_path
+    config.prompts.system_prompt = system_prompt
     config.tokenizer.checkpoint_path = hf_checkpoint_path
     config.tokenizer.prompt_format = TokenizerPromptFormat.HF_CHAT_TEMPLATE
 

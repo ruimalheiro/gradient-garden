@@ -1,7 +1,10 @@
 import argparse
 
 from logger import logger
-from engine.checkpoints import load_checkpoint_for_inference
+from engine.checkpoints import (
+    load_checkpoint_for_inference,
+    load_shallow_hf_checkpoint_for_inference
+)
 from utils import (
     load_json_file,
     set_seed,
@@ -26,7 +29,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Text Generation Script Options')
 
-    parser.add_argument('--checkpoint', type=str, required=True, help='Checkpoint file path to load.')
+    checkpoint_group = parser.add_mutually_exclusive_group(required=True)
+    checkpoint_group.add_argument('--checkpoint', type=str, help='Checkpoint file path to load.')
+    checkpoint_group.add_argument('--hf-checkpoint', type=str, help='Hugging Face checkpoint file path to load.')
+
     parser.add_argument('--prompts', type=str, required=True, help='Path to the prompts file.')
 
     add_generation_args(parser)
@@ -38,10 +44,15 @@ if __name__ == '__main__':
     validate_generation_args(args, parser)
     validate_runtime_args(args, parser)
 
-    validate_file_path(args.checkpoint, parser)
-    validate_file_path(args.prompts, parser)
+    if args.checkpoint:
+        checkpoint = args.checkpoint
+        validate_file_path(checkpoint, parser)
+        checkpoint_data = load_checkpoint_for_inference(checkpoint)
+    elif args.hf_checkpoint:
+        checkpoint = args.hf_checkpoint
+        checkpoint_data = load_shallow_hf_checkpoint_for_inference(checkpoint)
 
-    checkpoint_data = load_checkpoint_for_inference(args.checkpoint)
+    validate_file_path(args.prompts, parser)
     prompts = validate_input_prompts_list(load_json_file(args.prompts), parser)
 
     set_seed(args.seed)
@@ -75,13 +86,16 @@ if __name__ == '__main__':
         dtype=inference_runtime.dtype,
         is_instruct=args.instruct,
         use_kv_cache=args.use_kv_cache,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        show_progress=True,
+        progress_bar_label='Generating...'
     )
 
     results = []
-    for prompt, output in zip(prompts, outputs):
+    for output in outputs:
         results.append({
-            'prompt': prompt,
+            'prompt': output['prompt'],
+            'prepared_prompt': output['prepared_prompt'],
             'output': output['result_decoded'],
             'metadata': output['metadata']
         })
@@ -89,7 +103,7 @@ if __name__ == '__main__':
     data = {
         'name': name,
         'created_at_utc': timestamp.isoformat(),
-        'checkpoint': args.checkpoint,
+        'checkpoint': checkpoint,
         'prompts': args.prompts,
         'config': {
             'max_gen_len': args.max_gen_len,
@@ -114,7 +128,7 @@ if __name__ == '__main__':
     logger.info({
         'name': name,
         'created_at_utc': timestamp.isoformat(),
-        'checkpoint': args.checkpoint,
+        'checkpoint': checkpoint,
         'prompts': args.prompts,
         'num_prompts': len(prompts),
         'output_path': str(output_path),
