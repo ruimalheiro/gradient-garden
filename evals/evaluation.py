@@ -144,13 +144,13 @@ def evaluate_multiple_choice_task(
 
     return {
         'task': task.value,
+        'eval_file_path': str(filepath),
         'accuracy': acc_norm,
         'correct': num_correct_norm,
         'total': num_total,
         'skipped': skipped,
         'num_examples_requested': num_examples,
         'num_examples_loaded': len(examples),
-        'eval_file_path': str(filepath),
         'batch_size': batch_size,
     }
 
@@ -276,6 +276,8 @@ def evaluate_instruction_list_task(
 
     return {
         'task': task.value,
+        'eval_file_path': str(filepath),
+        'prompt_format': tokenizer.prompt_format,
         'num_prompt_correct': num_prompt_correct,
         'prompt_accuracy': prompt_accuracy,
         'num_instruction_correct': num_instruction_correct,
@@ -284,6 +286,5 @@ def evaluate_instruction_list_task(
         'skipped': skipped,
         'num_examples_requested': num_examples,
         'num_examples_loaded': len(examples),
-        'eval_file_path': str(filepath),
         'batch_size': batch_size,
     }
