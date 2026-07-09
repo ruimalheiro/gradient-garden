@@ -347,6 +347,8 @@ def generate_and_decode(
         else:
             prompt_tokens = prompts
 
+        prepared_prompts = [tokenizer.decode(tokens, skip_special_tokens=False) for tokens in prompt_tokens]
+
         batches = batch_generator(prompt_tokens, batch_size)
         if show_progress:
             total_batches = math.ceil(len(prompt_tokens) / batch_size)
@@ -378,8 +380,11 @@ def generate_and_decode(
         def validate_token(tokens):
             return [token if token < vocab_size else pad_token_id for token in tokens]
 
-        for prompt, output in zip(prompts, outputs):
+        for prompt, prepared_prompt, output in zip(prompts, prepared_prompts, outputs):
             result_decoded = tokenizer.decode(validate_token(output['result']))
+
+            output['prompt'] = prompt
+            output['prepared_prompt'] = prepared_prompt
 
             if full_seq:
                 output['result_decoded'] = f'{prompt} {result_decoded}' if is_instruct else f'{prompt}{result_decoded}'

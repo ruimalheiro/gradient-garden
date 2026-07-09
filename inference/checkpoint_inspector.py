@@ -19,7 +19,6 @@ class CheckpointInspector:
         dtype=None,
         device=None,
         use_torch_compile=False,
-        text_width=160,
         hf_token=None
     ):
         logger.set_master(True)
@@ -54,7 +53,6 @@ class CheckpointInspector:
         self.device_type = self.device.type if isinstance(self.device, torch.device) else str(self.device).split(':')[0]
         self.dtype = self.inference_runtime.dtype
         self.autocast_enabled = (self.dtype != torch.float32)
-        self.text_width = text_width
 
     def generate(
         self,
@@ -71,7 +69,8 @@ class CheckpointInspector:
         batch_size=1,
         skip_encoding=False,
         print_text=True,
-        prompts_are_messages=False
+        prompts_are_messages=False,
+        text_width=160
     ):
         with torch.autocast(
             device_type=self.device_type,
@@ -97,14 +96,12 @@ class CheckpointInspector:
                 prompts_are_messages=prompts_are_messages
             )
 
-        results = [
-            textwrap.fill(output['result_decoded'], self.text_width)
-            for output in outputs
-        ]
+        for output in outputs:
+            output['result_decoded_formatted'] = textwrap.fill(output['result_decoded'], text_width)
 
         if print_text:
-            for result in results:
-                logger.info(result)
+            for output in outputs:
+                logger.info(output['result_decoded_formatted'])
             return None
 
-        return results
+        return outputs
