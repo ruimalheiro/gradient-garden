@@ -121,6 +121,7 @@ if __name__ == '__main__':
             'use_torch_compile': args.use_torch_compile,
             'full_seq': args.full_seq,
             'instruct': args.instruct,
+            'prompt_format': inference_runtime.tokenizer.prompt_format
         },
         'generations': results,
     }
