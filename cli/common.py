@@ -58,7 +58,7 @@ def validate_generation_args(args: argparse.Namespace, parser: argparse.Argument
     if args.no_repeat_ngram_size is not None and args.no_repeat_ngram_size <= 1:
         parser.error('--no-repeat-ngram-size must be >= 2')
 
-def add_runtime_args(parser: argparse.ArgumentParser):
+def add_device_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         '--device',
         type=str,
@@ -73,6 +73,9 @@ def add_runtime_args(parser: argparse.ArgumentParser):
         choices=['auto', 'bf16', 'fp16', 'fp32'],
         help='By default the checkpoint/config dtype will be used.'
     )
+
+def add_runtime_args(parser: argparse.ArgumentParser):
+    add_device_args(parser)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--batch-size', type=int, default=1)
     parser.add_argument('--use-torch-compile', action='store_true', help='Use torch compile')
