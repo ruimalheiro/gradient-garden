@@ -12,8 +12,8 @@ class UI:
         *,
         checkpoint_path=None,
         hf_checkpoint_path=None,
-        device,
-        dtype,
+        device=None,
+        dtype=None,
         title='Chat',
         description='Test the instruct checkpoint',
         debug=False
