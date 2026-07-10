@@ -12,13 +12,17 @@ class UI:
         *,
         checkpoint_path=None,
         hf_checkpoint_path=None,
+        device,
+        dtype,
         title='Chat',
         description='Test the instruct checkpoint',
         debug=False
     ):
         self.inspector = CheckpointInspector(
             checkpoint_path = checkpoint_path,
-            hf_checkpoint_path = hf_checkpoint_path
+            hf_checkpoint_path = hf_checkpoint_path,
+            device=device,
+            dtype=dtype
         )
         self.system_prompt = self.inspector.config.prompts.system_prompt
         self.title = title
@@ -141,6 +145,8 @@ if __name__ == '__main__':
     chat_ui = UI(
         checkpoint_path=args.checkpoint,
         hf_checkpoint_path=args.hf_checkpoint,
+        device=args.device,
+        dtype=args.dtype,
         title=args.title,
         description=args.description,
         debug=args.debug
