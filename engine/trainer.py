@@ -1251,14 +1251,15 @@ class Trainer:
             disable=not is_master_process,
             leave=False
         ):
-            tokens, mask, attention_mask, label_index, valid = example['tokens'], example['mask'], example['attention_mask'], example['label_index'], example['valid']
+            tokens, mask, label_index, valid = example['tokens'], example['mask'], example['label_index'], example['valid']
 
             tokens = tokens.to(device)
             mask = mask.to(device)
-            attention_mask = attention_mask.to(device)
 
             with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-                logits = self.model(tokens, attention_mask=attention_mask)['logits']
+                # MC eval examples are right padded. For causal LM scoring, real tokens cannot attend to future pad tokens, and mask excludes pad target positions from the loss.
+                # Passing attention_mask here is redundant and triggers a torch.compile error..
+                logits = self.model(tokens)['logits']
 
             if not valid:
                 # We want all ranks to still call forward()...
