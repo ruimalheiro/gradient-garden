@@ -17,7 +17,6 @@ def load_multiple_choice_eval_file(
         example = json.loads(line)
         tokens = torch.tensor(example['tokens'], dtype=torch.long)
         scoring_mask = torch.tensor(example['mask'], dtype=torch.long)
-        attention_mask = (tokens != pad_token_id).long()
         label_index = int(example['label_index'])
 
         assert tokens.ndim == 2
@@ -26,7 +25,6 @@ def load_multiple_choice_eval_file(
         return {
             'tokens': tokens,
             'mask': scoring_mask,
-            'attention_mask': attention_mask,
             'label_index': label_index,
             'valid': True
         }
@@ -36,7 +34,6 @@ def load_multiple_choice_eval_file(
         return {
             'tokens': tokens,
             'mask': torch.zeros_like(tokens),
-            'attention_mask': torch.ones_like(tokens),
             'label_index': -1,
             'valid': False
         }
