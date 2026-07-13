@@ -113,7 +113,7 @@ def evaluate_multiple_choice_task(
 
     task_formatted = resolve_tqdm_label(task)
     for example in tqdm(examples, f'Running eval for {task_formatted}'):
-        tokens, mask, attention_mask, label_index, valid = example['tokens'], example['mask'], example['attention_mask'], example['label_index'], example['valid']
+        tokens, mask, label_index, valid = example['tokens'], example['mask'], example['label_index'], example['valid']
 
         if not valid:
             skipped += 1
@@ -130,9 +130,8 @@ def evaluate_multiple_choice_task(
 
         tokens = tokens.to(device)
         mask = mask.to(device)
-        attention_mask = attention_mask.to(device)
 
-        logits = model(tokens, attention_mask=attention_mask)['logits']
+        logits = model(tokens)['logits']
         predicted_label_index = estimate_best_candidate_index_from_logits(tokens, mask, logits)
         num_total += 1
         num_correct_norm += int(predicted_label_index == label_index)
