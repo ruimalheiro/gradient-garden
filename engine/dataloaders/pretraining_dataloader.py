@@ -116,7 +116,7 @@ class PretrainingDataLoader:
         self.tokens = load_tokens(self.shards[self.current_shard])
         if torch.cuda.is_available():
             self.tokens = self.tokens.pin_memory()
-        self.current_position = self.B * self.S * self.ddp_rank
+        self.current_position = 0
 
     def state_dict(self):
         return {
@@ -135,17 +135,42 @@ class PretrainingDataLoader:
 
     def next_batch(self):
         B, S = self.B, self.S
-        buf = self.tokens[self.current_position : self.current_position+B*S+1]
+        local_batch_tokens = B * S
+        global_batch_tokens = local_batch_tokens * self.ddp_world_size
+
+        # current_position is global and equal on all ranks. (same starting point reference)
+        rank_position = self.current_position + local_batch_tokens * self.ddp_rank
+
+        buf = self.tokens[rank_position : rank_position + local_batch_tokens + 1]
+
+        if len(buf) != local_batch_tokens + 1:
+            raise RuntimeError(
+                f'Invalid batch slice on rank {self.ddp_rank}: '
+                f'global_position={self.current_position}, '
+                f'rank_position={rank_position}, '
+                f'needed={local_batch_tokens + 1}, '
+                f'got={len(buf)}, '
+                f'shard={self.current_shard}, '
+                f'shard_len={len(self.tokens)}'
+            )
+
         x = (buf[:-1]).view(B, S)
         y = (buf[1:]).view(B, S)
-        self.current_position += B * S * self.ddp_world_size
-        if self.current_position + (B * S * self.ddp_world_size + 1) > len(self.tokens):
+
+        self.current_position += global_batch_tokens
+
+        # If needed to change shard, all ranks change.
+        if self.current_position + global_batch_tokens + 1 > len(self.tokens):
             self.current_shard = (self.current_shard + 1) % len(self.shards)
+
             if self.current_shard == 0:
                 self.sync_shuffle_shards()
+
             self.tokens = load_tokens(self.shards[self.current_shard])
             if torch.cuda.is_available():
                 self.tokens = self.tokens.pin_memory()
-            self.current_position = self.B * self.S * self.ddp_rank
+
+            self.current_position = 0
+
         # None here is because we dont need attention mask.
         return x, y, None
