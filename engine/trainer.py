@@ -1025,6 +1025,21 @@ class Trainer:
             if self.optimizers.muon:
                 self.optimizers.muon.step()
 
+    def scale_gradients_by_n_valid(self, valid_tokens_sum):
+        # Tasks return loss_for_backward as a summed objective numerator and n_valid as its denominator.
+        # We backprop summed local losses, then scale synchronized gradients once by the global denominator.
+        # For pretraining this matches loss / grad_accum_steps because each microbatch has the same valid token count.
+        # For SFT it correctly handles different numbers of supervised assistant tokens per microbatch/rank.
+        # DDP/FSDP average gradients across ranks, so after backpropagating summed local losses we multiply by
+        # world_size / global_n_valid to get the global mean objective gradient.
+        grad_scale = self.trainer_ctx.distributed.ddp_world_size / valid_tokens_sum.clamp_min(1).item()
+
+        for p in self.model.parameters():
+            if p.grad is not None:
+                p.grad.mul_(grad_scale)
+
+        return grad_scale
+
     def run_train(self, pbar):
         ddp = self.trainer_ctx.distributed.ddp
         ddp_local_rank = self.trainer_ctx.distributed.ddp_local_rank
@@ -1076,16 +1091,7 @@ class Trainer:
             dist.all_reduce(tokens_processed_sum, op=dist.ReduceOp.SUM)
             dist.all_reduce(valid_tokens_sum, op=dist.ReduceOp.SUM)
 
-            # Instead of scaling the loss by grad_accum_steps inside of the task, we now scale the gradients by the number of valid tokens.
-            # This is better than the previous and also compatible with pretraining, sft, etc.
-            # DDP/FSDP averages parameter gradients across ranks, but we want token grads / num valid tokens, so we multiply by (world_size / num valid tokens).
-            grad_scale = self.trainer_ctx.distributed.ddp_world_size / valid_tokens_sum.clamp_min(1).item()
-        else:
-            grad_scale = 1.0 / valid_tokens_sum.clamp_min(1).item()
-
-        for p in self.model.parameters():
-            if p.grad is not None:
-                p.grad.mul_(grad_scale)
+        self.scale_gradients_by_n_valid(valid_tokens_sum)
 
         norm = self.clip_grad_norm(self.model, 1.0)
 
