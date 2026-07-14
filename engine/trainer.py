@@ -1025,14 +1025,14 @@ class Trainer:
             if self.optimizers.muon:
                 self.optimizers.muon.step()
 
-    def scale_gradients_by_n_valid(self, valid_tokens_sum):
+    def scale_gradients_by_n_valid(self, n_valid_sum):
         # Tasks return loss_for_backward as a summed objective numerator and n_valid as its denominator.
         # We backprop summed local losses, then scale synchronized gradients once by the global denominator.
         # For pretraining this matches loss / grad_accum_steps because each microbatch has the same valid token count.
         # For SFT it correctly handles different numbers of supervised assistant tokens per microbatch/rank.
         # DDP/FSDP average gradients across ranks, so after backpropagating summed local losses we multiply by
         # world_size / global_n_valid to get the global mean objective gradient.
-        grad_scale = self.trainer_ctx.distributed.ddp_world_size / valid_tokens_sum.clamp_min(1).item()
+        grad_scale = self.trainer_ctx.distributed.ddp_world_size / n_valid_sum.clamp_min(1).item()
 
         for p in self.model.parameters():
             if p.grad is not None:
@@ -1048,7 +1048,7 @@ class Trainer:
         scaler = self.trainer_ctx.precision.scaler
         grad_accum_steps = self.trainer_ctx.grad_accum_steps
         tokens_processed_sum = torch.tensor(0.0, device=device)
-        valid_tokens_sum = torch.tensor(0.0, device=device)
+        n_valid_sum = torch.tensor(0.0, device=device)
         console_logs = []
         metrics_sum_acc = {}
         metrics_weights_acc = {}
@@ -1064,7 +1064,7 @@ class Trainer:
         for micro_step in range(grad_accum_steps):
             output = self.task.train_micro_step(self.model, self.train_loader.next_batch(), self.task_assets)
             tokens_processed_sum += output.tokens_processed
-            valid_tokens_sum += output.n_valid.to(device=device, dtype=torch.float32)
+            n_valid_sum += output.n_valid.to(device=device, dtype=torch.float32)
             loss_for_backward = output.loss_for_backward
 
             console_logs.extend(output.console_logs)
@@ -1089,9 +1089,9 @@ class Trainer:
 
         if ddp:
             dist.all_reduce(tokens_processed_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(valid_tokens_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(n_valid_sum, op=dist.ReduceOp.SUM)
 
-        self.scale_gradients_by_n_valid(valid_tokens_sum)
+        self.scale_gradients_by_n_valid(n_valid_sum)
 
         norm = self.clip_grad_norm(self.model, 1.0)
 
