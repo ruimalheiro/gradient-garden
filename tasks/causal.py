@@ -73,6 +73,8 @@ class CausalTask(BaseTask):
         }
 
         n_valid = (y != ignore_index).sum()
+        if n_valid.item() == 0:
+            raise ValueError('Causal batch has no valid supervised tokens')
 
         if self.config.distillation.enabled:
             tokens_processed += x.numel()
