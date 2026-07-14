@@ -1078,7 +1078,7 @@ class Trainer:
 
             # Instead of scaling the loss by grad_accum_steps inside of the task, we now scale the gradients by the number of valid tokens.
             # This is better than the previous and also compatible with pretraining, sft, etc.
-            # DDP already gives token grads / world size, but we want token grads / num valid tokens, so we multiply by (world_size / num valid tokens).
+            # DDP/FSDP averages parameter gradients across ranks, but we want token grads / num valid tokens, so we multiply by (world_size / num valid tokens).
             grad_scale = self.trainer_ctx.distributed.ddp_world_size / valid_tokens_sum.clamp_min(1).item()
         else:
             grad_scale = 1.0 / valid_tokens_sum.clamp_min(1).item()

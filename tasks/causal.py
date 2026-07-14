@@ -48,6 +48,7 @@ class CausalTask(BaseTask):
         device_type = self.ctx.device.device_type
         autocast_dtype = self.ctx.precision.autocast_dtype
         use_autocast = self.ctx.precision.use_autocast
+        ignore_index = self.config.tokenizer.ignore_index
 
         x, y, attention_mask = batch
         x = x.to(device, non_blocking=True)
@@ -71,23 +72,26 @@ class CausalTask(BaseTask):
             'Train Loss': loss.detach()
         }
 
+        n_valid = (y != ignore_index).sum()
+
         if self.config.distillation.enabled:
             tokens_processed += x.numel()
 
             with torch.no_grad():
-                teacher_logits = assets.teacher_model(input_ids=x)['logits']
+                teacher_logits = assets.teacher_model(input_ids=x, )['logits']
+
+            valid_mask = y != ignore_index
 
             loss_distil = distillation_loss(
                 teacher_logits,
                 result['logits'],
-                temperature=self.config.distillation.temperature
+                temperature=self.config.distillation.temperature,
+                valid_mask=valid_mask
             )
             loss_for_backward = loss_for_backward + loss_distil
 
             metrics['Train Loss'] = loss_for_backward.detach()
             metrics['Train Distill Loss'] = loss_distil.detach()
-
-        n_valid = (y != self.config.tokenizer.ignore_index).sum()
 
         loss_for_backward = loss_for_backward * n_valid
 
