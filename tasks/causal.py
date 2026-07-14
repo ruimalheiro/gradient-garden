@@ -80,7 +80,7 @@ class CausalTask(BaseTask):
             tokens_processed += x.numel()
 
             with torch.no_grad():
-                teacher_logits = assets.teacher_model(input_ids=x, )['logits']
+                teacher_logits = assets.teacher_model(input_ids=x, attention_mask=attention_mask)['logits']
 
             valid_mask = y != ignore_index
 
