@@ -1033,6 +1033,7 @@ class Trainer:
         scaler = self.trainer_ctx.precision.scaler
         grad_accum_steps = self.trainer_ctx.grad_accum_steps
         tokens_processed_sum = torch.tensor(0.0, device=device)
+        valid_tokens_sum = torch.tensor(0.0, device=device)
         console_logs = []
         metrics_sum_acc = {}
         metrics_weights_acc = {}
@@ -1048,7 +1049,8 @@ class Trainer:
         for micro_step in range(grad_accum_steps):
             output = self.task.train_micro_step(self.model, self.train_loader.next_batch(), self.task_assets)
             tokens_processed_sum += output.tokens_processed
-            loss_scaled = output.loss_for_backward
+            valid_tokens_sum += output.n_valid.to(device=device, dtype=torch.float32)
+            loss_for_backward = output.loss_for_backward
 
             console_logs.extend(output.console_logs)
             accumulate_weighted_metrics(
@@ -1063,16 +1065,27 @@ class Trainer:
                 self.model.require_backward_grad_sync = (micro_step == grad_accum_steps - 1)
 
             if scaler:
-                scaler.scale(loss_scaled).backward()
+                scaler.scale(loss_for_backward).backward()
             else:
-                loss_scaled.backward()
-
-        if ddp:
-            dist.all_reduce(tokens_processed_sum, op=dist.ReduceOp.SUM)
-        tokens_processed_sum = tokens_processed_sum.item()
+                loss_for_backward.backward()
 
         if scaler:
             self.unscale_optimizers(scaler)
+
+        if ddp:
+            dist.all_reduce(tokens_processed_sum, op=dist.ReduceOp.SUM)
+            dist.all_reduce(valid_tokens_sum, op=dist.ReduceOp.SUM)
+
+            # Instead of scaling the loss by grad_accum_steps inside of the task, we now scale the gradients by the number of valid tokens.
+            # This is better than the previous and also compatible with pretraining, sft, etc.
+            # DDP already gives token grads / world size, but we want token grads / num valid tokens, so we multiply by (world_size / num valid tokens).
+            grad_scale = self.trainer_ctx.distributed.ddp_world_size / valid_tokens_sum.clamp_min(1).item()
+        else:
+            grad_scale = 1.0 / valid_tokens_sum.clamp_min(1).item()
+
+        for p in self.model.parameters():
+            if p.grad is not None:
+                p.grad.mul_(grad_scale)
 
         norm = self.clip_grad_norm(self.model, 1.0)
 
@@ -1083,7 +1096,7 @@ class Trainer:
         t1.record()
         t1.synchronize()
         dt = t0.elapsed_time(t1) / 1000.0
-        tokens_per_sec = int(tokens_processed_sum / dt)
+        tokens_per_sec = int(tokens_processed_sum.item() / dt)
 
         step_metrics = StepMetrics(
             step_type=StepType.TRAIN,

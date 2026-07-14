@@ -48,7 +48,6 @@ class CausalTask(BaseTask):
         device_type = self.ctx.device.device_type
         autocast_dtype = self.ctx.precision.autocast_dtype
         use_autocast = self.ctx.precision.use_autocast
-        grad_accum_steps = self.ctx.grad_accum_steps
 
         x, y, attention_mask = batch
         x = x.to(device, non_blocking=True)
@@ -88,9 +87,9 @@ class CausalTask(BaseTask):
             metrics['Train Loss'] = loss_for_backward.detach()
             metrics['Train Distill Loss'] = loss_distil.detach()
 
-        loss_for_backward = loss_for_backward / grad_accum_steps
-
         n_valid = (y != self.config.tokenizer.ignore_index).sum()
+
+        loss_for_backward = loss_for_backward * n_valid
 
         return TaskStepOutput(
             tokens_processed=tokens_processed,
