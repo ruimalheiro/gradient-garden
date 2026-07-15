@@ -75,10 +75,3 @@ def test_moe_router_loss_mask_only_changes_auxiliary_loss():
     assert not torch.isclose(aux_loss_supervised, aux_loss_all)
 
     torch.testing.assert_close(aux_loss_all, torch.tensor(1.0))
-
-    expected_supervised_aux_loss = 2.0 * torch.stack(
-        [
-            aux_loss_supervised.new_tensor(4.0).sigmoid(),
-            aux_loss_supervised.new_tensor(2.0).sigmoid(),
-        ]
-    ).mean()
