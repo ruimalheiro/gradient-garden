@@ -200,7 +200,7 @@ class MoEFeedForward(nn.Module):
         self.acc_p_sum.add_(p.to(torch.float32) * n_tokens)
         self.acc_tokens.add_(n_tokens)
 
-    def forward(self, x):
+    def forward(self, x, router_loss_mask=None):
         B, S, D = x.shape
         x_flat = x.reshape(B * S, D)
         y_flat = torch.zeros_like(x_flat)
@@ -210,28 +210,53 @@ class MoEFeedForward(nn.Module):
         top_k_logits, top_k_index = torch.topk(logits, k=self.top_k, dim=-1) # (B*S, E_logits) / (B*S, E_indexes)
 
         top_k_probs = F.softmax(top_k_logits, dim=-1, dtype=x_flat.dtype)
-        all_probs = F.softmax(logits, dim=-1, dtype=x_flat.dtype)
+
+        # These counts describe the routing for every token.
+        full_topk_counts_i64 = torch.bincount(
+            top_k_index.reshape(-1),
+            minlength=self.num_experts,
+        ).to(torch.int64)
+
+        aux_logits = logits
+        aux_top_k_index = top_k_index
+        if router_loss_mask is not None:
+            flat_mask = router_loss_mask.reshape(-1).to(
+                device=logits.device,
+                dtype=torch.bool
+            )
+
+            if flat_mask.numel() != B * S:
+                raise ValueError(
+                    'router_loss_mask must have one entry per input token'
+                )
+
+            if not flat_mask.any().item():
+                raise ValueError(
+                    'MoE auxiliary loss has no valid supervised tokens'
+                )
+
+            aux_logits = logits[flat_mask]
+            aux_top_k_index = top_k_index[flat_mask]
 
         # TOKEN LOAD BALANCE
         # f
-        total_token_count_possible = B * S * self.top_k
-
-        topk_counts_i64 = torch.bincount(top_k_index.reshape(-1), minlength=self.num_experts).to(torch.int64)
-        counts_per_top_k_expert = topk_counts_i64.to(torch.float32)
-        f = counts_per_top_k_expert / max(1.0, total_token_count_possible)
+        aux_topk_counts_i64 = torch.bincount(aux_top_k_index.reshape(-1), minlength=self.num_experts).to(torch.int64)
+        aux_topk_counts = aux_topk_counts_i64.to(torch.float32)
+        f = aux_topk_counts / max(1.0, aux_top_k_index.numel())
         # p
-        p = all_probs.mean(dim=0)
+        p = F.softmax(aux_logits, dim=-1, dtype=x_flat.dtype).mean(dim=0)
         load_balance_loss = self.load_balancing_coef * self.num_experts * torch.sum(f * p)
 
         # Z LOSS
-        z_loss = self.z_loss_coef * torch.mean(torch.logsumexp(logits, dim=-1) ** 2.0)
+        z_loss = self.z_loss_coef * torch.mean(torch.logsumexp(aux_logits, dim=-1) ** 2.0)
 
         aux_loss = load_balance_loss + z_loss
 
         # COMPUTE STATS
         if self.compute_stats:
             with torch.no_grad():
-                self._accumulate_stats(top_k_index, topk_counts_i64, p)
+                full_p = F.softmax(logits, dim=-1, dtype=x_flat.dtype).mean(dim=0)
+                self._accumulate_stats(top_k_index, full_topk_counts_i64, full_p)
 
         # PERFORMANCE
         flat_top_k_index = top_k_index.reshape(-1)
@@ -243,8 +268,7 @@ class MoEFeedForward(nn.Module):
         flat_top_k_probs = flat_top_k_probs.index_select(0, order)
         flat_token = flat_token.index_select(0, order)
 
-        counts = counts_per_top_k_expert.int()
-        offsets = torch.cumsum(counts, dim=0)
+        offsets = torch.cumsum(full_topk_counts_i64, dim=0)
         starts = torch.empty_like(offsets)
         starts[0] = 0
         starts[1:] = offsets[:-1]
@@ -254,8 +278,8 @@ class MoEFeedForward(nn.Module):
             e_i = offsets[i]
             if s_i == e_i:
                 if torch.is_grad_enabled():
-                    for p in self.experts[i].parameters(): # hack so the autograd graph considers the expert (otherwise error because of None grad)
-                        aux_loss = aux_loss + p.sum() * 0.0
+                    for parameter in self.experts[i].parameters(): # hack so the autograd graph considers the expert (otherwise error because of None grad)
+                        aux_loss = aux_loss + parameter.sum() * 0.0
                 continue
 
             token_indexes = flat_token[s_i:e_i]
@@ -305,7 +329,7 @@ class TransformerBlock(nn.Module):
         self.attention_norm = RMSNorm(config.dim, eps=config.norm_eps)
         self.ffn_norm = RMSNorm(config.dim, eps=config.norm_eps)
 
-    def forward(self, x, rope_freqs, mask=None, layer_k_cache=None, layer_v_cache=None, start_position: int = 0):
+    def forward(self, x, rope_freqs, mask=None, router_loss_mask=None, layer_k_cache=None, layer_v_cache=None, start_position: int = 0):
         hidden_state = x + self.attention(
             self.attention_norm(x),
             rope_freqs,
@@ -314,7 +338,10 @@ class TransformerBlock(nn.Module):
             layer_v_cache=layer_v_cache,
             start_position=start_position
         )
-        ff, aux = self.feed_forward(self.ffn_norm(hidden_state))
+        ff, aux = self.feed_forward(
+            self.ffn_norm(hidden_state),
+            router_loss_mask
+        )
         output = hidden_state + ff
         return output, aux
 
@@ -486,6 +513,11 @@ class TendrilMoETransformer(BaseModel):
                     causal_keep = (k_pos[None, :] <= q_pos[:, None])[None, None, :, :]  # (1,1,Q,K)
                     attn_mask = attn_mask.expand(attn_mask.size(0), 1, sequence_length, k_length) & causal_keep
 
+        router_loss_mask = None
+        if labels is not None:
+            labels = labels.to(hidden_state.device)
+            router_loss_mask = labels != self.ignore_index
+
         aux_loss_total = hidden_state.new_zeros(())
         for layer_id, layer in enumerate(self.layers):
             layer_k_cache = None
@@ -498,6 +530,7 @@ class TendrilMoETransformer(BaseModel):
                 hidden_state,
                 rope_freqs,
                 attn_mask,
+                router_loss_mask,
                 layer_k_cache=layer_k_cache,
                 layer_v_cache=layer_v_cache,
                 start_position=start_position
@@ -515,7 +548,11 @@ class TendrilMoETransformer(BaseModel):
                 labels = labels.to(hidden_state.device)
             flat_logits = logits.view(-1, logits.size(-1))  # (batch_size * sequence_length, num_classes)
             flat_labels = labels.view(-1)  # (batch_size * sequence_length)
-            ce = nn.CrossEntropyLoss(ignore_index=self.ignore_index)(flat_logits, flat_labels)
-            loss = ce + (aux_loss_total / self.n_layers)
+            loss = nn.CrossEntropyLoss(ignore_index=self.ignore_index)(flat_logits, flat_labels)
 
-        return {'logits': logits, 'loss': loss, 'kv_cache': kv_cache}
+        return {
+            'logits': logits,
+            'loss': loss,
+            'aux_loss': aux_loss_total / self.n_layers,
+            'kv_cache': kv_cache
+        }

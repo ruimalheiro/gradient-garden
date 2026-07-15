@@ -53,6 +53,11 @@ class CausalTask(BaseTask):
         x, y, attention_mask = batch
         x = x.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
+
+        n_valid = (y != ignore_index).sum()
+        if n_valid.item() == 0:
+            raise ValueError('Causal batch has no valid supervised tokens')
+
         if attention_mask is not None:
             attention_mask = attention_mask.to(device, non_blocking=True)
 
@@ -64,17 +69,20 @@ class CausalTask(BaseTask):
             enabled=use_autocast
         ):
             result = model(x, labels=y, attention_mask=attention_mask)
-            loss = result['loss']
+            ce_loss = result['loss']
+            aux_loss = result.get('aux_loss')
 
-        loss_for_backward = loss
+            objective_loss = ce_loss
+            if aux_loss is not None:
+                objective_loss = objective_loss + aux_loss
 
         metrics = {
-            'Train Loss': loss.detach()
+            'Train Loss': objective_loss.detach(),
+            'Train CE Loss': ce_loss.detach(),
         }
 
-        n_valid = (y != ignore_index).sum()
-        if n_valid.item() == 0:
-            raise ValueError('Causal batch has no valid supervised tokens')
+        if aux_loss is not None:
+            metrics['Train Aux Loss'] = aux_loss.detach()
 
         if self.config.distillation.enabled:
             tokens_processed += x.numel()
@@ -90,17 +98,17 @@ class CausalTask(BaseTask):
                 temperature=self.config.distillation.temperature,
                 valid_mask=valid_mask
             )
-            loss_for_backward = loss_for_backward + loss_distil
+            objective_loss = objective_loss + loss_distil
 
-            metrics['Train Loss'] = loss_for_backward.detach()
+            metrics['Train Loss'] = objective_loss.detach()
             metrics['Train Distill Loss'] = loss_distil.detach()
 
-        loss_for_backward = loss_for_backward * n_valid
+        loss_for_backward = objective_loss * n_valid
 
         return TaskStepOutput(
             tokens_processed=tokens_processed,
             n_valid=n_valid,
-            loss=loss,
+            loss=objective_loss,
             loss_for_backward=loss_for_backward,
             metrics=metrics
         )
@@ -111,19 +119,39 @@ class CausalTask(BaseTask):
         device_type = self.ctx.device.device_type
         autocast_dtype = self.ctx.precision.autocast_dtype
         use_autocast = self.ctx.precision.use_autocast
+        ignore_index = self.config.tokenizer.ignore_index
 
         x, y, attention_mask = batch
         x = x.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
+
+        n_valid = (y != ignore_index).sum().float()
+        if n_valid.item() == 0:
+            raise ValueError(
+                'Causal validation batch has no valid supervised tokens'
+            )
+
         if attention_mask is not None:
             attention_mask = attention_mask.to(device, non_blocking=True)
 
         with torch.autocast(device_type=device_type, dtype=autocast_dtype, enabled=use_autocast):
-            loss = model(x, labels=y, attention_mask=attention_mask)['loss']
-        
-        n_valid = (y != self.config.tokenizer.ignore_index).sum().float()
+            result = model(x, labels=y, attention_mask=attention_mask)
+            ce_loss = result['loss']
+            aux_loss = result.get('aux_loss')
+
+            objective_loss = ce_loss
+            if aux_loss is not None:
+                objective_loss = objective_loss + aux_loss
+
+        metrics = {
+            'Val CE Loss': ce_loss.detach(),
+        }
+
+        if aux_loss is not None:
+            metrics['Val Aux Loss'] = aux_loss.detach()
 
         return TaskStepOutput(
             n_valid=n_valid,
-            loss=loss
+            loss=objective_loss,
+            metrics=metrics
         )
