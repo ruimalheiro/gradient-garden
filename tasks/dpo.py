@@ -47,7 +47,6 @@ class DPOTask(BaseTask):
         device_type = self.ctx.device.device_type
         autocast_dtype = self.ctx.precision.autocast_dtype
         use_autocast = self.ctx.precision.use_autocast
-        grad_accum_steps = self.ctx.grad_accum_steps
         dpo_beta = self.config.dpo.beta
         ignore_index = self.config.tokenizer.ignore_index
 
@@ -89,13 +88,13 @@ class DPOTask(BaseTask):
             dpo_beta
         )
 
-        loss_for_backward = loss / grad_accum_steps
-
         n_valid = torch.tensor(
             chosen_input_ids.size(0),
             device=device,
             dtype=loss.dtype
         )
+
+        loss_for_backward = loss * n_valid
 
         return TaskStepOutput(
             tokens_processed=tokens_processed,
