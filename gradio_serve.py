@@ -44,13 +44,12 @@ class UI:
         temperature: float,
         top_p: float,
     ) -> str:
-            if self.debug:
-                logger.info(f'HISTORY: {history}')
-                logger.info(f'MESSAGE: {message}')
-            
             messages = [{'role': 'system', 'content': system_prompt}]
             messages.extend(self.normalize_history(history))
             messages.append({'role': 'user', 'content': message})
+
+            if self.debug:
+                logger.info(f'CONTEXT: {messages}')
 
             outputs = self.inspector.generate(
                 [messages],
@@ -64,7 +63,11 @@ class UI:
                 prompts_are_messages=True,
             )
 
-            return outputs[0]['result_decoded']
+            answer = outputs[0]['result_decoded']
+            if self.debug:
+                logger.info(f'ANSWER: {answer}\n')
+
+            return answer
 
     def init_ui(self, *, server_name='localhost', server_port=6006, share=False):
         logger.set_master(True)
