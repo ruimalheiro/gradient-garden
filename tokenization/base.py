@@ -15,7 +15,7 @@ class PromptBuilder:
         self.ignore_index = ignore_index
         self.no_labels = no_labels
         self.system_prompt = tokenizer.system_prompt
-        self.eos_token = tokenizer.eos_token
+        self.eos_id = tokenizer.eos_id
         self.bos_id = tokenizer.bos_id
         self.tokens = []
         self.labels = []
@@ -37,13 +37,17 @@ class PromptBuilder:
             raise ValueError(f'Unknown role: {role}')
         return f'{self.ROLE_NAMES[role]}: '
 
-    def add_message(self, role, content, *, supervise=False, final_assistant=False):
+    def add_message(self, role, content, *, supervise=False, end_turn=False):
         prefix = self.role_prefix(role)
         self.push(self.encode(prefix), supervise=False)
 
         if role == 'assistant':
-            text = content + (self.eos_token if final_assistant else '\n')
-            self.push(self.encode(text), supervise=supervise)
+            self.push(self.encode(content), supervise=supervise)
+
+            if end_turn:
+                self.push([self.eos_id], supervise=supervise)
+            else:
+                self.push(self.encode('\n'), supervise=supervise)
         else:
             self.push(self.encode(content + '\n'), supervise=False)
 
@@ -90,9 +94,12 @@ class BaseTokenizer(ABC):
         builder = PromptBuilder(self, no_labels=True)
 
         for message in messages:
+            role = message['role']
+
             builder.add_message(
-                message['role'],
+                role,
                 message['content'],
+                end_turn=(role == "assistant")
             )
 
         builder.add_assistant_prefix()
@@ -115,31 +122,74 @@ class BaseTokenizer(ABC):
 
         return self.encode_instruct_messages_inference(messages)
 
+    def validate_conversation(
+        self,
+        conversation,
+        *,
+        expected_last_role,
+    ):
+        if not conversation:
+            raise ValueError('Conversation cannot be empty')
+
+        if conversation[-1]['role'] != expected_last_role:
+            raise ValueError(
+                f'Conversation must end with {expected_last_role}, '
+                f'got {conversation[-1]["role"]}'
+            )
+
+        expected_role = 'user'
+
+        for index, message in enumerate(conversation):
+            role = message['role']
+
+            if role not in {'user', 'assistant'}:
+                raise ValueError(
+                    f'Unexpected role at index {index}: {role}. '
+                    'System messages must be passed through system_prompt.'
+                )
+
+            if role != expected_role:
+                raise ValueError(
+                    f'Expected {expected_role} at index {index}, got {role}'
+                )
+
+            expected_role = (
+                'assistant'
+                if expected_role == 'user'
+                else 'user'
+            )
+
     def encode_instruct_chat(
         self,
         *,
         conversation,
         ignore_index: int,
+        system_prompt: str | None = None,
         max_seq_len: int | None = None,
         trim_to_context: bool = False
     ):
+        self.validate_conversation(conversation, expected_last_role='assistant')
+
+        system_prompt = (
+            self.system_prompt
+            if system_prompt is None
+            else system_prompt
+        )
+
         def encode_messages(messages):
             builder = PromptBuilder(self, ignore_index=ignore_index)
-            builder.add_message('system', self.system_prompt)
+            builder.add_message('system', system_prompt)
 
-            for idx, interaction in enumerate(messages):
+            for interaction in messages:
                 role = interaction['role']
                 content = interaction['content']
-
                 is_assistant = role == 'assistant'
-                is_last_message = idx == len(messages) - 1
-                is_final_assistant = is_assistant and is_last_message
 
                 builder.add_message(
                     role,
                     content,
-                    supervise=is_final_assistant,
-                    final_assistant=is_final_assistant
+                    supervise=is_assistant,
+                    end_turn=is_assistant
                 )
 
             return builder.build()
@@ -182,25 +232,38 @@ class BaseTokenizer(ABC):
         chosen: str,
         rejected: str,
         ignore_index: int,
+        system_prompt: str | None = None,
         max_seq_len: int | None = None,
         trim_to_context: bool = False
     ):
+        self.validate_conversation(conversation, expected_last_role='user')
+
+        system_prompt = (
+            self.system_prompt
+            if system_prompt is None
+            else system_prompt
+        )
+
         def encode_prompt(messages):
             prefix_builder = PromptBuilder(self, ignore_index=ignore_index)
-            prefix_builder.add_message('system', self.system_prompt)
+            prefix_builder.add_message('system', system_prompt)
 
             for interaction in messages:
+                role = interaction['role']
+
                 prefix_builder.add_message(
-                    interaction['role'],
+                    role,
                     interaction['content'],
                     supervise=False,
+                    end_turn=(role == 'assistant')
                 )
 
             prefix_builder.add_assistant_prefix()
 
             def build_answer(answer):
                 builder = prefix_builder.clone()
-                builder.push(builder.encode(answer + self.eos_token), supervise=True)
+                builder.push(builder.encode(answer), supervise=True)
+                builder.push([builder.eos_id], supervise=True)
                 return builder.build()
 
             prompt_ids, _ = prefix_builder.build()

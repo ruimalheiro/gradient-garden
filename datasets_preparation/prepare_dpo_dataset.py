@@ -59,11 +59,28 @@ SUPPORTED_HF_DATASETS = {
     }
 }
 
-def remove_system_messages(conversation):
-    return [
-        message for message in conversation
-        if message['role'] != 'system'
-    ]
+def extract_leading_system_prompt(conversation):
+    system_parts = []
+    remaining = []
+    seen_non_system = False
+
+    for message in conversation:
+        role = message['role']
+        content = message['content'].strip()
+
+        if role == 'system':
+            if seen_non_system:
+                return '', []
+            if content:
+                system_parts.append(content)
+            continue
+
+        seen_non_system = True
+        remaining.append(message)
+
+    system_prompt = '\n\n'.join(system_parts)
+
+    return system_prompt or '', remaining
 
 def ensure_only_user_assistant(conversation):
     allowed_roles = {'user', 'assistant'}
@@ -111,12 +128,26 @@ def ensure_alternating_prompt_for_dpo(conversation):
 
     return conversation
 
+def ensure_nonempty_content(conversation):
+    for message in conversation:
+        content = message.get('content')
+
+        if not isinstance(content, str):
+            return []
+
+        if not content.strip():
+            return []
+
+    return conversation
+
 tokenizer = None
 
 def tokenize(tokenizer_kwargs, ignore_index, max_seq_len, doc):
     global tokenizer
     if tokenizer is None:
         tokenizer = init_tokenizer(**tokenizer_kwargs)
+
+    source_system_prompt = doc.get('system_prompt', '').strip() or None
 
     (
         prompt_input_ids,
@@ -129,6 +160,7 @@ def tokenize(tokenizer_kwargs, ignore_index, max_seq_len, doc):
         chosen=doc['chosen'],
         rejected=doc['rejected'],
         ignore_index=ignore_index,
+        system_prompt=source_system_prompt,
         max_seq_len=max_seq_len,
         trim_to_context=True
     )
@@ -190,12 +222,16 @@ def download_and_prepare_data(
             data = adapter(doc, transforms)
 
             prompt = data['prompt']
-            prompt = remove_system_messages(prompt)
+
+            source_system_prompt, prompt = extract_leading_system_prompt(prompt)
+
             prompt = ensure_only_user_assistant(prompt)
             prompt = ensure_user_first(prompt)
             prompt = ensure_user_last(prompt)
             prompt = ensure_alternating_prompt_for_dpo(prompt)
+            prompt = ensure_nonempty_content(prompt)
 
+            data['system_prompt'] = source_system_prompt
             data['prompt'] = prompt
             data['chosen'] = data['chosen'].strip()
             data['rejected'] = data['rejected'].strip()
