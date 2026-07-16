@@ -16,9 +16,9 @@ def precompute_rope_freqs(head_dim, sequence_length, theta=10000.0, device='cpu'
     ''' Computes the frequencies that will be used for rope (rotary positional ebedding). Without complex numbers.
     '''
     indices = torch.arange(0, head_dim // 2, device=device, dtype=torch.float32)
-    normalised_indices = 2.0 * indices / head_dim
+    normalized_indices = 2.0 * indices / head_dim
 
-    freqs = 1.0 / (theta ** normalised_indices)
+    freqs = 1.0 / (theta ** normalized_indices)
 
     timesteps = torch.arange(sequence_length, device=device, dtype=torch.float32)
 
@@ -512,6 +512,8 @@ class TendrilMoETransformer(BaseModel):
                     k_pos = torch.arange(0, k_length, device=hidden_state.device)
                     causal_keep = (k_pos[None, :] <= q_pos[:, None])[None, None, :, :]  # (1,1,Q,K)
                     attn_mask = attn_mask.expand(attn_mask.size(0), 1, sequence_length, k_length) & causal_keep
+
+                attn_mask = attn_mask.contiguous()
 
         router_loss_mask = None
         if labels is not None:
