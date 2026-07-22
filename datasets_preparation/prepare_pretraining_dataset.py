@@ -78,7 +78,10 @@ SUPPORTED_HF_DATASETS = {
     },
     'karpathy/climbmix-400b-shuffle': {
         'default': hf_dataset()
-    }
+    },
+    'HuggingFaceFW/finewiki': {
+        'en': hf_dataset()
+    },
 }
 
 def download_and_prepare_data(
