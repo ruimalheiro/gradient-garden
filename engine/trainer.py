@@ -417,10 +417,7 @@ class Trainer:
         )
 
     def load_hellaswag_eval_data(self):
-        if (
-            self.config.training.stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT) or
-            not self.can_run_scheduled_action(self.config.evals.hellaswag)
-        ):
+        if not self.can_run_scheduled_action(self.config.evals.hellaswag):
             return
         self.hellaswag_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.hellaswag_path}/{self.config.paths.evals.data_filename}',
@@ -431,10 +428,7 @@ class Trainer:
         )
 
     def load_winogrande_eval_data(self):
-        if (
-            self.config.training.stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT) or
-            not self.can_run_scheduled_action(self.config.evals.winogrande)
-        ):
+        if not self.can_run_scheduled_action(self.config.evals.winogrande):
             return
         self.winogrande_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.winogrande_path}/{self.config.paths.evals.data_filename}',
@@ -445,10 +439,7 @@ class Trainer:
         )
 
     def load_arc_challenge_eval_data(self):
-        if (
-            self.config.training.stage not in (TrainingStage.PRETRAINING, TrainingStage.INSTRUCT) or
-            not self.can_run_scheduled_action(self.config.evals.arc_challenge)
-        ):
+        if not self.can_run_scheduled_action(self.config.evals.arc_challenge):
             return
         self.arc_challenge_data = load_multiple_choice_eval_file(
             filepath=f'{self.config.paths.evals.arc_challenge_path}/{self.config.paths.evals.data_filename}',
@@ -459,9 +450,9 @@ class Trainer:
         )
 
     def load_ifeval_no_external_eval_data(self):
-        if (
-            self.config.training.stage != TrainingStage.INSTRUCT or
-            not self.can_run_scheduled_action(self.config.evals.ifeval_no_external)
+        if not (
+            self.is_chat_stage() and
+            self.can_run_scheduled_action(self.config.evals.ifeval_no_external)
         ):
             return
         self.ifeval_no_external_data = load_ifeval_eval_file(
@@ -472,9 +463,9 @@ class Trainer:
         )
 
     def load_custom_sft_smoke_eval_data(self):
-        if (
-            self.config.training.stage != TrainingStage.INSTRUCT or
-            not self.can_run_scheduled_action(self.config.evals.custom_sft_smoke)
+        if not (
+            self.is_chat_stage() and
+            self.can_run_scheduled_action(self.config.evals.custom_sft_smoke)
         ):
             return
         self.custom_sft_smoke_data = load_custom_sft_smoke_eval_file(
@@ -509,6 +500,9 @@ class Trainer:
 
     def is_dpo(self):
         return self.config.training.stage == TrainingStage.DPO
+
+    def is_chat_stage(self):
+        return self.is_instruct() or self.is_dpo()
 
     def build_data_loaders(self):
         self.train_loader, self.val_loader = init_data_loaders(
@@ -1251,7 +1245,7 @@ class Trainer:
 
     @torch.inference_mode()
     def run_multiple_choice_eval(self, *, pbar, data, tqdm_label: str, step_type: StepType):
-        if not (self.is_pretraining() or self.is_instruct()):
+        if not (self.is_pretraining() or self.is_chat_stage()):
             return
         ddp = self.trainer_ctx.distributed.ddp
         is_master_process = self.trainer_ctx.distributed.is_master_process
@@ -1339,7 +1333,7 @@ class Trainer:
         max_gen_len: int,
         batch_size: int
     ):
-        if not (self.is_instruct()):
+        if not self.is_chat_stage():
             return
         ddp = self.trainer_ctx.distributed.ddp
         is_master_process = self.trainer_ctx.distributed.is_master_process
@@ -1480,7 +1474,7 @@ class Trainer:
                 full_seq=True,
                 device=self.trainer_ctx.device.device,
                 dtype=self.trainer_ctx.precision.autocast_dtype,
-                is_instruct=self.is_instruct(),
+                is_instruct=self.is_chat_stage(),
                 use_kv_cache=True,
                 batch_size=self.config.training.micro_batch_size,
                 show_progress=self.trainer_ctx.distributed.is_master_process
