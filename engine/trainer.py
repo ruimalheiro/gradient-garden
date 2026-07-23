@@ -1245,7 +1245,7 @@ class Trainer:
 
     @torch.inference_mode()
     def run_multiple_choice_eval(self, *, pbar, data, tqdm_label: str, step_type: StepType):
-        if not (self.is_pretraining() or self.is_instruct()):
+        if not (self.is_pretraining() or self.is_chat_stage()):
             return
         ddp = self.trainer_ctx.distributed.ddp
         is_master_process = self.trainer_ctx.distributed.is_master_process
