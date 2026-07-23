@@ -49,12 +49,43 @@ def adapt_anthropic_hh_rlhf(doc, transforms):
 
     return {'prompt': prompt, 'chosen': chosen_assistant[-1], 'rejected': rejected_assistant[-1] }
 
+def adapt_ultrafeedback_binarized(doc, transforms):
+    chosen = doc['chosen']
+    rejected = doc['rejected']
+
+    if not chosen or not rejected:
+        return {'prompt': [], 'chosen': '', 'rejected': ''}
+
+    chosen_prompt = chosen[:-1]
+    rejected_prompt = rejected[:-1]
+
+    if chosen_prompt != rejected_prompt:
+        return {'prompt': [], 'chosen': '', 'rejected': ''}
+
+    if chosen[-1]['role'] != 'assistant':
+        return {'prompt': [], 'chosen': '', 'rejected': ''}
+
+    if rejected[-1]['role'] != 'assistant':
+        return {'prompt': [], 'chosen': '', 'rejected': ''}
+
+    return {
+        'prompt': chosen_prompt,
+        'chosen': chosen[-1]['content'],
+        'rejected': rejected[-1]['content']
+    }
+
 #### SUPPORTED DATASETS
 SUPPORTED_HF_DATASETS = {
     'Anthropic/hh-rlhf': {
         'default': {
             'split': 'train',
             'adapter': adapt_anthropic_hh_rlhf
+        }
+    },
+    'HuggingFaceH4/ultrafeedback_binarized': {
+        'default': {
+            'split': 'train_prefs',
+            'adapter': adapt_ultrafeedback_binarized
         }
     }
 }
