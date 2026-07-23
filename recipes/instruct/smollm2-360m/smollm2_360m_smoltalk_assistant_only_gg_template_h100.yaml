@@ -1,7 +1,8 @@
 name: smollm2_360m_smoltalk_assistant_only_gg_template_h100
 description: >
-  SmolLM2-360M full SFT on Smol-SmolTalk, approximating the official
-  SmolLM2 recipe while using custom chat template, assistant only loss, and no sequence packing.
+  SFT baseline for SmolLM2-360M on Smol-SmolTalk using the
+  Gradient Garden chat template and assistant only loss.
+  Does not include the official DPO stage as that will be a DPO recipe.
 
 config:
   run:
@@ -61,45 +62,45 @@ config:
       enabled: false
 
   validation:
-    every_x_steps: 2901
-    validation_steps: 1143
+    every_x_steps: 500
+    validation_steps: 2286
     run_on_first_step: true
     run_on_last_step: true
 
   generation:
-    every_x_steps: 2901
+    every_x_steps: 250
     max_gen_len: 256
     run_on_first_step: true
     run_on_last_step: true
 
   evals:
     hellaswag:
-      every_x_steps: 2901
+      every_x_steps: 1000
       number_of_examples: 200
       run_on_first_step: true
       run_on_last_step: true
 
     winogrande:
-      every_x_steps: 2901
+      every_x_steps: 1000
       number_of_examples: 200
       run_on_first_step: true
       run_on_last_step: true
 
     arc_challenge:
-      every_x_steps: 2901
+      every_x_steps: 1000
       number_of_examples: 200
       run_on_first_step: true
       run_on_last_step: true
 
     ifeval_no_external:
-      every_x_steps: 2901
+      every_x_steps: 1000
       max_gen_len: 256
       number_of_examples: 100
       run_on_first_step: true
       run_on_last_step: true
 
     custom_sft_smoke:
-      every_x_steps: 2901
+      every_x_steps: 1000
       max_gen_len: 256
       number_of_examples: 100
       run_on_first_step: true
@@ -107,8 +108,8 @@ config:
 
   checkpointing:
     save_checkpoints: true
-    every_x_steps: 2901
-    max_number_checkpoints: 2
+    every_x_steps: 500
+    max_number_checkpoints: 3
     max_number_best_checkpoints: 1
     run_on_first_step: false
     run_on_last_step: true

@@ -1,6 +1,9 @@
 name: tendril_480m_smoltalk_assistant_only_gg_template_h100
 description: >
-  Tendril 480M full SFT on Smol-SmolTalk using custom chat template, assistant only loss, 2048 context window.
+  SFT conversational baseline for Tendril 480M on Smol-SmolTalk,
+  using the Gradient Garden chat template, assistant only loss, and a
+  2048 token context window. Requires a pretrained Tendril checkpoint
+  supplied through --checkpoint.
 
 config:
   run:
