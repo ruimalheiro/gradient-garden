@@ -379,7 +379,7 @@ For convenience, local configurations, recipes or other files should use the nam
 ```
 
 ## Contributions
-Feel free to reach out if interested in contributing!
+Feel free to open an issue if you are interested in contributing!
 
 ## Third-party assets and licenses
 Tokenizer files, model weights, and datasets obtained from third parties are **not** included in this repository unless explicitly stated, and may be subject to their own licenses and terms.
