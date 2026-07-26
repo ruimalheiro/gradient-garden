@@ -1,4 +1,4 @@
-name: smollm2_360m_smoltalk_assistant_only_gg_template_h100
+name: smollm2_360m_smoltalk_assistant_only_gg_template
 description: >
   SFT baseline for SmolLM2-360M on Smol-SmolTalk using the
   Gradient Garden chat template and assistant only loss.
@@ -6,7 +6,7 @@ description: >
 
 config:
   run:
-    name: smollm2_360m_smoltalk_assistant_only_gg_template_h100
+    name: smollm2_360m_smoltalk_assistant_only_gg_template
 
   runtime:
     device_type: cuda

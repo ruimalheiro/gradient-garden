@@ -1,9 +1,9 @@
-name: tendril_480m_8xGPU_80GB_pretraining_200b
-description: 8xGPU_80GB pretraining recipe for Tendril 480M with over ~200B tokens.
+name: tendril_480m_climbmix_pretraining_200b
+description: Tendril 480M pretraining baseline on 200B tokens from ClimbMix.
 
 config:
   run:
-    name: tendril_480m_8xGPU_80GB_pretraining_200b
+    name: tendril_480m_climbmix_pretraining_200b
 
   runtime:
     device_type: cuda

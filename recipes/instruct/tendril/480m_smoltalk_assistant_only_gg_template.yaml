@@ -1,4 +1,4 @@
-name: tendril_480m_smoltalk_assistant_only_gg_template_h100
+name: tendril_480m_smoltalk_assistant_only_gg_template
 description: >
   SFT conversational baseline for Tendril 480M on Smol-SmolTalk,
   using the Gradient Garden chat template, assistant only loss, and a
@@ -7,7 +7,7 @@ description: >
 
 config:
   run:
-    name: tendril_480m_smoltalk_assistant_only_gg_template_h100
+    name: tendril_480m_smoltalk_assistant_only_gg_template
 
   runtime:
     device_type: cuda
