@@ -63,6 +63,13 @@ class UI:
                 assert candidate_messages[-1]['role'] == 'user'
                 return candidate_messages
 
+            if len(history_ready_messages) < 2:
+                raise gr.Error(
+                    'The system prompt and current message are too long for '
+                    f'the available context window of {available_length} tokens. '
+                    'Reduce the size of the message, system prompt, or requested response length.'
+                )
+
             history_ready_messages = history_ready_messages[2:]
 
     def chat_interface(
