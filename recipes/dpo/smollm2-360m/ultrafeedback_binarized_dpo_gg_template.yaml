@@ -1,0 +1,149 @@
+name: smollm2_360m_ultrafeedback_binarized_dpo_gg_template
+description: >
+  DPO baseline for SmolLM2-360M on UltraFeedback Binarized using the
+  Gradient Garden chat template. Requires the Smol-SmolTalk SFT
+  checkpoint supplied through --checkpoint.
+
+config:
+  run:
+    name: smollm2_360m_ultrafeedback_binarized_dpo_gg_template
+
+  runtime:
+    device_type: cuda
+    training_precision: bf16
+    use_torch_compile: true
+    use_fsdp: false
+    number_of_cpu_processes: 16
+
+  training:
+    stage: dpo
+    seed: 42
+    total_batch_size: 16384
+    micro_batch_size: 2
+    max_steps: 7566
+    early_stopping_patience: 1000000
+    early_stopping_patience_skip_steps: 0
+
+  model:
+    architecture: hf_wrapper
+    hf_config:
+      model_name: HuggingFaceTB/SmolLM2-360M
+      random_init: false
+    max_seq_len: 1024
+
+  dpo:
+    beta: 0.5
+
+  prompts:
+    system_prompt: "You are a helpful AI assistant named SmolLM"
+
+  tokenizer:
+    checkpoint_path: HuggingFaceTB/SmolLM2-360M
+    huggingface_tokenizer: true
+    prompt_format: gradient_garden
+    ignore_index: -100
+
+  paths:
+    datasets:
+      training_path: ./datasets/dpo_ultrafeedback_binarized_1024
+    runs:
+      output_dir_path: ./runs
+
+  optimizers:
+    adamw:
+      max_lr: 1.0e-6
+      min_lr: 0.0
+      betas: [0.9, 0.999]
+      weight_decay: 0.0
+      schedulers:
+        active: cosine
+        cosine:
+          start_step: 0
+          warmup_steps: 757
+          max_steps: 7566
+    muon:
+      enabled: false
+
+  validation:
+    every_x_steps: 500
+    validation_steps: 306
+    run_on_first_step: true
+    run_on_last_step: true
+
+  generation:
+    every_x_steps: 250
+    max_gen_len: 256
+    run_on_first_step: true
+    run_on_last_step: true
+
+  evals:
+    hellaswag:
+      every_x_steps: 1000
+      number_of_examples: 200
+      run_on_first_step: true
+      run_on_last_step: true
+
+    winogrande:
+      every_x_steps: 1000
+      number_of_examples: 200
+      run_on_first_step: true
+      run_on_last_step: true
+
+    arc_challenge:
+      every_x_steps: 1000
+      number_of_examples: 200
+      run_on_first_step: true
+      run_on_last_step: true
+
+    ifeval_no_external:
+      every_x_steps: 1000
+      max_gen_len: 256
+      number_of_examples: 100
+      run_on_first_step: true
+      run_on_last_step: true
+
+    custom_sft_smoke:
+      every_x_steps: 1000
+      max_gen_len: 256
+      number_of_examples: 100
+      run_on_first_step: true
+      run_on_last_step: true
+
+  checkpointing:
+    save_checkpoints: true
+    every_x_steps: 500
+    max_number_checkpoints: 3
+    max_number_best_checkpoints: 1
+    run_on_first_step: false
+    run_on_last_step: true
+
+  wandb:
+    enabled: true
+
+data:
+  seed: 42
+
+  datasets_common_settings:
+    validation_ratio: 0.01
+    interleave_stopping_strategy: first_exhausted
+
+  datasets:
+    HuggingFaceH4/ultrafeedback_binarized:
+      default:
+        weight: 1.0
+
+  evals:
+    hellaswag:
+      enabled: true
+
+    winogrande:
+      enabled: true
+
+    arc_challenge:
+      enabled: true
+
+    ifeval_no_external:
+      enabled: true
+
+    custom_sft_smoke:
+      enabled: true
