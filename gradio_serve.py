@@ -45,6 +45,9 @@ class UI:
         max_seq_len = self.inspector.model.config.max_seq_len
         available_length = max_seq_len - max_new_tokens
 
+        if available_length <= 0:
+            raise gr.Error(f'Max new tokens ({max_new_tokens}) must be smaller than the context window ({max_seq_len}).')
+
         while True:
             candidate_messages = [
                 system_ready_message,
