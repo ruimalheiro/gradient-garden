@@ -35,6 +35,43 @@ class UI:
         # {'role': ..., 'content': [{'type': 'text', 'text': ...}], ...}
         return [{'role': h['role'], 'content': h['content'][0]['text']} for h in history]
 
+    def fit_messages_to_context_window(
+        self,
+        system_ready_message,
+        history_ready_messages,
+        user_ready_message,
+        max_new_tokens
+    ):
+        max_seq_len = self.inspector.model.config.max_seq_len
+        available_length = max_seq_len - max_new_tokens
+
+        if available_length <= 0:
+            raise gr.Error(f'Max new tokens ({max_new_tokens}) must be smaller than the context window ({max_seq_len}).')
+
+        while True:
+            candidate_messages = [
+                system_ready_message,
+                *history_ready_messages,
+                user_ready_message,
+            ]
+
+            prompt_tokens = self.inspector.tokenizer.encode_instruct_messages_inference(candidate_messages)
+            prompt_length = len(prompt_tokens)
+
+            if prompt_length <= available_length:
+                assert candidate_messages[0]['role'] == 'system'
+                assert candidate_messages[-1]['role'] == 'user'
+                return candidate_messages
+
+            if len(history_ready_messages) < 2:
+                raise gr.Error(
+                    'The system prompt and current message are too long for '
+                    f'the available context window of {available_length} tokens. '
+                    'Reduce the size of the message, system prompt, or requested response length.'
+                )
+
+            history_ready_messages = history_ready_messages[2:]
+
     def chat_interface(
         self,
         message: str,
@@ -44,9 +81,16 @@ class UI:
         temperature: float,
         top_p: float,
     ) -> str:
-            messages = [{'role': 'system', 'content': system_prompt}]
-            messages.extend(self.normalize_history(history))
-            messages.append({'role': 'user', 'content': message})
+            system_ready_message = {'role': 'system', 'content': system_prompt}
+            history_ready_messages = self.normalize_history(history)
+            user_ready_message = {'role': 'user', 'content': message}
+
+            messages = self.fit_messages_to_context_window(
+                system_ready_message,
+                history_ready_messages,
+                user_ready_message,
+                max_new_tokens
+            )
 
             if self.debug:
                 logger.info(f'CONTEXT: {messages}')
