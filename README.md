@@ -195,16 +195,17 @@ HF_HOME='./cache'
 `train.py` accepts some flags that are useful to load a checkpoint or override some properties:
 
 ```bash
-  --config <file>                   # Load config directly from a config YAML file
-  --recipe <file>                   # Load config from a recipe YAML file
+  --config <file>                   # Load config directly from a config YAML file.
+  --recipe <file>                   # Load config from a recipe YAML file.
   --pretraining                     # Automatically sets pretraining stage.
   --instruct                        # Automatically sets instruct stage.
   --dpo                             # Automatically sets DPO stage.
-  --checkpoint <file>               # Resume training from a specific checkpoint
-  --reset-optimizers                # Ignore stored optimizer(s) state
-  --reset-dataloaders               # Ignore stored dataloaders state
-  --start-step <N>                  # Override internal step counter
-  --micro-batch-size <N>            # Override config.training.micro_batch_size
+  --checkpoint <file>               # Resume training from a specific checkpoint.
+  --reset-optimizers                # Ignore stored optimizer(s) state.
+  --reset-dataloaders               # Ignore stored dataloaders state.
+  --reset-validation-history        # Reset the validation loss history.
+  --start-step <N>                  # Override internal step counter.
+  --micro-batch-size <N>            # Override config.training.micro_batch_size.
 ```
 **NOTES:**
   - The project output path can be configured in `config.py` under `GlobalConfig.paths.runs`. By default it will use `./runs`

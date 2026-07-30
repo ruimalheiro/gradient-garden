@@ -22,6 +22,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--reset-optimizers', action='store_true', help='Reset the optimizers state when loading a checkpoint.')
     parser.add_argument('--reset-dataloaders', action='store_true', help='Reset the dataloaders state when loading a checkpoint.')
+    parser.add_argument('--reset-validation-history', action='store_true', help='Reset the validation loss history when loading a checkpoint to continue on the same training stage.')
     parser.add_argument('--start-step', type=int, default=None, help='Starting step number for training.')
     parser.add_argument('--micro-batch-size', type=int, default=None, help='Overrides the micro-batch-size set in config.training.micro_batch_size')
 
