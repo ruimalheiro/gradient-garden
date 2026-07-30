@@ -20,18 +20,10 @@ IDENTITY_FIXTURES = {
             },
             {
                 'role': 'assistant',
-                'content': '{answer}',
+                'content': '{identity_message}',
             },
         ],
-        'examples': [
-            {
-                'answers': [
-                    '{identity_message}',
-                    'I am {model_name}, an AI assistant.',
-                    'My name is {model_name}, and I am a helpful AI assistant.',
-                ],
-            },
-        ],
+        'examples': [{}],
     },
 
     'name_brief': {
