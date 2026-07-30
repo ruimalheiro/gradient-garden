@@ -1,149 +1,177 @@
 LIST_FIXTURES = {
     'dedup': {
+        'messages': [
+            {
+                'role': 'user',
+                'content': '{question}',
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
+        ],
         'examples': [
             {
-                'prompt': 'List exactly three unique fruits, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique fruits, separated by commas. Only provide the list.',
                 'answer': 'apple, banana, orange',
             },
             {
-                'prompt': 'List exactly three unique animals, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique animals, separated by commas. Only provide the list.',
                 'answer': 'cat, dog, rabbit',
             },
             {
-                'prompt': 'List exactly three unique colors, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique colors, separated by commas. Only provide the list.',
                 'answer': 'red, blue, green',
             },
             {
-                'prompt': 'List exactly three unique vegetables, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique vegetables, separated by commas. Only provide the list.',
                 'answer': 'carrot, onion, broccoli',
             },
             {
-                'prompt': 'List exactly three unique programming languages, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique programming languages, separated by commas. Only provide the list.',
                 'answer': 'Python, JavaScript, Rust',
             },
             {
-                'prompt': 'List exactly three unique countries, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique countries, separated by commas. Only provide the list.',
                 'answer': 'Portugal, France, Japan',
             },
             {
-                'prompt': 'List exactly three unique cities, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique cities, separated by commas. Only provide the list.',
                 'answer': 'London, Lisbon, Paris',
             },
             {
-                'prompt': 'List exactly three unique school subjects, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique school subjects, separated by commas. Only provide the list.',
                 'answer': 'math, history, science',
             },
             {
-                'prompt': 'List exactly three unique sports, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique sports, separated by commas. Only provide the list.',
                 'answer': 'soccer, tennis, basketball',
             },
             {
-                'prompt': 'List exactly three unique drinks, separated by commas. Only provide the list.',
+                'question': 'List exactly three unique drinks, separated by commas. Only provide the list.',
                 'answer': 'water, tea, coffee',
             },
             {
-                'prompt': 'List exactly three fruits. Do not repeat any item. Use commas only.',
+                'question': 'List exactly three fruits. Do not repeat any item. Use commas only.',
                 'answer': 'apple, banana, pear',
             },
             {
-                'prompt': 'List exactly three animals. Do not repeat any item. Use commas only.',
+                'question': 'List exactly three animals. Do not repeat any item. Use commas only.',
                 'answer': 'lion, zebra, horse',
             },
             {
-                'prompt': 'List exactly three colors. Do not repeat any item. Use commas only.',
+                'question': 'List exactly three colors. Do not repeat any item. Use commas only.',
                 'answer': 'yellow, purple, black',
             },
             {
-                'prompt': 'List exactly three tools. Do not repeat any item. Use commas only.',
+                'question': 'List exactly three tools. Do not repeat any item. Use commas only.',
                 'answer': 'hammer, wrench, drill',
             },
             {
-                'prompt': 'List exactly three countries. Do not repeat any item. Use commas only.',
+                'question': 'List exactly three countries. Do not repeat any item. Use commas only.',
                 'answer': 'Brazil, Canada, Ireland',
             },
             {
-                'prompt': 'List exactly three cities. Do not repeat any item. Use commas only.',
+                'question': 'List exactly three cities. Do not repeat any item. Use commas only.',
                 'answer': 'Berlin, Rome, Tokyo',
             },
             {
-                'prompt': 'Name exactly three unique fruits, separated by commas. No extra text.',
+                'question': 'Name exactly three unique fruits, separated by commas. No extra text.',
                 'answer': 'mango, peach, plum',
             },
             {
-                'prompt': 'Name exactly three unique animals, separated by commas. No extra text.',
+                'question': 'Name exactly three unique animals, separated by commas. No extra text.',
                 'answer': 'fox, bear, elephant',
             },
             {
-                'prompt': 'Name exactly three unique colors, separated by commas. No extra text.',
+                'question': 'Name exactly three unique colors, separated by commas. No extra text.',
                 'answer': 'white, pink, brown',
             },
             {
-                'prompt': 'Name exactly three unique vegetables, separated by commas. No extra text.',
+                'question': 'Name exactly three unique vegetables, separated by commas. No extra text.',
                 'answer': 'spinach, pepper, potato',
             },
             {
-                'prompt': 'Give exactly three unique fruits. Separate them with commas only.',
+                'question': 'Give exactly three unique fruits. Separate them with commas only.',
                 'answer': 'grape, kiwi, melon',
             },
             {
-                'prompt': 'Give exactly three unique animals. Separate them with commas only.',
+                'question': 'Give exactly three unique animals. Separate them with commas only.',
                 'answer': 'tiger, dolphin, sheep',
             },
             {
-                'prompt': 'Give exactly three unique colors. Separate them with commas only.',
+                'question': 'Give exactly three unique colors. Separate them with commas only.',
                 'answer': 'red, orange, blue',
             },
             {
-                'prompt': 'Give exactly three unique sports. Separate them with commas only.',
+                'question': 'Give exactly three unique sports. Separate them with commas only.',
                 'answer': 'cricket, rugby, swimming',
             },
             {
-                'prompt': 'Provide exactly three unique fruits, separated only by commas.',
+                'question': 'Provide exactly three unique fruits, separated only by commas.',
                 'answer': 'apple, cherry, pineapple',
             },
             {
-                'prompt': 'Provide exactly three unique animals, separated only by commas.',
+                'question': 'Provide exactly three unique animals, separated only by commas.',
                 'answer': 'cat, horse, rabbit',
             },
             {
-                'prompt': 'Provide exactly three unique drinks, separated only by commas.',
+                'question': 'Provide exactly three unique drinks, separated only by commas.',
                 'answer': 'juice, milk, lemonade',
             },
             {
-                'prompt': 'Provide exactly three unique tools, separated only by commas.',
+                'question': 'Provide exactly three unique tools, separated only by commas.',
                 'answer': 'saw, pliers, screwdriver',
             },
             {
-                'prompt': 'List exactly two unique fruits, separated by commas. Only provide the list.',
+                'question': 'List exactly two unique fruits, separated by commas. Only provide the list.',
                 'answer': 'apple, orange',
             },
             {
-                'prompt': 'List exactly two unique animals, separated by commas. Only provide the list.',
+                'question': 'List exactly two unique animals, separated by commas. Only provide the list.',
                 'answer': 'dog, rabbit',
             },
             {
-                'prompt': 'List exactly two unique colors, separated by commas. Only provide the list.',
+                'question': 'List exactly two unique colors, separated by commas. Only provide the list.',
                 'answer': 'blue, green',
             },
             {
-                'prompt': 'List exactly four unique fruits, separated by commas. Only provide the list.',
+                'question': 'List exactly four unique fruits, separated by commas. Only provide the list.',
                 'answer': 'apple, banana, orange, pear',
             },
             {
-                'prompt': 'List exactly four unique animals, separated by commas. Only provide the list.',
+                'question': 'List exactly four unique animals, separated by commas. Only provide the list.',
                 'answer': 'cat, dog, rabbit, horse',
             },
             {
-                'prompt': 'List exactly four unique colors, separated by commas. Only provide the list.',
+                'question': 'List exactly four unique colors, separated by commas. Only provide the list.',
                 'answer': 'red, blue, green, yellow',
             },
         ],
     },
     'sampled_categories': {
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'List exactly three unique {category}, separated by commas. Only provide the list.',
+                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
+                    'Give exactly three unique {category}. Use commas and no extra text.',
+                    'Provide exactly three unique {category}, separated only by commas.',
+                    'List exactly three {category}. Do not repeat any item. Use commas only.',
+                    'Give three different {category}. Separate them with commas only.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
+        ],
         'examples': [
             {
                 'category': 'fruits',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'apple',
                     'banana',
@@ -158,18 +186,11 @@ LIST_FIXTURES = {
                     'melon',
                     'cherry',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'colors',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'red',
                     'blue',
@@ -182,18 +203,11 @@ LIST_FIXTURES = {
                     'pink',
                     'brown',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'animals',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'cat',
                     'dog',
@@ -208,18 +222,11 @@ LIST_FIXTURES = {
                     'dolphin',
                     'sheep',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'vegetables',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'carrot',
                     'onion',
@@ -234,18 +241,11 @@ LIST_FIXTURES = {
                     'pea',
                     'corn',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'tools',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'hammer',
                     'screwdriver',
@@ -258,18 +258,11 @@ LIST_FIXTURES = {
                     'chisel',
                     'clamp',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'programming languages',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'Python',
                     'JavaScript',
@@ -282,18 +275,11 @@ LIST_FIXTURES = {
                     'TypeScript',
                     'Scala',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'countries',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'Portugal',
                     'France',
@@ -308,18 +294,11 @@ LIST_FIXTURES = {
                     'Greece',
                     'Mexico',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'cities',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'London',
                     'Lisbon',
@@ -334,18 +313,11 @@ LIST_FIXTURES = {
                     'Toronto',
                     'Athens',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'school subjects',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'math',
                     'history',
@@ -358,18 +330,11 @@ LIST_FIXTURES = {
                     'chemistry',
                     'physics',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'sports',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'soccer',
                     'tennis',
@@ -382,18 +347,11 @@ LIST_FIXTURES = {
                     'baseball',
                     'volleyball',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'drinks',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'water',
                     'tea',
@@ -406,18 +364,11 @@ LIST_FIXTURES = {
                     'soda',
                     'sparkling water',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'household items',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'chair',
                     'table',
@@ -430,18 +381,11 @@ LIST_FIXTURES = {
                     'cup',
                     'towel',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'musical instruments',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'piano',
                     'guitar',
@@ -454,18 +398,11 @@ LIST_FIXTURES = {
                     'clarinet',
                     'saxophone',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'jobs',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'teacher',
                     'doctor',
@@ -478,18 +415,11 @@ LIST_FIXTURES = {
                     'farmer',
                     'builder',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'vehicles',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'car',
                     'bus',
@@ -502,18 +432,11 @@ LIST_FIXTURES = {
                     'tram',
                     'motorcycle',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'desserts',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'cake',
                     'pie',
@@ -526,18 +449,11 @@ LIST_FIXTURES = {
                     'sorbet',
                     'muffin',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'flowers',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'rose',
                     'tulip',
@@ -550,18 +466,11 @@ LIST_FIXTURES = {
                     'iris',
                     'marigold',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'planets',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'Mercury',
                     'Venus',
@@ -572,18 +481,11 @@ LIST_FIXTURES = {
                     'Uranus',
                     'Neptune',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'emotions',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'happiness',
                     'sadness',
@@ -596,18 +498,11 @@ LIST_FIXTURES = {
                     'calm',
                     'excitement',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'kitchen utensils',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'spoon',
                     'fork',
@@ -620,18 +515,11 @@ LIST_FIXTURES = {
                     'grater',
                     'measuring cup',
                 ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
-                ],
             },
             {
                 'category': 'clothing items',
                 'count': 3,
+                'separator': ', ',
                 'items': [
                     'shirt',
                     'jacket',
@@ -643,14 +531,6 @@ LIST_FIXTURES = {
                     'gloves',
                     'dress',
                     'trousers',
-                ],
-                'prompt_templates': [
-                    'List exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Name exactly three unique {category}, separated by commas. Only provide the list.',
-                    'Give exactly three unique {category}. Use commas and no extra text.',
-                    'Provide exactly three unique {category}, separated only by commas.',
-                    'List exactly three {category}. Do not repeat any item. Use commas only.',
-                    'Give three different {category}. Separate them with commas only.',
                 ],
             },
         ],

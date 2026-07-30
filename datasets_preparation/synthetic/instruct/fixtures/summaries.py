@@ -1,11 +1,20 @@
 SUMMARY_FIXTURES = {
     'one_sentence': {
-        'prompt_templates': [
-            'Summarize this in one sentence:\n{text}\nOnly provide the summary.',
-            'Summarize this in one sentence:\n{text}\nDo not copy the original text.',
-            'Write a one-sentence summary:\n{text}\nOnly provide the summary.',
-            'Compress this into one sentence:\n{text}\nOnly provide the summary.',
-            'Rewrite this as a shorter one-sentence summary:\n{text}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Summarize this in one sentence:\n{text}\nOnly provide the summary.',
+                    'Summarize this in one sentence:\n{text}\nDo not copy the original text.',
+                    'Write a one-sentence summary:\n{text}\nOnly provide the summary.',
+                    'Compress this into one sentence:\n{text}\nOnly provide the summary.',
+                    'Rewrite this as a shorter one-sentence summary:\n{text}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -62,11 +71,11 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The student revised her essay after receiving feedback from her teacher.',
-                'answer': 'The student improved her essay using teacher feedback.',
+                'answer': 'The student revised her essay using teacher feedback.',
             },
             {
                 'text': 'The city planted more trees to provide shade and improve air quality.',
-                'answer': 'The city planted trees to improve shade and air quality.',
+                'answer': 'The city planted trees to provide shade and improve air quality.',
             },
             {
                 'text': 'The phone battery drained quickly because several apps were running in the background.',
@@ -93,8 +102,8 @@ SUMMARY_FIXTURES = {
                 'answer': 'The farmer watered crops during dry weather.',
             },
             {
-                'text': 'The café changed its opening hours so commuters could buy breakfast earlier in the morning.',
-                'answer': 'The café opened earlier for commuters.',
+                'text': 'The cafe changed its opening hours so commuters could buy breakfast earlier in the morning.',
+                'answer': 'The cafe opened earlier for commuters.',
             },
             {
                 'text': 'The old bridge was repaired after inspectors found cracks in the stone supports.',
@@ -111,13 +120,22 @@ SUMMARY_FIXTURES = {
         ],
     },
     'short_summary': {
-        'prompt_templates': [
-            'Write a short summary:\n{text}\nOnly provide the summary.',
-            'Write a short summary:\n{text}\nDo not copy the original text.',
-            'Summarize this briefly:\n{text}\nOnly provide the summary.',
-            'Give a brief summary of this text:\n{text}\nDo not explain your answer.',
-            'Summarize the following text in a short phrase:\n{text}\nOnly output the summary.',
-            'Compress this text into a short summary:\n{text}\nOnly provide the summary.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Write a short summary:\n{text}\nOnly provide the summary.',
+                    'Write a short summary:\n{text}\nDo not copy the original text.',
+                    'Summarize this briefly:\n{text}\nOnly provide the summary.',
+                    'Give a brief summary of this text:\n{text}\nDo not explain your answer.',
+                    'Summarize the following text in a short phrase:\n{text}\nOnly output the summary.',
+                    'Compress this text into a short summary:\n{text}\nOnly provide the summary.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -130,7 +148,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'Maria planned to take the bus, but it was delayed, so she walked to school instead.',
-                'answer': 'Maria walked after missing the bus.',
+                'answer': 'A delayed bus made Maria walk to school.',
             },
             {
                 'text': 'The laptop became faster after old files were removed and unnecessary programs were closed.',
@@ -150,7 +168,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The train service added more evening trips to reduce crowding during rush hour.',
-                'answer': 'Extra trips reduced train crowding.',
+                'answer': 'Train service added trips to reduce crowding.',
             },
             {
                 'text': 'The garden grew well because it received steady sunlight, regular watering, and rich soil.',
@@ -202,7 +220,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The school added more buses after students complained about crowded morning routes.',
-                'answer': 'The school reduced bus crowding.',
+                'answer': 'The school added buses to reduce crowding.',
             },
             {
                 'text': 'The phone company replaced the damaged cable after many homes lost internet service.',
@@ -214,7 +232,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The store sold out of umbrellas after a week of heavy rain.',
-                'answer': 'Rain increased umbrella sales.',
+                'answer': 'Heavy rain caused an umbrella sellout.',
             },
             {
                 'text': 'The student improved her grade after studying each evening and asking for help.',
@@ -223,13 +241,22 @@ SUMMARY_FIXTURES = {
         ],
     },
     'five_words_or_fewer': {
-        'prompt_templates': [
-            'Summarize this in five words or fewer:\n{text}\nOnly provide the summary.',
-            'Summarize this in five words or fewer:\n{text}\nDo not copy the original text.',
-            'Write a summary using at most five words:\n{text}\nOnly output the summary.',
-            'Compress this into five words or fewer:\n{text}\nDo not explain your answer.',
-            'Give a five-word-or-fewer summary:\n{text}\nOnly provide the summary.',
-            'Summarize briefly, using no more than five words:\n{text}\nOnly provide the summary.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Summarize this in five words or fewer:\n{text}\nOnly provide the summary.',
+                    'Summarize this in five words or fewer:\n{text}\nDo not copy the original text.',
+                    'Write a summary using at most five words:\n{text}\nOnly output the summary.',
+                    'Compress this into five words or fewer:\n{text}\nDo not explain your answer.',
+                    'Give a five-word-or-fewer summary:\n{text}\nOnly provide the summary.',
+                    'Summarize briefly, using no more than five words:\n{text}\nOnly provide the summary.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -242,7 +269,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The storm brought heavy rain and strong winds, causing several roads to flood.',
-                'answer': 'Storm floods several roads.',
+                'answer': 'Storm flooded several roads.',
             },
             {
                 'text': 'Solar panels turn sunlight into electricity for homes and buildings.',
@@ -258,11 +285,11 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The app update fixed several crashes and made search faster.',
-                'answer': 'Update fixed crashes and search.',
+                'answer': 'Crashes fixed; search became faster.',
             },
             {
                 'text': 'The bakery added gluten-free bread after customers asked for more options.',
-                'answer': 'Bakery adds gluten-free bread.',
+                'answer': 'Bakery added gluten-free bread.',
             },
             {
                 'text': 'The train route will make travel between the two cities faster and easier.',
@@ -278,23 +305,23 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The chef changed the menu after customers requested more vegetarian meals.',
-                'answer': 'Menu adds vegetarian options.',
+                'answer': 'Chef added vegetarian menu options.',
             },
             {
                 'text': 'The cyclist fixed a flat tire before continuing the race.',
-                'answer': 'Cyclist fixes flat tire.',
+                'answer': 'Cyclist fixed a flat tire.',
             },
             {
                 'text': 'The library extended weekend hours to help students study before exams.',
-                'answer': 'Library extends exam hours.',
+                'answer': 'Library extended exam study hours.',
             },
             {
                 'text': 'The researcher repeated the experiment to check whether the results were reliable.',
-                'answer': 'Researcher verifies experiment results.',
+                'answer': 'Researcher checked result reliability.',
             },
             {
-                'text': 'The café opened earlier so commuters could buy breakfast before work.',
-                'answer': 'Café opens earlier for commuters.',
+                'text': 'The cafe opened earlier so commuters could buy breakfast before work.',
+                'answer': 'cafe opened earlier for commuters.',
             },
             {
                 'text': 'The bridge was repaired after inspectors found cracks in its supports.',
@@ -310,17 +337,26 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The airport added staff to help passengers move through security faster.',
-                'answer': 'Airport adds security staff.',
+                'answer': 'Airport added security staff.',
             },
         ],
     },
     'headline': {
-        'prompt_templates': [
-            'Write a short headline for this text:\n{text}\nOnly provide the headline.',
-            'Turn this text into a concise headline:\n{text}\nOnly provide the headline.',
-            'Write a headline that summarizes this text:\n{text}\nDo not explain your answer.',
-            'Create a brief headline:\n{text}\nOnly output the headline.',
-            'Summarize this as a headline:\n{text}\nOnly provide the headline.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Write a short headline for this text:\n{text}\nOnly provide the headline.',
+                    'Turn this text into a concise headline:\n{text}\nOnly provide the headline.',
+                    'Write a headline that summarizes this text:\n{text}\nDo not explain your answer.',
+                    'Create a brief headline:\n{text}\nOnly output the headline.',
+                    'Summarize this as a headline:\n{text}\nOnly provide the headline.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -337,7 +373,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The new train route will make travel between the two cities faster and easier.',
-                'answer': 'New Train Route Speeds City Travel',
+                'answer': 'New Train Route Speeds Intercity Travel',
             },
             {
                 'text': 'The school closed early because snow made the roads unsafe for buses.',
@@ -385,7 +421,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The park reopened after workers cleared fallen branches and repaired damaged signs.',
-                'answer': 'Trail Reopens After Repairs',
+                'answer': 'Park Reopens After Repairs',
             },
             {
                 'text': 'The airport added clearer signs and more staff near security checkpoints.',
@@ -406,13 +442,22 @@ SUMMARY_FIXTURES = {
         ],
     },
     'key_point': {
-        'prompt_templates': [
-            'What is the key point of this text?\n{text}\nOnly provide the key point.',
-            'State the main point of this text:\n{text}\nOnly provide the answer.',
-            'Identify the main idea:\n{text}\nDo not explain your answer.',
-            'Give the central point of this text:\n{text}\nOnly output the central point.',
-            'Summarize the main idea:\n{text}\nOnly provide the main idea.',
-            'Give the key idea without copying the text:\n{text}\nOnly provide the key idea.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'What is the key point of this text?\n{text}\nOnly provide the key point.',
+                    'State the main point of this text:\n{text}\nOnly provide the answer.',
+                    'Identify the main idea:\n{text}\nDo not explain your answer.',
+                    'Give the central point of this text:\n{text}\nOnly output the central point.',
+                    'Summarize the main idea:\n{text}\nOnly provide the main idea.',
+                    'Give the key idea without copying the text:\n{text}\nOnly provide the key idea.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -429,11 +474,11 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The recipe uses flour, eggs, milk, and butter to make soft pancakes.',
-                'answer': 'The recipe explains how to make pancakes.',
+                'answer': 'The recipe uses simple ingredients to make pancakes.',
             },
             {
                 'text': 'The student revised her essay after receiving feedback from her teacher.',
-                'answer': 'Feedback helped the student improve her essay.',
+                'answer': 'Teacher feedback led the student to revise her essay.',
             },
             {
                 'text': 'The laptop became faster after old files were removed and unnecessary programs were closed.',
@@ -449,7 +494,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The candidate answered the questions clearly and gave examples from previous projects.',
-                'answer': 'The candidate gave a strong interview.',
+                'answer': 'The candidate answered interview questions clearly.',
             },
             {
                 'text': 'The researcher repeated the experiment to check whether the results were reliable.',
@@ -476,8 +521,8 @@ SUMMARY_FIXTURES = {
                 'answer': 'The tool helps people manage work.',
             },
             {
-                'text': 'The café opened earlier so commuters could buy breakfast before work.',
-                'answer': 'The café changed hours to serve commuters.',
+                'text': 'The cafe opened earlier so commuters could buy breakfast before work.',
+                'answer': 'The cafe changed hours to serve commuters.',
             },
             {
                 'text': 'The old bridge was repaired after inspectors found cracks in the stone supports.',
@@ -493,18 +538,27 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The phone company replaced the damaged cable after many homes lost internet service.',
-                'answer': 'Cable repairs restored internet service.',
+                'answer': 'The phone company replaced a damaged cable.',
             },
         ],
     },
     'two_sentence_summary': {
-        'prompt_templates': [
-            'Summarize this in two short sentences:\n{text}\nOnly provide the summary.',
-            'Write a two-sentence summary:\n{text}\nOnly provide the summary.',
-            'Summarize the following text in exactly two sentences:\n{text}\nDo not explain your answer.',
-            'Give a brief two-sentence summary:\n{text}\nOnly output the summary.',
-            'Compress this into two short sentences:\n{text}\nOnly provide the summary.',
-            'Write exactly two short summary sentences without copying the text:\n{text}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Summarize this in two short sentences:\n{text}\nOnly provide the summary.',
+                    'Write a two-sentence summary:\n{text}\nOnly provide the summary.',
+                    'Summarize the following text in exactly two sentences:\n{text}\nDo not explain your answer.',
+                    'Give a brief two-sentence summary:\n{text}\nOnly output the summary.',
+                    'Compress this into two short sentences:\n{text}\nOnly provide the summary.',
+                    'Write exactly two short summary sentences without copying the text:\n{text}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -533,7 +587,7 @@ SUMMARY_FIXTURES = {
             },
             {
                 'text': 'The city repaired the broken traffic lights at the main intersection. Drivers had experienced long delays there during the morning commute.',
-                'answer': 'The city fixed broken traffic lights. The repair should reduce commute delays.',
+                'answer': 'The city fixed broken traffic lights. Drivers had faced long morning delays.',
             },
             {
                 'text': 'A musician released a new album inspired by childhood memories and old family stories. Critics praised its honest lyrics and simple acoustic sound.',
@@ -560,8 +614,8 @@ SUMMARY_FIXTURES = {
                 'answer': 'Inspectors found cracks in the bridge. Repair crews began fixing it the next morning.',
             },
             {
-                'text': 'The café opened earlier so commuters could buy breakfast before work. The owner said morning sales improved immediately.',
-                'answer': 'The café changed its hours for commuters. Morning sales improved right away.',
+                'text': 'The cafe opened earlier so commuters could buy breakfast before work. The owner said morning sales improved immediately.',
+                'answer': 'The cafe changed its hours for commuters. Morning sales improved right away.',
             },
             {
                 'text': 'The phone company replaced a damaged cable after many homes lost internet service. Most customers were back online by evening.',

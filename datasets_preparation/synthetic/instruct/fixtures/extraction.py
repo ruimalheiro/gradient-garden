@@ -1,30 +1,30 @@
 EXTRACTION_FIXTURES = {
     'name': {
-        'prompt_templates': [
-            'Extract the name from this sentence:\n{sentence}\nOnly provide the extracted name.',
-            'Extract the name from this sentence: {sentence}',
-            'Return only the name from this sentence:\n{sentence}',
-            'What name appears in this sentence?\n{sentence}\nOnly provide the name.',
-            'Find the person name in this sentence:\n{sentence}\nOnly output the name.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the name from this sentence:\n{sentence}\nOnly provide the extracted name.',
+                    'Extract the name from this sentence: {sentence}',
+                    'Return only the name from this sentence:\n{sentence}',
+                    'What name appears in this sentence?\n{sentence}\nOnly provide the name.',
+                    'Find the person name in this sentence:\n{sentence}\nOnly output the name.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'sentence': 'Maria went to the store.', 'answer': 'Maria'},
-            {
-                'sentence': 'Daniel called his friend after lunch.',
-                'answer': 'Daniel',
-            },
+            {'sentence': 'Daniel called his friend after lunch.', 'answer': 'Daniel'},
             {'sentence': 'Sofia opened the window.', 'answer': 'Sofia'},
             {'sentence': 'Lucas finished the homework.', 'answer': 'Lucas'},
             {'sentence': 'Emma walked to the library.', 'answer': 'Emma'},
             {'sentence': 'Noah waited outside the school.', 'answer': 'Noah'},
-            {
-                'sentence': 'Olivia baked a cake for the party.',
-                'answer': 'Olivia',
-            },
-            {
-                'sentence': 'Liam brought a notebook to class.',
-                'answer': 'Liam',
-            },
+            {'sentence': 'Olivia baked a cake for the party.', 'answer': 'Olivia'},
+            {'sentence': 'Liam brought a notebook to class.', 'answer': 'Liam'},
             {'sentence': 'Ana sent the report yesterday.', 'answer': 'Ana'},
             {'sentence': 'Miguel fixed the broken chair.', 'answer': 'Miguel'},
             {'sentence': 'Rui lives near the station.', 'answer': 'Rui'},
@@ -34,130 +34,106 @@ EXTRACTION_FIXTURES = {
             {'sentence': 'Ethan wrote a short poem.', 'answer': 'Ethan'},
         ],
     },
+
     'city': {
-        'prompt_templates': [
-            'Extract the city from this sentence:\n{sentence}\nOnly provide the extracted city.',
-            'Extract the city from this sentence: {sentence}',
-            'Return only the city from this sentence:\n{sentence}',
-            'What city appears in this sentence?\n{sentence}\nOnly provide the city.',
-            'Find the city name in this sentence:\n{sentence}\nOnly output the city.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the city from this sentence:\n{sentence}\nOnly provide the extracted city.',
+                    'Extract the city from this sentence: {sentence}',
+                    'Return only the city from this sentence:\n{sentence}',
+                    'What city appears in this sentence?\n{sentence}\nOnly provide the city.',
+                    'Find the city name in this sentence:\n{sentence}\nOnly output the city.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'sentence': 'Rui lives in London.', 'answer': 'London'},
-            {
-                'sentence': 'The conference will happen in Paris.',
-                'answer': 'Paris',
-            },
-            {
-                'sentence': 'Maria moved to Lisbon last year.',
-                'answer': 'Lisbon',
-            },
-            {
-                'sentence': 'The train arrived in Berlin at noon.',
-                'answer': 'Berlin',
-            },
-            {
-                'sentence': 'We visited Madrid during spring.',
-                'answer': 'Madrid',
-            },
-            {
-                'sentence': 'The meeting is scheduled in Rome.',
-                'answer': 'Rome',
-            },
+            {'sentence': 'The conference will happen in Paris.', 'answer': 'Paris'},
+            {'sentence': 'Maria moved to Lisbon last year.', 'answer': 'Lisbon'},
+            {'sentence': 'The train arrived in Berlin at noon.', 'answer': 'Berlin'},
+            {'sentence': 'We visited Madrid during spring.', 'answer': 'Madrid'},
+            {'sentence': 'The meeting is scheduled in Rome.', 'answer': 'Rome'},
             {'sentence': 'She booked a hotel in Tokyo.', 'answer': 'Tokyo'},
-            {
-                'sentence': 'The team flew to Dublin for the event.',
-                'answer': 'Dublin',
-            },
+            {'sentence': 'The team flew to Dublin for the event.', 'answer': 'Dublin'},
             {
                 'sentence': 'He studied in Barcelona for a semester.',
                 'answer': 'Barcelona',
             },
-            {
-                'sentence': 'The concert takes place in Vienna.',
-                'answer': 'Vienna',
-            },
+            {'sentence': 'The concert takes place in Vienna.', 'answer': 'Vienna'},
             {
                 'sentence': 'They opened a new office in Amsterdam.',
                 'answer': 'Amsterdam',
             },
-            {
-                'sentence': 'The workshop will be held in Zurich.',
-                'answer': 'Zurich',
-            },
+            {'sentence': 'The workshop will be held in Zurich.', 'answer': 'Zurich'},
             {'sentence': 'I met my friend in Prague.', 'answer': 'Prague'},
-            {
-                'sentence': 'The museum is located in Athens.',
-                'answer': 'Athens',
-            },
+            {'sentence': 'The museum is located in Athens.', 'answer': 'Athens'},
             {'sentence': 'Her flight landed in Toronto.', 'answer': 'Toronto'},
         ],
     },
+
     'date': {
-        'prompt_templates': [
-            'Extract the date from this sentence:\n{sentence}\nOnly provide the extracted date.',
-            'Extract the date from this sentence: {sentence}',
-            'Return only the date from this sentence:\n{sentence}',
-            'What date appears in this sentence?\n{sentence}\nOnly provide the date.',
-            'Find the date in this sentence:\n{sentence}\nOnly output the date.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the date from this sentence:\n{sentence}\nOnly provide the extracted date.',
+                    'Extract the date from this sentence: {sentence}',
+                    'Return only the date from this sentence:\n{sentence}',
+                    'What date appears in this sentence?\n{sentence}\nOnly provide the date.',
+                    'Find the date in this sentence:\n{sentence}\nOnly output the date.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'sentence': 'The meeting is on June 12.', 'answer': 'June 12'},
-            {
-                'sentence': 'The deadline is September 3.',
-                'answer': 'September 3',
-            },
+            {'sentence': 'The deadline is September 3.', 'answer': 'September 3'},
             {'sentence': 'The event starts on April 9.', 'answer': 'April 9'},
-            {
-                'sentence': 'The exam is scheduled for May 15.',
-                'answer': 'May 15',
-            },
-            {
-                'sentence': 'The package arrives on July 20.',
-                'answer': 'July 20',
-            },
-            {
-                'sentence': 'The class begins on October 1.',
-                'answer': 'October 1',
-            },
+            {'sentence': 'The exam is scheduled for May 15.', 'answer': 'May 15'},
+            {'sentence': 'The package arrives on July 20.', 'answer': 'July 20'},
+            {'sentence': 'The class begins on October 1.', 'answer': 'October 1'},
             {'sentence': 'The trip ends on August 22.', 'answer': 'August 22'},
-            {
-                'sentence': 'The concert is on December 5.',
-                'answer': 'December 5',
-            },
-            {
-                'sentence': 'The form is due on January 31.',
-                'answer': 'January 31',
-            },
-            {
-                'sentence': 'The workshop happens on March 14.',
-                'answer': 'March 14',
-            },
+            {'sentence': 'The concert is on December 5.', 'answer': 'December 5'},
+            {'sentence': 'The form is due on January 31.', 'answer': 'January 31'},
+            {'sentence': 'The workshop happens on March 14.', 'answer': 'March 14'},
             {
                 'sentence': 'The appointment is set for November 8.',
                 'answer': 'November 8',
             },
-            {
-                'sentence': 'The sale begins on February 2.',
-                'answer': 'February 2',
-            },
+            {'sentence': 'The sale begins on February 2.', 'answer': 'February 2'},
         ],
     },
+
     'number': {
-        'prompt_templates': [
-            'Extract the number from this sentence:\n{sentence}\nOnly provide the extracted number.',
-            'Extract the number from this sentence: {sentence}',
-            'Return only the number from this sentence:\n{sentence}',
-            'What number appears in this sentence?\n{sentence}\nOnly provide the number.',
-            'Find the number in this sentence:\n{sentence}\nOnly output the number.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the number from this sentence:\n{sentence}\nOnly provide the extracted number.',
+                    'Extract the number from this sentence: {sentence}',
+                    'Return only the number from this sentence:\n{sentence}',
+                    'What number appears in this sentence?\n{sentence}\nOnly provide the number.',
+                    'Find the number in this sentence:\n{sentence}\nOnly output the number.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'sentence': 'There are 27 books on the shelf.', 'answer': '27'},
             {'sentence': 'The box contains 48 pencils.', 'answer': '48'},
-            {
-                'sentence': 'She bought 12 apples at the market.',
-                'answer': '12',
-            },
+            {'sentence': 'She bought 12 apples at the market.', 'answer': '12'},
             {'sentence': 'The class has 30 students.', 'answer': '30'},
             {'sentence': 'He scored 95 points in the game.', 'answer': '95'},
             {'sentence': 'The recipe needs 4 eggs.', 'answer': '4'},
@@ -169,13 +145,23 @@ EXTRACTION_FIXTURES = {
             {'sentence': 'The garden has 21 flowers.', 'answer': '21'},
         ],
     },
+
     'email': {
-        'prompt_templates': [
-            'Extract the email address from this sentence:\n{sentence}\nOnly provide the extracted email address.',
-            'Extract the email address from this sentence: {sentence}',
-            'Return only the email address from this sentence:\n{sentence}',
-            'What email address appears in this sentence?\n{sentence}\nOnly provide the email address.',
-            'Find the email address in this sentence:\n{sentence}\nOnly output the email address.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the email address from this sentence:\n{sentence}\nOnly provide the extracted email address.',
+                    'Extract the email address from this sentence: {sentence}',
+                    'Return only the email address from this sentence:\n{sentence}',
+                    'What email address appears in this sentence?\n{sentence}\nOnly provide the email address.',
+                    'Find the email address in this sentence:\n{sentence}\nOnly output the email address.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -198,10 +184,7 @@ EXTRACTION_FIXTURES = {
                 'sentence': 'Questions can go to info@company.com.',
                 'answer': 'info@company.com',
             },
-            {
-                'sentence': 'My address is maria@test.com.',
-                'answer': 'maria@test.com',
-            },
+            {'sentence': 'My address is maria@test.com.', 'answer': 'maria@test.com'},
             {
                 'sentence': 'Use admin@school.org for login help.',
                 'answer': 'admin@school.org',
@@ -220,13 +203,23 @@ EXTRACTION_FIXTURES = {
             },
         ],
     },
+
     'color': {
-        'prompt_templates': [
-            'Extract the color from this sentence:\n{sentence}\nOnly provide the extracted color.',
-            'Extract the color from this sentence: {sentence}',
-            'Return only the color from this sentence:\n{sentence}',
-            'What color appears in this sentence?\n{sentence}\nOnly provide the color.',
-            'Find the color in this sentence:\n{sentence}\nOnly output the color.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the color from this sentence:\n{sentence}\nOnly provide the extracted color.',
+                    'Extract the color from this sentence: {sentence}',
+                    'Return only the color from this sentence:\n{sentence}',
+                    'What color appears in this sentence?\n{sentence}\nOnly provide the color.',
+                    'Find the color in this sentence:\n{sentence}\nOnly output the color.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'sentence': 'The car is painted red.', 'answer': 'red'},
@@ -236,67 +229,63 @@ EXTRACTION_FIXTURES = {
             {'sentence': 'The cat slept on a black chair.', 'answer': 'black'},
             {'sentence': 'The walls are white.', 'answer': 'white'},
             {'sentence': 'I bought a purple notebook.', 'answer': 'purple'},
-            {
-                'sentence': 'The orange cup is on the table.',
-                'answer': 'orange',
-            },
-            {
-                'sentence': 'The sky looked gray before the storm.',
-                'answer': 'gray',
-            },
+            {'sentence': 'The orange cup is on the table.', 'answer': 'orange'},
+            {'sentence': 'The sky looked gray before the storm.', 'answer': 'gray'},
             {'sentence': 'She chose a pink ribbon.', 'answer': 'pink'},
             {'sentence': 'The brown dog ran outside.', 'answer': 'brown'},
-            {
-                'sentence': 'The silver watch was on the desk.',
-                'answer': 'silver',
-            },
+            {'sentence': 'The silver watch was on the desk.', 'answer': 'silver'},
         ],
     },
+
     'animal': {
-        'prompt_templates': [
-            'Extract the animal from this sentence:\n{sentence}\nOnly provide the extracted animal.',
-            'Extract the animal from this sentence: {sentence}',
-            'Return only the animal from this sentence:\n{sentence}',
-            'What animal appears in this sentence?\n{sentence}\nOnly provide the animal.',
-            'Find the animal in this sentence:\n{sentence}\nOnly output the animal.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the animal from this sentence:\n{sentence}\nOnly provide the extracted animal.',
+                    'Extract the animal from this sentence: {sentence}',
+                    'Return only the animal from this sentence:\n{sentence}',
+                    'What animal appears in this sentence?\n{sentence}\nOnly provide the animal.',
+                    'Find the animal in this sentence:\n{sentence}\nOnly output the animal.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
-            {
-                'sentence': 'The rabbit jumped over the fence.',
-                'answer': 'rabbit',
-            },
+            {'sentence': 'The rabbit jumped over the fence.', 'answer': 'rabbit'},
             {'sentence': 'A dog barked near the gate.', 'answer': 'dog'},
             {'sentence': 'The cat slept on the sofa.', 'answer': 'cat'},
             {'sentence': 'A horse ran across the field.', 'answer': 'horse'},
             {'sentence': 'The bird landed on the branch.', 'answer': 'bird'},
-            {
-                'sentence': 'A turtle crossed the path slowly.',
-                'answer': 'turtle',
-            },
-            {
-                'sentence': 'The elephant walked through the grass.',
-                'answer': 'elephant',
-            },
-            {
-                'sentence': 'A dolphin swam beside the boat.',
-                'answer': 'dolphin',
-            },
+            {'sentence': 'A turtle crossed the path slowly.', 'answer': 'turtle'},
+            {'sentence': 'The elephant walked through the grass.', 'answer': 'elephant'},
+            {'sentence': 'A dolphin swam beside the boat.', 'answer': 'dolphin'},
             {'sentence': 'The fox hid behind the tree.', 'answer': 'fox'},
             {'sentence': 'A sheep stood near the barn.', 'answer': 'sheep'},
             {'sentence': 'The lion rested under the tree.', 'answer': 'lion'},
-            {
-                'sentence': 'A bear walked through the forest.',
-                'answer': 'bear',
-            },
+            {'sentence': 'A bear walked through the forest.', 'answer': 'bear'},
         ],
     },
+
     'food': {
-        'prompt_templates': [
-            'Extract the food from this sentence:\n{sentence}\nOnly provide the extracted food.',
-            'Extract the food from this sentence: {sentence}',
-            'Return only the food from this sentence:\n{sentence}',
-            'What food appears in this sentence?\n{sentence}\nOnly provide the food.',
-            'Find the food in this sentence:\n{sentence}\nOnly output the food.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the food from this sentence:\n{sentence}\nOnly provide the extracted food.',
+                    'Extract the food from this sentence: {sentence}',
+                    'Return only the food from this sentence:\n{sentence}',
+                    'What food appears in this sentence?\n{sentence}\nOnly provide the food.',
+                    'Find the food in this sentence:\n{sentence}\nOnly output the food.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'sentence': 'She ate pasta for dinner.', 'answer': 'pasta'},
@@ -304,107 +293,98 @@ EXTRACTION_FIXTURES = {
             {'sentence': 'The child wanted pizza.', 'answer': 'pizza'},
             {'sentence': 'They served soup at the cafe.', 'answer': 'soup'},
             {'sentence': 'I packed an apple in my bag.', 'answer': 'apple'},
-            {
-                'sentence': 'The sandwich was on the plate.',
-                'answer': 'sandwich',
-            },
+            {'sentence': 'The sandwich was on the plate.', 'answer': 'sandwich'},
             {'sentence': 'She cooked eggs for breakfast.', 'answer': 'eggs'},
-            {
-                'sentence': 'He bought bread from the bakery.',
-                'answer': 'bread',
-            },
-            {
-                'sentence': 'The salad had tomatoes and lettuce.',
-                'answer': 'salad',
-            },
-            {
-                'sentence': 'We ordered noodles for dinner.',
-                'answer': 'noodles',
-            },
+            {'sentence': 'He bought bread from the bakery.', 'answer': 'bread'},
+            {'sentence': 'She ordered a salad for lunch.', 'answer': 'salad'},
+            {'sentence': 'We ordered noodles for dinner.', 'answer': 'noodles'},
             {'sentence': 'The cake was on the table.', 'answer': 'cake'},
             {'sentence': 'He drank milk with breakfast.', 'answer': 'milk'},
         ],
     },
+
     'country': {
-        'prompt_templates': [
-            'Extract the country from this sentence:\n{sentence}\nOnly provide the extracted country.',
-            'Extract the country from this sentence: {sentence}',
-            'Return only the country from this sentence:\n{sentence}',
-            'What country appears in this sentence?\n{sentence}\nOnly provide the country.',
-            'Find the country in this sentence:\n{sentence}\nOnly output the country.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the country from this sentence:\n{sentence}\nOnly provide the extracted country.',
+                    'Extract the country from this sentence: {sentence}',
+                    'Return only the country from this sentence:\n{sentence}',
+                    'What country appears in this sentence?\n{sentence}\nOnly provide the country.',
+                    'Find the country in this sentence:\n{sentence}\nOnly output the country.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
-            {
-                'sentence': 'He traveled to Portugal last summer.',
-                'answer': 'Portugal',
-            },
+            {'sentence': 'He traveled to Portugal last summer.', 'answer': 'Portugal'},
             {'sentence': 'She moved to Spain in March.', 'answer': 'Spain'},
-            {
-                'sentence': 'The team visited France for the match.',
-                'answer': 'France',
-            },
-            {
-                'sentence': 'They flew to Germany for a conference.',
-                'answer': 'Germany',
-            },
+            {'sentence': 'The team visited France for the match.', 'answer': 'France'},
+            {'sentence': 'They flew to Germany for a conference.', 'answer': 'Germany'},
             {'sentence': 'I learned about Japan in class.', 'answer': 'Japan'},
             {'sentence': 'The package came from Italy.', 'answer': 'Italy'},
-            {
-                'sentence': 'He studied in Canada for two years.',
-                'answer': 'Canada',
-            },
+            {'sentence': 'He studied in Canada for two years.', 'answer': 'Canada'},
             {'sentence': 'The film was made in Brazil.', 'answer': 'Brazil'},
-            {
-                'sentence': 'She bought coffee from Colombia.',
-                'answer': 'Colombia',
-            },
-            {
-                'sentence': 'The singer was born in Ireland.',
-                'answer': 'Ireland',
-            },
+            {'sentence': 'She bought coffee from Colombia.', 'answer': 'Colombia'},
+            {'sentence': 'The singer was born in Ireland.', 'answer': 'Ireland'},
             {'sentence': 'They spent winter in Norway.', 'answer': 'Norway'},
-            {
-                'sentence': 'The article mentioned Australia.',
-                'answer': 'Australia',
-            },
+            {'sentence': 'The article mentioned Australia.', 'answer': 'Australia'},
         ],
     },
+
     'month': {
-        'prompt_templates': [
-            'Extract the month from this sentence:\n{sentence}\nOnly provide the extracted month.',
-            'Extract the month from this sentence: {sentence}',
-            'Return only the month from this sentence:\n{sentence}',
-            'What month appears in this sentence?\n{sentence}\nOnly provide the month.',
-            'Find the month in this sentence:\n{sentence}\nOnly output the month.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the month from this sentence:\n{sentence}\nOnly provide the extracted month.',
+                    'Extract the month from this sentence: {sentence}',
+                    'Return only the month from this sentence:\n{sentence}',
+                    'What month appears in this sentence?\n{sentence}\nOnly provide the month.',
+                    'Find the month in this sentence:\n{sentence}\nOnly output the month.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'sentence': 'The event happens in April.', 'answer': 'April'},
             {'sentence': 'The course starts in January.', 'answer': 'January'},
             {'sentence': 'The festival is planned for May.', 'answer': 'May'},
-            {
-                'sentence': 'The deadline falls in September.',
-                'answer': 'September',
-            },
+            {'sentence': 'The deadline falls in September.', 'answer': 'September'},
             {'sentence': 'The trip begins in July.', 'answer': 'July'},
             {'sentence': 'The shop opens in November.', 'answer': 'November'},
             {'sentence': 'The exam is in March.', 'answer': 'March'},
-            {
-                'sentence': 'The concert happens in December.',
-                'answer': 'December',
-            },
+            {'sentence': 'The concert happens in December.', 'answer': 'December'},
             {'sentence': 'The flowers bloom in June.', 'answer': 'June'},
             {'sentence': 'The class ends in October.', 'answer': 'October'},
             {'sentence': 'The sale starts in February.', 'answer': 'February'},
             {'sentence': 'The holiday is in August.', 'answer': 'August'},
         ],
     },
+
     'time': {
-        'prompt_templates': [
-            'Extract the time from this sentence:\n{sentence}\nOnly provide the extracted time.',
-            'Extract the time from this sentence: {sentence}',
-            'Return only the time from this sentence:\n{sentence}',
-            'What time appears in this sentence?\n{sentence}\nOnly provide the time.',
-            'Find the time in this sentence:\n{sentence}\nOnly output the time.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Extract the time from this sentence:\n{sentence}\nOnly provide the extracted time.',
+                    'Extract the time from this sentence: {sentence}',
+                    'Return only the time from this sentence:\n{sentence}',
+                    'What time appears in this sentence?\n{sentence}\nOnly provide the time.',
+                    'Find the time in this sentence:\n{sentence}\nOnly output the time.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'sentence': 'The train leaves at 8:30.', 'answer': '8:30'},

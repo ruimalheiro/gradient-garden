@@ -1,11 +1,20 @@
 SENTENCE_TRANSFORM_FIXTURES = {
     'question_statement': {
-        'prompt_templates': [
-            'Turn this into a question:\n{sentence}\nOnly provide the question.',
-            'Turn this statement into a question:\n{sentence}\nOnly provide the question.',
-            'Rewrite this as a question:\n{sentence}\nOnly output the question.',
-            'Change this sentence into a question:\n{sentence}\nDo not explain your answer.',
-            'Make this a question:\n{sentence}\nOnly provide the question.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Turn this into a question:\n{sentence}\nOnly provide the question.',
+                    'Turn this statement into a question:\n{sentence}\nOnly provide the question.',
+                    'Rewrite this as a question:\n{sentence}\nOnly output the question.',
+                    'Change this sentence into a question:\n{sentence}\nDo not explain your answer.',
+                    'Make this a question:\n{sentence}\nOnly provide the question.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -67,12 +76,21 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'statement_question': {
-        'prompt_templates': [
-            'Turn this into a statement:\n{sentence}\nOnly provide the statement.',
-            'Turn this question into a statement:\n{sentence}\nOnly provide the statement.',
-            'Rewrite this as a statement:\n{sentence}\nOnly output the statement.',
-            'Change this question into a statement:\n{sentence}\nDo not explain your answer.',
-            'Make this a statement:\n{sentence}\nOnly provide the statement.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Turn this into a statement:\n{sentence}\nOnly provide the statement.',
+                    'Turn this question into a statement:\n{sentence}\nOnly provide the statement.',
+                    'Rewrite this as a statement:\n{sentence}\nOnly output the statement.',
+                    'Change this question into a statement:\n{sentence}\nDo not explain your answer.',
+                    'Make this a statement:\n{sentence}\nOnly provide the statement.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -123,10 +141,19 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'tense': {
-        'prompt_templates': [
-            'Change this sentence to past tense:\n{present}\nOnly provide the changed sentence.',
-            'Rewrite this in past tense:\n{present}\nOnly output the changed sentence.',
-            'Change this sentence from present tense to past tense:\n{present}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Change this sentence to past tense:\n{present}\nOnly provide the changed sentence.',
+                    'Rewrite this in past tense:\n{present}\nOnly output the changed sentence.',
+                    'Change this sentence from present tense to past tense:\n{present}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -168,10 +195,19 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'present_tense': {
-        'prompt_templates': [
-            'Change this sentence to present tense:\n{past}\nOnly provide the changed sentence.',
-            'Rewrite this in present tense:\n{past}\nOnly output the changed sentence.',
-            'Change this sentence from past tense to present tense:\n{past}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Change this sentence to present tense:\n{past}\nOnly provide the changed sentence.',
+                    'Rewrite this in present tense:\n{past}\nOnly output the changed sentence.',
+                    'Change this sentence from past tense to present tense:\n{past}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -202,10 +238,19 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'number': {
-        'prompt_templates': [
-            'Change this sentence to plural:\n{singular}\nOnly provide the changed sentence.',
-            'Rewrite this sentence in plural form:\n{singular}\nOnly output the changed sentence.',
-            'Make this sentence plural:\n{singular}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Change this sentence to plural:\n{singular}\nOnly provide the changed sentence.',
+                    'Rewrite this sentence in plural form:\n{singular}\nOnly output the changed sentence.',
+                    'Make this sentence plural:\n{singular}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -248,10 +293,19 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'singular': {
-        'prompt_templates': [
-            'Change this sentence to singular:\n{plural}\nOnly provide the changed sentence.',
-            'Rewrite this sentence in singular form:\n{plural}\nOnly output the changed sentence.',
-            'Make this sentence singular:\n{plural}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Change this sentence to singular:\n{plural}\nOnly provide the changed sentence.',
+                    'Rewrite this sentence in singular form:\n{plural}\nOnly output the changed sentence.',
+                    'Make this sentence singular:\n{plural}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -291,10 +345,19 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'polarity': {
-        'prompt_templates': [
-            'Make this sentence negative:\n{positive}\nOnly provide the changed sentence.',
-            'Rewrite this sentence in negative form:\n{positive}\nOnly output the changed sentence.',
-            'Change this sentence to negative:\n{positive}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Make this sentence negative:\n{positive}\nOnly provide the changed sentence.',
+                    'Rewrite this sentence in negative form:\n{positive}\nOnly output the changed sentence.',
+                    'Change this sentence to negative:\n{positive}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'positive': 'She likes tea.', 'answer': 'She does not like tea.'},
@@ -328,10 +391,19 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'positive': {
-        'prompt_templates': [
-            'Make this sentence positive:\n{negative}\nOnly provide the changed sentence.',
-            'Rewrite this sentence in positive form:\n{negative}\nOnly output the changed sentence.',
-            'Change this sentence to positive:\n{negative}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Make this sentence positive:\n{negative}\nOnly provide the changed sentence.',
+                    'Rewrite this sentence in positive form:\n{negative}\nOnly output the changed sentence.',
+                    'Change this sentence to positive:\n{negative}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'negative': 'She does not like tea.', 'answer': 'She likes tea.'},
@@ -365,10 +437,19 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'style': {
-        'prompt_templates': [
-            'Make this sentence more formal:\n{casual}\nOnly provide the rewritten sentence.',
-            'Rewrite this sentence in a more formal style:\n{casual}\nOnly output the rewritten sentence.',
-            'Make this sound more formal:\n{casual}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Make this sentence more formal:\n{casual}\nOnly provide the rewritten sentence.',
+                    'Rewrite this sentence in a more formal style:\n{casual}\nOnly output the rewritten sentence.',
+                    'Make this sound more formal:\n{casual}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -381,7 +462,7 @@ SENTENCE_TRANSFORM_FIXTURES = {
             },
             {
                 'casual': 'I need this soon.',
-                'answer': 'I would appreciate receiving this soon.',
+                'answer': 'I require this promptly.',
             },
             {
                 'casual': 'Can you send it over?',
@@ -401,15 +482,24 @@ SENTENCE_TRANSFORM_FIXTURES = {
             },
             {
                 'casual': 'This looks good to me.',
-                'answer': 'This looks acceptable to me.',
+                'answer': 'This appears satisfactory to me.',
             },
         ],
     },
     'casual_style': {
-        'prompt_templates': [
-            'Make this sentence more casual:\n{formal}\nOnly provide the rewritten sentence.',
-            'Rewrite this sentence in a more casual style:\n{formal}\nOnly output the rewritten sentence.',
-            'Make this sound more casual:\n{formal}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Make this sentence more casual:\n{formal}\nOnly provide the rewritten sentence.',
+                    'Rewrite this sentence in a more casual style:\n{formal}\nOnly output the rewritten sentence.',
+                    'Make this sound more casual:\n{formal}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -421,7 +511,7 @@ SENTENCE_TRANSFORM_FIXTURES = {
                 'answer': 'Thanks for the info.',
             },
             {
-                'formal': 'I would appreciate receiving this soon.',
+                'formal': 'I require this promptly.',
                 'answer': 'I need this soon.',
             },
             {
@@ -441,16 +531,25 @@ SENTENCE_TRANSFORM_FIXTURES = {
                 'answer': 'I got your message.',
             },
             {
-                'formal': 'This looks acceptable to me.',
+                'formal': 'This appears satisfactory to me.',
                 'answer': 'This looks good to me.',
             },
         ],
     },
     'combine_split': {
-        'prompt_templates': [
-            'Combine these sentences into one sentence:\n{first} {second}\nOnly provide the combined sentence.',
-            'Combine these two sentences into one sentence:\n{first} {second}\nOnly output the combined sentence.',
-            'Rewrite these as one sentence:\n{first} {second}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Combine these sentences into one sentence:\n{first} {second}\nOnly provide the combined sentence.',
+                    'Combine these two sentences into one sentence:\n{first} {second}\nOnly output the combined sentence.',
+                    'Rewrite these as one sentence:\n{first} {second}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -496,10 +595,19 @@ SENTENCE_TRANSFORM_FIXTURES = {
         ],
     },
     'split': {
-        'prompt_templates': [
-            'Split this sentence into two shorter sentences:\n{sentence}\nOnly provide the two sentences.',
-            'Rewrite this as two shorter sentences:\n{sentence}\nOnly output the two sentences.',
-            'Separate this into two sentences:\n{sentence}\nDo not explain your answer.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Split this sentence into two shorter sentences:\n{sentence}\nOnly provide the two sentences.',
+                    'Rewrite this as two shorter sentences:\n{sentence}\nOnly output the two sentences.',
+                    'Separate this into two sentences:\n{sentence}\nDo not explain your answer.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -508,7 +616,7 @@ SENTENCE_TRANSFORM_FIXTURES = {
             },
             {
                 'sentence': 'The laptop was slow because too many programs were open.',
-                'answer': 'The laptop was slow. Too many programs were open.',
+                'answer': 'The laptop was slow. This was because too many programs were open.',
             },
             {
                 'sentence': 'The cake smelled sweet and everyone wanted a slice.',
@@ -516,11 +624,11 @@ SENTENCE_TRANSFORM_FIXTURES = {
             },
             {
                 'sentence': 'Maria missed the bus, so she walked to school.',
-                'answer': 'Maria missed the bus. She walked to school.',
+                'answer': 'Maria missed the bus. As a result, she walked to school.',
             },
             {
                 'sentence': 'The room was cold, so I closed the window.',
-                'answer': 'The room was cold. I closed the window.',
+                'answer': 'The room was cold. Therefore, I closed the window.',
             },
             {
                 'sentence': 'The sun was setting and the sky turned orange.',
@@ -528,11 +636,11 @@ SENTENCE_TRANSFORM_FIXTURES = {
             },
             {
                 'sentence': 'The dog barked because someone knocked on the door.',
-                'answer': 'The dog barked. Someone knocked on the door.',
+                'answer': 'Someone knocked on the door. Because of this, the dog barked.',
             },
             {
                 'sentence': 'The train was late, so many people waited.',
-                'answer': 'The train was late. Many people waited.',
+                'answer': 'The train was late. As a result, many people waited.',
             },
         ],
     },

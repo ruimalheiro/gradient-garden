@@ -1,10 +1,19 @@
 FACTUAL_QA_FIXTURES = {
     'capital': {
-        'prompt_templates': [
-            'What is the capital of {country}? Answer in one short sentence.',
-            'What is the capital of {country}? Only provide one short sentence.',
-            'Name the capital of {country}. Answer in one short sentence.',
-            'Which city is the capital of {country}? Answer in one short sentence.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'What is the capital of {country}? Answer in one short sentence.',
+                    'What is the capital of {country}? Only provide one short sentence.',
+                    'Name the capital of {country}. Answer in one short sentence.',
+                    'Which city is the capital of {country}? Answer in one short sentence.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -49,7 +58,7 @@ FACTUAL_QA_FIXTURES = {
             },
             {
                 'country': 'Brazil',
-                'answer': 'The capital of Brazil is Brasília.',
+                'answer': 'The capital of Brazil is Brasilia.',
                 'entities': ['Brazil'],
             },
             {
@@ -84,11 +93,21 @@ FACTUAL_QA_FIXTURES = {
             },
         ],
     },
+
     'science': {
-        'prompt_templates': [
-            '{question} Answer in one short sentence.',
-            '{question} Only provide one short sentence.',
-            'Answer this science question in one short sentence: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question} Answer in one short sentence.',
+                    '{question} Only provide one short sentence.',
+                    'Answer this science question in one short sentence: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -159,12 +178,22 @@ FACTUAL_QA_FIXTURES = {
             },
         ],
     },
+
     'solar_system': {
-        'prompt_templates': [
-            '{question}',
-            '{question} Answer in one short sentence.',
-            '{question} Only provide the answer.',
-            'Answer this astronomy question: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question}',
+                    '{question} Answer in one short sentence.',
+                    '{question} Only provide the answer.',
+                    'Answer this astronomy question: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -179,13 +208,10 @@ FACTUAL_QA_FIXTURES = {
                 'question': 'Which planets orbit the Sun?',
                 'answer': 'Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune orbit the Sun.',
             },
-            {
-                'question': 'Is the Sun a planet?',
-                'answer': 'No, the Sun is a star.',
-            },
+            {'question': 'Is the Sun a planet?', 'answer': 'No, the Sun is a star.'},
             {
                 'question': 'Is the Moon a planet?',
-                'answer': 'No, the Moon is Earth’s natural satellite.',
+                'answer': "No, the Moon is Earth's natural satellite.",
             },
             {
                 'question': 'Which planet do humans live on?',
@@ -201,11 +227,21 @@ FACTUAL_QA_FIXTURES = {
             },
         ],
     },
+
     'counts': {
-        'prompt_templates': [
-            '{question} Answer in one short sentence.',
-            '{question} Only provide one short sentence.',
-            'Answer this counting question in one short sentence: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question} Answer in one short sentence.',
+                    '{question} Only provide one short sentence.',
+                    'Answer this counting question in one short sentence: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -250,11 +286,21 @@ FACTUAL_QA_FIXTURES = {
             },
         ],
     },
+
     'authors_art': {
-        'prompt_templates': [
-            '{question} Answer in one short sentence.',
-            '{question} Only provide one short sentence.',
-            'Answer this question in one short sentence: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question} Answer in one short sentence.',
+                    '{question} Only provide one short sentence.',
+                    'Answer this question in one short sentence: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -299,21 +345,28 @@ FACTUAL_QA_FIXTURES = {
             },
         ],
     },
+
     'animals': {
-        'prompt_templates': [
-            '{question} Answer in one short sentence.',
-            '{question} Only provide one short sentence.',
-            'Answer this animal question in one short sentence: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question} Answer in one short sentence.',
+                    '{question} Only provide one short sentence.',
+                    'Answer this animal question in one short sentence: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
                 'question': "What animal is known as man's best friend?",
                 'answer': "Dogs are often called man's best friend.",
             },
-            {
-                'question': 'What animal gives us wool?',
-                'answer': 'Sheep give us wool.',
-            },
+            {'question': 'What animal gives us wool?', 'answer': 'Sheep give us wool.'},
             {
                 'question': 'What animal is known for producing honey?',
                 'answer': 'Bees are known for producing honey.',
@@ -342,11 +395,21 @@ FACTUAL_QA_FIXTURES = {
             },
         ],
     },
+
     'geography': {
-        'prompt_templates': [
-            '{question} Answer in one short sentence.',
-            '{question} Only provide one short sentence.',
-            'Answer this geography question in one short sentence: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question} Answer in one short sentence.',
+                    '{question} Only provide one short sentence.',
+                    'Answer this geography question in one short sentence: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -357,10 +420,7 @@ FACTUAL_QA_FIXTURES = {
                 'question': 'What is the tallest mountain on Earth?',
                 'answer': 'Mount Everest is the tallest mountain on Earth.',
             },
-            {
-                'question': 'What continent is Egypt in?',
-                'answer': 'Egypt is in Africa.',
-            },
+            {'question': 'What continent is Egypt in?', 'answer': 'Egypt is in Africa.'},
             {
                 'question': 'What continent is Brazil in?',
                 'answer': 'Brazil is in South America.',
@@ -369,10 +429,7 @@ FACTUAL_QA_FIXTURES = {
                 'question': 'What continent is France in?',
                 'answer': 'France is in Europe.',
             },
-            {
-                'question': 'What continent is Japan in?',
-                'answer': 'Japan is in Asia.',
-            },
+            {'question': 'What continent is Japan in?', 'answer': 'Japan is in Asia.'},
             {
                 'question': 'What ocean is east of the United States?',
                 'answer': 'The Atlantic Ocean is east of the United States.',
@@ -385,17 +442,24 @@ FACTUAL_QA_FIXTURES = {
                 'question': 'What country is Lisbon in?',
                 'answer': 'Lisbon is in Portugal.',
             },
-            {
-                'question': 'What country is Paris in?',
-                'answer': 'Paris is in France.',
-            },
+            {'question': 'What country is Paris in?', 'answer': 'Paris is in France.'},
         ],
     },
+
     'objects_body_plants': {
-        'prompt_templates': [
-            '{question} Answer in one short sentence.',
-            '{question} Only provide one short sentence.',
-            'Answer this question in one short sentence: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question} Answer in one short sentence.',
+                    '{question} Only provide one short sentence.',
+                    'Answer this question in one short sentence: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -434,10 +498,7 @@ FACTUAL_QA_FIXTURES = {
                 'question': 'What do leaves help plants do?',
                 'answer': 'Leaves help plants make food from sunlight.',
             },
-            {
-                'question': 'What does a key open?',
-                'answer': 'A key opens a lock.',
-            },
+            {'question': 'What does a key open?', 'answer': 'A key opens a lock.'},
             {
                 'question': 'What does a pencil write with?',
                 'answer': 'A pencil writes with graphite.',
@@ -448,11 +509,21 @@ FACTUAL_QA_FIXTURES = {
             },
         ],
     },
+
     'opposites': {
-        'prompt_templates': [
-            '{question} Answer with one word.',
-            '{question} Only provide one word.',
-            'Answer with exactly one word: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question} Answer with one word.',
+                    '{question} Only provide one word.',
+                    'Answer with exactly one word: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'question': 'What is the opposite of hot?', 'answer': 'cold'},
@@ -467,18 +538,25 @@ FACTUAL_QA_FIXTURES = {
             {'question': 'What is the opposite of full?', 'answer': 'empty'},
         ],
     },
+
     'one_word_factual': {
-        'prompt_templates': [
-            'Answer with exactly one word: {question}',
-            '{question} Answer with exactly one word.',
-            '{question} Only provide one word.',
-            'Answer this question with one word only: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Answer with exactly one word: {question}',
+                    '{question} Answer with exactly one word.',
+                    '{question} Only provide one word.',
+                    'Answer this question with one word only: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
-            {
-                'question': 'What color is the sky on a clear day?',
-                'answer': 'blue',
-            },
+            {'question': 'What color is the sky on a clear day?', 'answer': 'blue'},
             {'question': 'What color is grass?', 'answer': 'green'},
             {'question': 'What color is snow?', 'answer': 'white'},
             {'question': 'What color is a ripe banana?', 'answer': 'yellow'},
@@ -489,28 +567,35 @@ FACTUAL_QA_FIXTURES = {
             {'question': 'What planet do humans live on?', 'answer': 'Earth'},
             {'question': 'What star gives Earth light?', 'answer': 'Sun'},
             {'question': 'What gas do humans breathe?', 'answer': 'oxygen'},
-            {'question': 'What gas do plants take in?', 'answer': 'carbon'},
+            {
+                'question': 'What gas do plants release during photosynthesis?',
+                'answer': 'oxygen',
+            },
             {'question': 'What is frozen water called?', 'answer': 'ice'},
             {'question': 'What is liquid rain made of?', 'answer': 'water'},
-            {
-                'question': 'What do people use to tell time?',
-                'answer': 'clock',
-            },
+            {'question': 'What do people use to tell time?', 'answer': 'clock'},
             {'question': 'What shape has three sides?', 'answer': 'triangle'},
-            {
-                'question': 'What shape has four equal sides?',
-                'answer': 'square',
-            },
+            {'question': 'What shape has four equal sides?', 'answer': 'square'},
             {'question': 'What sense uses the ears?', 'answer': 'hearing'},
             {'question': 'What sense uses the eyes?', 'answer': 'sight'},
             {'question': 'What organ pumps blood?', 'answer': 'heart'},
         ],
     },
+
     'health_safety': {
-        'prompt_templates': [
-            '{question}',
-            '{question} Answer in one short sentence.',
-            'Answer this health question in one short sentence: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    '{question}',
+                    '{question} Answer in one short sentence.',
+                    'Answer this health question in one short sentence: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {

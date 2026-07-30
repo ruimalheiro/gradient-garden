@@ -1,16 +1,25 @@
 RHYME_FIXTURES = {
     'exactly_four_unique': {
-        'prompt_templates': [
-            'Give exactly four different words that rhyme with {word}, separated by commas.',
-            'Give exactly four words that rhyme with {word}, separated by commas.',
-            'List exactly four words that rhyme with {word}, separated by commas.',
-            'Give four unique words that rhyme with {word}, separated by commas.',
-            'Give exactly four rhyming words for {word}, separated by commas only.',
-            'Write exactly four comma-separated words that rhyme with {word}.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Give exactly four different words that rhyme with {word}, separated by commas.',
+                    'Give exactly four words that rhyme with {word}, separated by commas.',
+                    'List exactly four words that rhyme with {word}, separated by commas.',
+                    'Give four unique words that rhyme with {word}, separated by commas.',
+                    'Give exactly four rhyming words for {word}, separated by commas only.',
+                    'Write exactly four comma-separated words that rhyme with {word}.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'word': 'cat', 'answer': 'bat, hat, mat, rat'},
-            {'word': 'dog', 'answer': 'fog, log, hog, frog'},
+            {'word': 'log', 'answer': 'bog, cog, fog, hog'},
             {'word': 'sun', 'answer': 'bun, fun, run, done'},
             {'word': 'light', 'answer': 'bright, night, sight, right'},
             {'word': 'tree', 'answer': 'bee, free, see, three'},
@@ -42,16 +51,25 @@ RHYME_FIXTURES = {
         ],
     },
     'exactly_three_unique': {
-        'prompt_templates': [
-            'Give exactly three different words that rhyme with {word}, separated by commas.',
-            'Give exactly three words that rhyme with {word}, separated by commas.',
-            'List exactly three words that rhyme with {word}, separated by commas.',
-            'Give three unique words that rhyme with {word}, separated by commas.',
-            'Write exactly three comma-separated words that rhyme with {word}.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Give exactly three different words that rhyme with {word}, separated by commas.',
+                    'Give exactly three words that rhyme with {word}, separated by commas.',
+                    'List exactly three words that rhyme with {word}, separated by commas.',
+                    'Give three unique words that rhyme with {word}, separated by commas.',
+                    'Write exactly three comma-separated words that rhyme with {word}.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'word': 'cat', 'answer': 'bat, hat, mat'},
-            {'word': 'dog', 'answer': 'fog, log, hog'},
+            {'word': 'log', 'answer': 'bog, cog, fog'},
             {'word': 'sun', 'answer': 'fun, run, bun'},
             {'word': 'light', 'answer': 'night, sight, bright'},
             {'word': 'tree', 'answer': 'bee, free, see'},
@@ -73,16 +91,25 @@ RHYME_FIXTURES = {
         ],
     },
     'exactly_five_unique': {
-        'prompt_templates': [
-            'Give exactly five different words that rhyme with {word}, separated by commas.',
-            'Give exactly five words that rhyme with {word}, separated by commas.',
-            'List exactly five words that rhyme with {word}, separated by commas.',
-            'Give five unique words that rhyme with {word}, separated by commas.',
-            'Write exactly five comma-separated words that rhyme with {word}.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Give exactly five different words that rhyme with {word}, separated by commas.',
+                    'Give exactly five words that rhyme with {word}, separated by commas.',
+                    'List exactly five words that rhyme with {word}, separated by commas.',
+                    'Give five unique words that rhyme with {word}, separated by commas.',
+                    'Write exactly five comma-separated words that rhyme with {word}.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'word': 'cat', 'answer': 'bat, hat, mat, rat, sat'},
-            {'word': 'dog', 'answer': 'fog, log, hog, frog, bog'},
+            {'word': 'log', 'answer': 'bog, cog, fog, hog, jog'},
             {'word': 'sun', 'answer': 'bun, fun, run, done, none'},
             {'word': 'light', 'answer': 'bright, night, sight, right, flight'},
             {'word': 'tree', 'answer': 'bee, free, see, three, key'},
@@ -104,16 +131,25 @@ RHYME_FIXTURES = {
         ],
     },
     'no_repeats_explicit': {
-        'prompt_templates': [
-            'Give exactly four words that rhyme with {word}. Do not repeat any word. Use commas only.',
-            'Give exactly four rhyming words for {word}. Do not repeat any word. Use commas only.',
-            'List four words that rhyme with {word}. Do not repeat words. Use commas only.',
-            'Give four unique words that rhyme with {word}. Use commas only.',
-            'Write four different rhyming words for {word}. Use commas only.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Give exactly four words that rhyme with {word}. Do not repeat any word. Use commas only.',
+                    'Give exactly four rhyming words for {word}. Do not repeat any word. Use commas only.',
+                    'List four words that rhyme with {word}. Do not repeat words. Use commas only.',
+                    'Give four unique words that rhyme with {word}. Use commas only.',
+                    'Write four different rhyming words for {word}. Use commas only.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'word': 'cat', 'answer': 'bat, hat, mat, rat'},
-            {'word': 'dog', 'answer': 'fog, log, hog, frog'},
+            {'word': 'log', 'answer': 'bog, cog, fog, hog'},
             {'word': 'sun', 'answer': 'bun, fun, run, done'},
             {'word': 'light', 'answer': 'bright, night, sight, right'},
             {'word': 'tree', 'answer': 'bee, free, see, three'},
@@ -140,16 +176,25 @@ RHYME_FIXTURES = {
         ],
     },
     'comma_format_only': {
-        'prompt_templates': [
-            'List four rhyming words for {word}. Separate them with commas only.',
-            'List four rhyming words for {word}, separated by commas only.',
-            'Give four rhyming words for {word}. Use commas only.',
-            'Write four comma-separated rhyming words for {word}.',
-            'Give four words that rhyme with {word}. Separate them with commas only.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'List four rhyming words for {word}. Separate them with commas only.',
+                    'List four rhyming words for {word}, separated by commas only.',
+                    'Give four rhyming words for {word}. Use commas only.',
+                    'Write four comma-separated rhyming words for {word}.',
+                    'Give four words that rhyme with {word}. Separate them with commas only.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'word': 'cat', 'answer': 'bat, hat, mat, rat'},
-            {'word': 'dog', 'answer': 'fog, log, hog, frog'},
+            {'word': 'log', 'answer': 'bog, cog, fog, hog'},
             {'word': 'sun', 'answer': 'bun, fun, run, done'},
             {'word': 'light', 'answer': 'bright, night, sight, right'},
             {'word': 'tree', 'answer': 'bee, free, see, three'},
