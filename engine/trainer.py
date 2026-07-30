@@ -565,6 +565,9 @@ class Trainer:
         if args.reset_dataloaders:
             logger.warning('Reset dataloaders flag was set')
 
+        if args.reset_validation_history:
+            logger.warning('Reset validation history flag was set')
+
         if ddp_world_size_changed or training_stage_changed or args.reset_dataloaders:
             if checkpoint_data.train_loader_state is not None and checkpoint_data.val_loader_state is not None:
                 logger.warning('ignoring stored metadata for dataloaders...')
@@ -577,7 +580,7 @@ class Trainer:
                 logger.warning('ignoring stored state of optimizer(s)...')
                 checkpoint_data.optimizers_state = None
 
-        reset_validation_history = training_stage_changed or lora_mode_changed
+        reset_validation_history = training_stage_changed or lora_mode_changed or args.reset_validation_history
         if reset_validation_history:
             if checkpoint_data.last_val_loss is not None or checkpoint_data.best_val_loss is not None:
                 logger.warning('ignoring stored last val loss and best val loss...')
