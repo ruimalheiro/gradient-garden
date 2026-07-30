@@ -16,13 +16,8 @@ def make_fixture_dataset_generator(
     transforms=None,
     default_weights=None,
     variables=None,
-    prompt_transforms=None,
-    answer_selector=None,
-    answer_transform=None,
-    override_group_answer=None,
 ):
     variables = variables or {}
-    override_group_answer = override_group_answer or {}
 
     default_weights = (
         default_weights
@@ -42,10 +37,6 @@ def make_fixture_dataset_generator(
             group_name,
             rng=rng,
             variables=dict(variables),
-            prompt_transforms=prompt_transforms,
-            answer_selector=answer_selector,
-            answer_transform=answer_transform,
-            override_group_answer=override_group_answer,
         )
 
     return generate_example
