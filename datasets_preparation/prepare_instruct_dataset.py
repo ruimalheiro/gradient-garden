@@ -344,7 +344,7 @@ def download_and_prepare_data(
     for d, ds in zip(valid_datasets, prepared_datasets):
         logger.info(f'- Total for: {d["id"]} : {len(ds)}')
 
-    logger.info('- Mix total len:', len(prepared_dataset))
+    logger.info(f'- Mix total len: {len(prepared_dataset)}')
 
     splits = prepared_dataset.train_test_split(test_size=validation_ratio, seed=seed)
 

@@ -1,11 +1,20 @@
 BASIC_ARITHMETIC_FIXTURES = {
     'addition': {
-        'prompt_templates': [
-            'What is {left} plus {right}? Answer with only the number.',
-            'Add {left} and {right}. Answer with only the number.',
-            'Compute {left} plus {right}. Only provide the number.',
-            '{left} plus {right} equals what? Answer with only the number.',
-            'What is the sum of {left} and {right}? Only provide the number.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'What is {left} plus {right}? Answer with only the number.',
+                    'Add {left} and {right}. Answer with only the number.',
+                    'Compute {left} plus {right}. Only provide the number.',
+                    '{left} plus {right} equals what? Answer with only the number.',
+                    'What is the sum of {left} and {right}? Only provide the number.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'left': '1', 'right': '1', 'answer': '2'},
@@ -41,12 +50,21 @@ BASIC_ARITHMETIC_FIXTURES = {
         ],
     },
     'subtraction': {
-        'prompt_templates': [
-            'What is {left} minus {right}? Answer with only the number.',
-            'Subtract {right} from {left}. Answer with only the number.',
-            'Compute {left} minus {right}. Only provide the number.',
-            '{left} minus {right} equals what? Answer with only the number.',
-            'What is the difference between {left} and {right}? Only provide the number.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'What is {left} minus {right}? Answer with only the number.',
+                    'Subtract {right} from {left}. Answer with only the number.',
+                    'Compute {left} minus {right}. Only provide the number.',
+                    '{left} minus {right} equals what? Answer with only the number.',
+                    'What is the difference between {left} and {right}? Only provide the number.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'left': '3', 'right': '1', 'answer': '2'},
@@ -76,12 +94,21 @@ BASIC_ARITHMETIC_FIXTURES = {
         ],
     },
     'multiplication': {
-        'prompt_templates': [
-            'What is {left} times {right}? Answer with only the number.',
-            'Multiply {left} by {right}. Answer with only the number.',
-            'Compute {left} times {right}. Only provide the number.',
-            '{left} times {right} equals what? Answer with only the number.',
-            'What is the product of {left} and {right}? Only provide the number.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'What is {left} times {right}? Answer with only the number.',
+                    'Multiply {left} by {right}. Answer with only the number.',
+                    'Compute {left} times {right}. Only provide the number.',
+                    '{left} times {right} equals what? Answer with only the number.',
+                    'What is the product of {left} and {right}? Only provide the number.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'left': '1', 'right': '2', 'answer': '2'},
@@ -111,12 +138,21 @@ BASIC_ARITHMETIC_FIXTURES = {
         ],
     },
     'division': {
-        'prompt_templates': [
-            'What is {left} divided by {right}? Answer with only the number.',
-            'Divide {left} by {right}. Answer with only the number.',
-            'Compute {left} divided by {right}. Only provide the number.',
-            '{left} divided by {right} equals what? Answer with only the number.',
-            'What is {left} split into {right} equal groups? Only provide the number.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'What is {left} divided by {right}? Answer with only the number.',
+                    'Divide {left} by {right}. Answer with only the number.',
+                    'Compute {left} divided by {right}. Only provide the number.',
+                    '{left} divided by {right} equals what? Answer with only the number.',
+                    'What is {left} split into {right} equal groups? Only provide the number.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'left': '4', 'right': '2', 'answer': '2'},
@@ -142,10 +178,19 @@ BASIC_ARITHMETIC_FIXTURES = {
         ],
     },
     'comparison': {
-        'prompt_templates': [
-            'Which is larger, {left} or {right}? Answer with only the larger number.',
-            'Which number is larger: {left} or {right}? Only provide the larger number.',
-            'Choose the larger number: {left} or {right}. Answer with only the number.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Which is larger, {left} or {right}? Answer with only the larger number.',
+                    'Which number is larger: {left} or {right}? Only provide the larger number.',
+                    'Choose the larger number: {left} or {right}. Answer with only the number.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'left': '42', 'right': '24', 'answer': '42'},
@@ -163,10 +208,19 @@ BASIC_ARITHMETIC_FIXTURES = {
         ],
     },
     'smaller_comparison': {
-        'prompt_templates': [
-            'Which is smaller, {left} or {right}? Answer with only the smaller number.',
-            'Which number is smaller: {left} or {right}? Only provide the smaller number.',
-            'Choose the smaller number: {left} or {right}. Answer with only the number.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Which is smaller, {left} or {right}? Answer with only the smaller number.',
+                    'Which number is smaller: {left} or {right}? Only provide the smaller number.',
+                    'Choose the smaller number: {left} or {right}. Answer with only the number.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'left': '9', 'right': '14', 'answer': '9'},
@@ -184,113 +238,123 @@ BASIC_ARITHMETIC_FIXTURES = {
         ],
     },
     'symbolic_answer_only': {
+        'messages': [
+            {
+                'role': 'user',
+                'content': '{question}',
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
+        ],
         'examples': [
             {
-                'prompt': 'What is 7 + 5? Answer with only the number.',
+                'question': 'What is 7 + 5? Answer with only the number.',
                 'answer': '12',
             },
             {
-                'prompt': '7 + 5 = ? Answer with only the number.',
+                'question': '7 + 5 = ? Answer with only the number.',
                 'answer': '12',
             },
             {
-                'prompt': 'Compute 7 + 5. Only provide the number.',
+                'question': 'Compute 7 + 5. Only provide the number.',
                 'answer': '12',
             },
             {
-                'prompt': 'Add 7 and 5. Only provide the number.',
+                'question': 'Add 7 and 5. Only provide the number.',
                 'answer': '12',
             },
             {
-                'prompt': 'What is seven plus five? Answer with only the number.',
+                'question': 'What is seven plus five? Answer with only the number.',
                 'answer': '12',
             },
             {
-                'prompt': 'What is 5 + 7? Answer with only the number.',
+                'question': 'What is 5 + 7? Answer with only the number.',
                 'answer': '12',
             },
             {
-                'prompt': '5 + 7 = ? Answer with only the number.',
+                'question': '5 + 7 = ? Answer with only the number.',
                 'answer': '12',
             },
             {
-                'prompt': 'What is 3 + 4? Answer with only the number.',
+                'question': 'What is 3 + 4? Answer with only the number.',
                 'answer': '7',
             },
             {
-                'prompt': '3 + 4 = ? Answer with only the number.',
+                'question': '3 + 4 = ? Answer with only the number.',
                 'answer': '7',
             },
             {
-                'prompt': 'What is 8 + 6? Answer with only the number.',
+                'question': 'What is 8 + 6? Answer with only the number.',
                 'answer': '14',
             },
             {
-                'prompt': '8 + 6 = ? Answer with only the number.',
+                'question': '8 + 6 = ? Answer with only the number.',
                 'answer': '14',
             },
             {
-                'prompt': 'What is 9 + 2? Answer with only the number.',
+                'question': 'What is 9 + 2? Answer with only the number.',
                 'answer': '11',
             },
             {
-                'prompt': '9 + 2 = ? Answer with only the number.',
+                'question': '9 + 2 = ? Answer with only the number.',
                 'answer': '11',
             },
             {
-                'prompt': 'What is 11 + 7? Answer with only the number.',
+                'question': 'What is 11 + 7? Answer with only the number.',
                 'answer': '18',
             },
             {
-                'prompt': '11 + 7 = ? Answer with only the number.',
+                'question': '11 + 7 = ? Answer with only the number.',
                 'answer': '18',
             },
             {
-                'prompt': 'What is 10 - 3? Answer with only the number.',
+                'question': 'What is 10 - 3? Answer with only the number.',
                 'answer': '7',
             },
             {
-                'prompt': '10 - 3 = ? Answer with only the number.',
+                'question': '10 - 3 = ? Answer with only the number.',
                 'answer': '7',
             },
             {
-                'prompt': 'What is 15 - 6? Answer with only the number.',
+                'question': 'What is 15 - 6? Answer with only the number.',
                 'answer': '9',
             },
             {
-                'prompt': '15 - 6 = ? Answer with only the number.',
+                'question': '15 - 6 = ? Answer with only the number.',
                 'answer': '9',
             },
             {
-                'prompt': 'What is 4 * 3? Answer with only the number.',
+                'question': 'What is 4 * 3? Answer with only the number.',
                 'answer': '12',
             },
             {
-                'prompt': '4 * 3 = ? Answer with only the number.',
+                'question': '4 * 3 = ? Answer with only the number.',
                 'answer': '12',
             },
             {
-                'prompt': 'What is 5 * 2? Answer with only the number.',
+                'question': 'What is 5 * 2? Answer with only the number.',
                 'answer': '10',
             },
             {
-                'prompt': '5 * 2 = ? Answer with only the number.',
+                'question': '5 * 2 = ? Answer with only the number.',
                 'answer': '10',
             },
             {
-                'prompt': 'What is 12 / 3? Answer with only the number.',
+                'question': 'What is 12 / 3? Answer with only the number.',
                 'answer': '4',
             },
             {
-                'prompt': '12 / 3 = ? Answer with only the number.',
+                'question': '12 / 3 = ? Answer with only the number.',
                 'answer': '4',
             },
             {
-                'prompt': 'What is 20 / 5? Answer with only the number.',
+                'question': 'What is 20 / 5? Answer with only the number.',
                 'answer': '4',
             },
             {
-                'prompt': '20 / 5 = ? Answer with only the number.',
+                'question': '20 / 5 = ? Answer with only the number.',
                 'answer': '4',
             },
         ],

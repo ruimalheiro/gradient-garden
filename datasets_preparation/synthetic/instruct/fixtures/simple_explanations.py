@@ -1,12 +1,21 @@
 SIMPLE_EXPLANATION_FIXTURES = {
     'technology': {
-        'prompt_templates': [
-            'Explain what {concept} is in simple words. Use at most two short sentences.',
-            'Explain {concept} in simple words. Use at most two short sentences.',
-            'What is {concept}? Explain in simple words using at most two short sentences.',
-            'Explain {concept} simply. Do not use more than two short sentences.',
-            'Give a simple explanation of {concept}. Stop after two short sentences.',
-            'Explain {concept} for a beginner. Use simple words and no more than two sentences.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Explain what {concept} is in simple words. Use at most two short sentences.',
+                    'Explain {concept} in simple words. Use at most two short sentences.',
+                    'What is {concept}? Explain in simple words using at most two short sentences.',
+                    'Explain {concept} simply. Do not use more than two short sentences.',
+                    'Give a simple explanation of {concept}. Stop after two short sentences.',
+                    'Explain {concept} for a beginner. Use simple words and no more than two sentences.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -83,7 +92,7 @@ SIMPLE_EXPLANATION_FIXTURES = {
             },
             {
                 'concept': 'two-factor authentication',
-                'answer': 'Two-factor authentication adds a second check when you sign in. It makes accounts harder to steal.',
+                'answer': 'Two-factor authentication adds a second check when you sign in. It makes accounts harder for other people to access.',
             },
             {
                 'concept': 'encryption',
@@ -132,18 +141,27 @@ SIMPLE_EXPLANATION_FIXTURES = {
         ],
     },
     'general_science': {
-        'prompt_templates': [
-            'Explain what {concept} is in simple words. Use at most two short sentences.',
-            'Explain {concept} in simple words. Use at most two short sentences.',
-            'What is {concept}? Explain in simple words using at most two short sentences.',
-            'Explain {concept} simply. Do not use more than two short sentences.',
-            'Give a simple explanation of {concept}. Stop after two short sentences.',
-            'Explain {concept} for a beginner. Use simple words and no more than two sentences.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Explain what {concept} is in simple words. Use at most two short sentences.',
+                    'Explain {concept} in simple words. Use at most two short sentences.',
+                    'What is {concept}? Explain in simple words using at most two short sentences.',
+                    'Explain {concept} simply. Do not use more than two short sentences.',
+                    'Give a simple explanation of {concept}. Stop after two short sentences.',
+                    'Explain {concept} for a beginner. Use simple words and no more than two sentences.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
                 'concept': 'electricity',
-                'answer': 'Electricity is energy that moves through wires. It powers lights, machines, and devices.',
+                'answer': 'Electricity is energy carried by moving electric charges. It powers lights, machines, and devices.',
             },
             {
                 'concept': 'gravity',
@@ -199,7 +217,7 @@ SIMPLE_EXPLANATION_FIXTURES = {
             },
             {
                 'concept': 'heat',
-                'answer': 'Heat is energy that makes things warmer. It can move from warmer objects to cooler ones.',
+                'answer': 'Heat is energy transferred from a warmer object to a cooler one. It can make the cooler object warmer.',
             },
             {
                 'concept': 'air',
@@ -240,13 +258,22 @@ SIMPLE_EXPLANATION_FIXTURES = {
         ],
     },
     'everyday_concepts': {
-        'prompt_templates': [
-            'Explain what {concept} is in simple words. Use at most two short sentences.',
-            'Explain {concept} in simple words. Use at most two short sentences.',
-            'What is {concept}? Explain in simple words using at most two short sentences.',
-            'Explain {concept} simply. Do not use more than two short sentences.',
-            'Give a simple explanation of {concept}. Stop after two short sentences.',
-            'Explain {concept} for a beginner. Use simple words and no more than two sentences.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Explain what {concept} is in simple words. Use at most two short sentences.',
+                    'Explain {concept} in simple words. Use at most two short sentences.',
+                    'What is {concept}? Explain in simple words using at most two short sentences.',
+                    'Explain {concept} simply. Do not use more than two short sentences.',
+                    'Give a simple explanation of {concept}. Stop after two short sentences.',
+                    'Explain {concept} for a beginner. Use simple words and no more than two sentences.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -259,7 +286,7 @@ SIMPLE_EXPLANATION_FIXTURES = {
             },
             {
                 'concept': 'interest',
-                'answer': 'Interest is extra money paid for borrowing or saving money. A bank may charge it or pay it.',
+                'answer': 'Interest is extra money charged on a loan or earned on savings. A bank may charge it or pay it.',
             },
             {
                 'concept': 'a receipt',

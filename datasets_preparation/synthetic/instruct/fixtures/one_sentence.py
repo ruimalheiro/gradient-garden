@@ -1,16 +1,25 @@
 ONE_SENTENCE_FIXTURES = {
     'topics': {
-        'prompt_templates': [
-            'Write exactly one sentence about {topic}.',
-            'Write exactly one sentence about {topic}.\nOnly provide the sentence.',
-            'Write one short sentence about {topic}.',
-            'Write one short sentence about {topic}.\nDo not write a second sentence.',
-            'Describe {topic} in exactly one sentence.',
-            'Give one short sentence about {topic}.',
-            'Write one sentence only about {topic}.',
-            'In exactly one sentence, explain {topic}.',
-            'Write a single sentence about {topic}. Stop after that sentence.',
-            'Answer with one sentence only: {topic}.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Write exactly one sentence about {topic}.',
+                    'Write exactly one sentence about {topic}.\nOnly provide the sentence.',
+                    'Write one short sentence about {topic}.',
+                    'Write one short sentence about {topic}.\nDo not write a second sentence.',
+                    'Describe {topic} in exactly one sentence.',
+                    'Give one short sentence about {topic}.',
+                    'Write one sentence only about {topic}.',
+                    'In exactly one sentence, explain {topic}.',
+                    'Write a single sentence about {topic}. Stop after that sentence.',
+                    'Answer with one sentence only: {topic}.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -153,7 +162,7 @@ ONE_SENTENCE_FIXTURES = {
                 'topic': 'kindness',
                 'answers': [
                     'Kindness means treating others with care and respect.',
-                    'Small acts of kindness can make someone’s day better.',
+                    "Small acts of kindness can make someone's day better.",
                     'Kindness helps people feel valued and supported.',
                 ],
             },
@@ -335,14 +344,24 @@ ONE_SENTENCE_FIXTURES = {
             },
         ],
     },
+
     'must_include_words': {
-        'prompt_templates': [
-            'Write a sentence that contains the words "{word1}" and "{word2}".',
-            'Write exactly one sentence that contains the words "{word1}" and "{word2}".',
-            'Write one short sentence using both "{word1}" and "{word2}".',
-            'Use "{word1}" and "{word2}" in one sentence only.',
-            'Write a single sentence that includes both "{word1}" and "{word2}".',
-            'Write one sentence containing both "{word1}" and "{word2}".\nOnly provide the sentence.',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Write a sentence that contains the words "{word1}" and "{word2}".',
+                    'Write exactly one sentence that contains the words "{word1}" and "{word2}".',
+                    'Write one short sentence using both "{word1}" and "{word2}".',
+                    'Use "{word1}" and "{word2}" in one sentence only.',
+                    'Write a single sentence that includes both "{word1}" and "{word2}".',
+                    'Write one sentence containing both "{word1}" and "{word2}".\nOnly provide the sentence.',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -371,17 +390,13 @@ ONE_SENTENCE_FIXTURES = {
                 'answer': 'The cat slept under the chair.',
             },
             {
-                'word1': 'music',
+                'word1': 'Music',
                 'word2': 'room',
                 'answer': 'Music filled the room during the party.',
             },
+            {'word1': 'tree', 'word2': 'bird', 'answer': 'A bird landed in the tree.'},
             {
-                'word1': 'tree',
-                'word2': 'bird',
-                'answer': 'A bird landed in the tree.',
-            },
-            {
-                'word1': 'coffee',
+                'word1': 'Coffee',
                 'word2': 'morning',
                 'answer': 'Coffee helped brighten the morning.',
             },
@@ -402,7 +417,7 @@ ONE_SENTENCE_FIXTURES = {
             },
             {
                 'word1': 'mountain',
-                'word2': 'snow',
+                'word2': 'Snow',
                 'answer': 'Snow covered the top of the mountain.',
             },
             {
@@ -425,11 +440,7 @@ ONE_SENTENCE_FIXTURES = {
                 'word2': 'station',
                 'answer': 'The train arrived at the station.',
             },
-            {
-                'word1': 'dog',
-                'word2': 'park',
-                'answer': 'The dog ran through the park.',
-            },
+            {'word1': 'dog', 'word2': 'park', 'answer': 'The dog ran through the park.'},
             {
                 'word1': 'cloud',
                 'word2': 'sky',

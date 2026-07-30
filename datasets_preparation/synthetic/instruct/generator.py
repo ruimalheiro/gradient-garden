@@ -32,34 +32,26 @@ from datasets_preparation.synthetic.instruct.fixtures.rhymes import RHYME_FIXTUR
 
 
 def generator_fn(*, config, rng, count, transforms):
-    def make_generator(group_name, fixtures, weight, *, default_weights=None, variables=None, override_group_answer=None):
+    def make_generator(group_name, fixtures, weight, *, default_weights=None, variables=None):
         generator = make_fixture_dataset_generator(
             fixtures=fixtures,
             rng=rng,
             render_example=render_fixture_example,
             transforms=transforms.get('groups', {}).get(group_name, {}),
             default_weights=default_weights,
-            variables=variables,
-            override_group_answer=override_group_answer
+            variables=variables
         )
         return group_name, (generator, weight)
 
-    custom_identity_message = transforms.get('identity_message')
-
     model_name = transforms.get(
         'model_name',
-        get_architecture_name(config).capitalize()
+        get_architecture_name(config).capitalize(),
     )
 
-    identity_message = custom_identity_message or (
-        f'I am {model_name}, a helpful AI assistant.'
+    identity_message = (
+        transforms.get('identity_message')
+        or f'I am {model_name}, a helpful AI assistant.'
     )
-
-    override_group_answer = None
-    if custom_identity_message:
-        override_group_answer = {
-            'self_identification': '{identity_message}',
-        }
 
     groups = [
         make_generator(
@@ -79,7 +71,6 @@ def generator_fn(*, config, rng, count, transforms):
                 'model_name': model_name,
                 'identity_message': identity_message,
             },
-            override_group_answer=override_group_answer,
         ),
         make_generator(
             'factual_qa',

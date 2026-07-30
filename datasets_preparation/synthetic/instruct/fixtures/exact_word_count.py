@@ -1,11 +1,20 @@
 EXACT_WORD_COUNT_FIXTURES = {
     'one_word': {
-        'prompt_templates': [
-            'Answer with exactly one word: {question}',
-            '{question} Answer with exactly one word.',
-            'Answer with one word only: {question}',
-            '{question} Only provide one word.',
-            'Use exactly one word to answer: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Answer with exactly one word: {question}',
+                    '{question} Answer with exactly one word.',
+                    'Answer with one word only: {question}',
+                    '{question} Only provide one word.',
+                    'Use exactly one word to answer: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -52,12 +61,21 @@ EXACT_WORD_COUNT_FIXTURES = {
         ],
     },
     'two_words': {
-        'prompt_templates': [
-            'Answer in exactly two words:\n{question}',
-            'Use exactly two words to answer:\n{question}',
-            '{question}\nAnswer in exactly two words.',
-            'Answer with exactly two words: {question}',
-            'Give a two-word answer: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Answer in exactly two words:\n{question}',
+                    'Use exactly two words to answer:\n{question}',
+                    '{question}\nAnswer in exactly two words.',
+                    'Answer with exactly two words: {question}',
+                    'Give a two-word answer: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'question': 'What do cats say?', 'answer': 'cats meow'},
@@ -75,12 +93,21 @@ EXACT_WORD_COUNT_FIXTURES = {
         ],
     },
     'three_words': {
-        'prompt_templates': [
-            'Answer in exactly three words:\n{question}',
-            'Use exactly three words to answer:\n{question}',
-            '{question}\nAnswer in exactly three words.',
-            'Answer with exactly three words: {question}',
-            'Give a three-word answer: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Answer in exactly three words:\n{question}',
+                    'Use exactly three words to answer:\n{question}',
+                    '{question}\nAnswer in exactly three words.',
+                    'Answer with exactly three words: {question}',
+                    'Give a three-word answer: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {'question': 'What color is grass?', 'answer': 'grass is green'},
@@ -116,12 +143,21 @@ EXACT_WORD_COUNT_FIXTURES = {
         ],
     },
     'four_words': {
-        'prompt_templates': [
-            'Answer in exactly four words:\n{question}',
-            'Use exactly four words to answer:\n{question}',
-            '{question}\nAnswer in exactly four words.',
-            'Answer with exactly four words: {question}',
-            'Give a four-word answer: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Answer in exactly four words:\n{question}',
+                    'Use exactly four words to answer:\n{question}',
+                    '{question}\nAnswer in exactly four words.',
+                    'Answer with exactly four words: {question}',
+                    'Give a four-word answer: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -169,12 +205,21 @@ EXACT_WORD_COUNT_FIXTURES = {
         ],
     },
     'five_words': {
-        'prompt_templates': [
-            'Answer in exactly five words:\n{question}',
-            'Use exactly five words to answer:\n{question}',
-            '{question}\nAnswer in exactly five words.',
-            'Answer with exactly five words: {question}',
-            'Give a five-word answer: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Answer in exactly five words:\n{question}',
+                    'Use exactly five words to answer:\n{question}',
+                    '{question}\nAnswer in exactly five words.',
+                    'Answer with exactly five words: {question}',
+                    'Give a five-word answer: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -228,12 +273,21 @@ EXACT_WORD_COUNT_FIXTURES = {
         ],
     },
     'six_words': {
-        'prompt_templates': [
-            'Answer in exactly six words:\n{question}',
-            'Use exactly six words to answer:\n{question}',
-            '{question}\nAnswer in exactly six words.',
-            'Answer with exactly six words: {question}',
-            'Give a six-word answer: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Answer in exactly six words:\n{question}',
+                    'Use exactly six words to answer:\n{question}',
+                    '{question}\nAnswer in exactly six words.',
+                    'Answer with exactly six words: {question}',
+                    'Give a six-word answer: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -279,12 +333,21 @@ EXACT_WORD_COUNT_FIXTURES = {
         ],
     },
     'seven_words': {
-        'prompt_templates': [
-            'Answer in exactly seven words:\n{question}',
-            'Use exactly seven words to answer:\n{question}',
-            '{question}\nAnswer in exactly seven words.',
-            'Answer with exactly seven words: {question}',
-            'Give a seven-word answer: {question}',
+        'messages': [
+            {
+                'role': 'user',
+                'content': [
+                    'Answer in exactly seven words:\n{question}',
+                    'Use exactly seven words to answer:\n{question}',
+                    '{question}\nAnswer in exactly seven words.',
+                    'Answer with exactly seven words: {question}',
+                    'Give a seven-word answer: {question}',
+                ],
+            },
+            {
+                'role': 'assistant',
+                'content': '{answer}',
+            },
         ],
         'examples': [
             {
@@ -321,7 +384,9 @@ EXACT_WORD_COUNT_FIXTURES = {
             },
             {
                 'question': 'Why do people save documents?',
-                'answer': 'saving documents prevents losing important written work',
+                'answer': (
+                    'saving documents prevents losing important written work'
+                ),
             },
             {
                 'question': 'Why do people drink water?',
