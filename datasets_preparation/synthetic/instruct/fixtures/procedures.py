@@ -1,18 +1,857 @@
+_THREE_STEP_MESSAGE_TEMPLATES = [
+    'Give exactly three numbered steps for {task}.',
+    'Give exactly three numbered steps for {task}. Stop after step 3.',
+    'Give exactly three numbered steps for {task}. Do not add extra text.',
+    'Explain {task} in exactly three numbered steps. Stop after step 3.',
+    'Provide exactly three numbered steps for {task}. Do not add extra text.',
+    'List exactly three numbered steps for {task}. Do not include anything after step 3.',
+    'Describe {task} in exactly three numbered steps. Only provide the steps.',
+    'Answer with exactly three numbered steps for {task}.',
+    'Write a simple procedure for {task} using only three numbered steps.',
+    'In three numbered steps and no other text, describe {task}.',
+]
+
+
+_STRICT_THREE_STEP_MESSAGE_TEMPLATES = [
+    'Give exactly three numbered steps for {task}.',
+    'List exactly three numbered steps for {task}. Keep each step concise.',
+    'Provide exactly three numbered instructions for {task}; add no extra text.',
+    'Explain {task} using only steps 1, 2, and 3.',
+    'Write a numbered procedure for {task} with exactly three steps.',
+    'Answer with three numbered lines describing {task}.',
+]
+
+
+_THREE_STEP_PROCEDURES = [
+    (
+        'cooking a boiled egg',
+        'Place the egg in a pot and cover it with water.',
+        'Bring the water to a boil, then cook for 9 to 12 minutes.',
+        'Cool the egg in cold water, then peel it.',
+    ),
+    (
+        'brushing your teeth',
+        'Put a pea-sized amount of fluoride toothpaste on a toothbrush.',
+        'Brush every surface of your teeth gently for about two minutes.',
+        'Spit out the excess toothpaste and rinse the toothbrush.',
+    ),
+    (
+        'making toast',
+        'Place a slice of bread in the toaster.',
+        'Choose a browning level and start the toaster.',
+        'Remove the toast carefully and add a topping if desired.',
+    ),
+    (
+        'making a cup of tea',
+        'Heat fresh water to a suitable temperature for the tea.',
+        'Steep the tea bag or leaves in the water for the recommended time.',
+        'Remove the tea and serve it, adding milk or sweetener if desired.',
+    ),
+    (
+        'making instant coffee',
+        'Add instant coffee to a mug.',
+        'Pour in hot water and stir until the granules dissolve.',
+        'Add milk or sugar if desired and serve.',
+    ),
+    (
+        'washing your hands',
+        'Wet your hands with clean running water and apply soap.',
+        'Scrub all surfaces of your hands for at least 20 seconds.',
+        'Rinse under clean water and dry them thoroughly.',
+    ),
+    (
+        'charging a phone',
+        'Connect a compatible charger to a power source.',
+        'Plug the charging cable into the phone.',
+        'Leave it connected until the battery reaches the charge level you need.',
+    ),
+    (
+        'sending an email',
+        'Enter the recipient, subject, and message, then attach any needed files.',
+        'Review the addresses, content, and attachments for mistakes.',
+        'Send the email once everything is correct.',
+    ),
+    (
+        'saving a document',
+        'Choose the save command in the application.',
+        'Select a folder and enter a clear file name.',
+        'Confirm the save and verify that the file appears in the chosen folder.',
+    ),
+    (
+        'packing a school bag',
+        'Check the schedule and gather the books and supplies you need.',
+        'Place heavier items near the back and smaller items in suitable pockets.',
+        'Close the bag and check that no required item is missing.',
+    ),
+    (
+        'planting a seed',
+        'Fill a container with suitable potting soil.',
+        'Plant the seed at the depth recommended on its packet and cover it lightly.',
+        'Water gently and place the container where it will receive suitable light.',
+    ),
+    (
+        'watering a houseplant',
+        'Check the soil and the plant’s watering guidance.',
+        'Pour water slowly and evenly onto the soil.',
+        'Stop when excess water begins to drain, then empty any standing water from the saucer.',
+    ),
+    (
+        'cleaning a desk',
+        'Remove rubbish and move loose items off the work surface.',
+        'Wipe the desk with a cleaner suitable for its material.',
+        'Return only the needed items and arrange them neatly.',
+    ),
+    (
+        'making a sandwich',
+        'Place the chosen filling and vegetables between two slices of bread.',
+        'Add a suitable spread or seasoning if desired.',
+        'Close the sandwich, cut it if needed, and serve it.',
+    ),
+    (
+        'making a bowl of cereal',
+        'Pour a serving of cereal into a bowl.',
+        'Add milk or a suitable milk alternative.',
+        'Add fruit if desired and eat it with a spoon.',
+    ),
+    (
+        'tying your shoes',
+        'Cross the laces, pass one under the other, and pull them snug.',
+        'Make a loop with one lace and wrap the other lace around it.',
+        'Pull a second loop through the opening and tighten both loops.',
+    ),
+    (
+        'folding a shirt',
+        'Lay the shirt flat with the front facing down and smooth out wrinkles.',
+        'Fold each side inward so the sleeves lie across the back.',
+        'Fold the bottom up toward the collar and place the shirt away.',
+    ),
+    (
+        'washing a cup',
+        'Rinse the cup and apply dish soap to a clean sponge or brush.',
+        'Scrub the inside, outside, rim, and handle.',
+        'Rinse away all soap and leave the cup to dry.',
+    ),
+    (
+        'taking a screenshot',
+        'Open the screen and arrange the content you want to capture.',
+        'Use the screenshot command or shortcut available on the device.',
+        'Review the captured image, then save or share it as needed.',
+    ),
+    (
+        'setting an alarm',
+        'Open the device’s clock or alarm function.',
+        'Choose the alarm time and any repeat settings.',
+        'Save the alarm and make sure it is enabled.',
+    ),
+    (
+        'joining a video call',
+        'Open the meeting link or the named calling application.',
+        'Check the selected camera, microphone, and speaker.',
+        'Join at the scheduled time and mute yourself when you are not speaking.',
+    ),
+    (
+        'printing a document',
+        'Open the document and choose the print command.',
+        'Select the intended printer, page range, and other settings.',
+        'Review the preview and start the print job.',
+    ),
+    (
+        'changing a password',
+        'Open the account’s security or password settings.',
+        'Enter the current password and create a strong, unique new one.',
+        'Save the change and update the password in your password manager if you use one.',
+    ),
+    (
+        'creating a new folder',
+        'Open the location where the folder should be stored.',
+        'Use the command for creating a new folder.',
+        'Give the folder a clear name and confirm it.',
+    ),
+    (
+        'renaming a file',
+        'Select the file without opening or moving it.',
+        'Choose the rename command.',
+        'Enter the new name, keep the needed file extension, and confirm it.',
+    ),
+    (
+        'checking the weather',
+        'Open a reliable weather service and confirm the location.',
+        'Choose the day and time period relevant to your plans.',
+        'Review the temperature, precipitation, wind, and any alerts.',
+    ),
+    (
+        'planning a short walk',
+        'Choose a suitable route, distance, and turnaround point.',
+        'Check the weather and wear appropriate clothing and shoes.',
+        'Bring needed essentials, tell someone your route when appropriate, and begin.',
+    ),
+    (
+        'feeding a pet',
+        'Check the pet’s approved food, feeding schedule, and portion size.',
+        'Place the measured food in a clean bowl.',
+        'Serve it with fresh water and remove spoiled leftovers as appropriate.',
+    ),
+    (
+        'cleaning your glasses',
+        'Rinse the lenses with lukewarm water to remove loose particles.',
+        'Gently wash them with lens cleaner or a small amount of mild dish soap.',
+        'Rinse and dry them with a clean microfiber cloth.',
+    ),
+    (
+        'making a simple salad',
+        'Wash the vegetables and cut them into bite-sized pieces.',
+        'Place the vegetables and any other ingredients in a bowl.',
+        'Add dressing, toss gently, and serve.',
+    ),
+    (
+        'boiling pasta',
+        'Bring a pot of water to a rolling boil and salt it if desired.',
+        'Add the pasta and cook it for the package’s recommended time, stirring occasionally.',
+        'Test for doneness, drain the pasta, and serve it.',
+    ),
+    (
+        'heating soup',
+        'Place the soup in a saucepan or microwave-safe container.',
+        'Heat it while stirring periodically until it is hot throughout.',
+        'Check the temperature carefully, then serve it.',
+    ),
+    (
+        'making scrambled eggs',
+        'Crack the eggs into a bowl and beat them until combined.',
+        'Pour them into a lightly greased pan over moderate heat and stir gently.',
+        'Remove the eggs when they are set and fully cooked, then serve.',
+    ),
+    (
+        'preparing rice',
+        'Measure the rice and liquid according to the package directions, rinsing if recommended.',
+        'Cook it using the stated heat and time without lifting the lid unnecessarily.',
+        'Remove it from the heat, let it rest, and fluff it before serving.',
+    ),
+    (
+        'washing fruit',
+        'Hold the fruit under clean running water.',
+        'Rub the surface gently with clean hands, without using soap.',
+        'Dry it with a clean towel before eating or cutting it.',
+    ),
+    (
+        'making lemonade',
+        'Squeeze lemon juice into a pitcher and remove any seeds.',
+        'Add water and sweetener to taste.',
+        'Stir until mixed, chill if desired, and serve.',
+    ),
+    (
+        'organizing a bookshelf',
+        'Remove the books and set aside any that belong elsewhere.',
+        'Choose one sorting rule, such as author, topic, or size.',
+        'Return the books in that order and leave frequently used titles accessible.',
+    ),
+    (
+        'cleaning a mirror',
+        'Apply a small amount of glass-safe cleaner to a cloth or the mirror.',
+        'Wipe the surface from top to bottom with overlapping strokes.',
+        'Buff away remaining moisture or streaks with a clean, dry cloth.',
+    ),
+    (
+        'making a grocery list',
+        'Check planned meals and the food and supplies already available.',
+        'Write down only the items and quantities that are needed.',
+        'Group the entries by store section to make shopping easier.',
+    ),
+    (
+        'preparing for bed',
+        'Complete basic hygiene and change into comfortable sleepwear.',
+        'Set any needed alarm and prepare items for the next morning.',
+        'Dim lights, silence distractions, and get into bed at the planned time.',
+    ),
+    (
+        'studying for a quiz',
+        'Identify the topics and materials that the quiz will cover.',
+        'Review the material actively by recalling facts and answering practice questions.',
+        'Check mistakes, revisit weak areas, and stop in time to rest.',
+    ),
+    (
+        'writing a short paragraph',
+        'Write one clear topic sentence stating the main idea.',
+        'Add supporting sentences that explain or illustrate that idea.',
+        'Revise for clarity, grammar, and a logical ending.',
+    ),
+    (
+        'summarizing an article',
+        'Read the article and identify its central claim or event.',
+        'Select only the most important supporting details.',
+        'Write a shorter account in your own words without adding new information.',
+    ),
+    (
+        'checking a math answer',
+        'Rework the calculation or inspect each step from the beginning.',
+        'Check arithmetic, copied values, units, and signs.',
+        'Compare the result with an estimate and the original question.',
+    ),
+    (
+        'backing up files',
+        'Choose the important files and decide on a secure backup location.',
+        'Copy or sync the files to separate storage.',
+        'Open a sample of the backed-up files to verify that the backup works.',
+    ),
+    (
+        'cleaning a keyboard',
+        'Turn off or disconnect the keyboard.',
+        'Remove loose debris with gentle air or a soft brush.',
+        'Wipe the keys with a barely damp cloth and let the keyboard dry before reconnecting it.',
+    ),
+    (
+        'setting up a workspace',
+        'Choose a stable, well-lit place with a comfortable seat.',
+        'Arrange the tools and materials so frequently used items are within reach.',
+        'Remove distractions and adjust the space before beginning work.',
+    ),
+    (
+        'starting a simple workout',
+        'Warm up with several minutes of comfortable movement.',
+        'Perform a small set of familiar exercises with controlled form and manageable effort.',
+        'Cool down gradually and stop if you feel pain, dizziness, or unusual discomfort.',
+    ),
+    (
+        'washing a car window',
+        'Rinse or brush away loose grit that could scratch the glass.',
+        'Apply automotive glass cleaner and wipe with a clean cloth.',
+        'Dry and inspect the window from both sides for streaks.',
+    ),
+    (
+        'preparing a backpack for travel',
+        'List the essentials for the trip and check size or weight limits.',
+        'Pack heavier items close to the back and protect fragile items.',
+        'Review the contents, secure each pocket, and keep important documents accessible.',
+    ),
+    (
+        'changing bed sheets',
+        'Remove the used pillowcases, sheets, and duvet cover.',
+        'Fit the clean bottom sheet and replace the top sheet or duvet cover.',
+        'Put on clean pillowcases and smooth the bedding into place.',
+    ),
+    (
+        'sweeping a floor',
+        'Move small obstacles and choose a broom suitable for the surface.',
+        'Sweep debris from the edges toward one central pile.',
+        'Collect the pile with a dustpan and return moved items.',
+    ),
+    (
+        'dusting a shelf',
+        'Remove objects from the shelf and note their arrangement.',
+        'Wipe the shelf and each object with a suitable dry or slightly damp cloth.',
+        'Let damp surfaces dry, then return the objects neatly.',
+    ),
+    (
+        'cleaning a reusable lunch box',
+        'Empty the lunch box and remove any detachable inserts.',
+        'Wash all washable surfaces with warm water and dish soap.',
+        'Rinse thoroughly and leave every part open to dry completely.',
+    ),
+    (
+        'sorting household recycling',
+        'Check the local recycling rules for accepted materials.',
+        'Separate accepted items and remove food residue as required.',
+        'Place each item in the correct collection container.',
+    ),
+    (
+        'reheating refrigerated leftovers',
+        'Place the leftovers in a suitable container and cover them loosely if needed.',
+        'Heat them evenly, stirring or rotating partway through.',
+        'Make sure the food is steaming hot throughout before serving.',
+    ),
+    (
+        'peeling and slicing an orange',
+        'Wash the orange and place it on a clean cutting surface.',
+        'Remove the peel by hand or score it carefully with a small knife.',
+        'Separate the segments or slice the fruit and remove any seeds.',
+    ),
+    (
+        'storing cut vegetables',
+        'Place freshly cut vegetables in a clean, food-safe container.',
+        'Seal or cover the container and label it if the contents are not obvious.',
+        'Refrigerate promptly and use the vegetables while they remain fresh.',
+    ),
+    (
+        'moving a file to another folder',
+        'Select the file and choose the move or cut command.',
+        'Open the destination folder and complete the move.',
+        'Verify that the file appears in the destination and opens correctly.',
+    ),
+    (
+        'copying and pasting text',
+        'Select the exact text you want to copy.',
+        'Use the copy command, then place the cursor at the destination.',
+        'Use the paste command and check that the text appears correctly.',
+    ),
+    (
+        'attaching a file to an email',
+        'Compose the email and choose the attachment command.',
+        'Select the intended file and wait for it to finish attaching.',
+        'Confirm the file name and recipient before sending the message.',
+    ),
+    (
+        'checking available device storage',
+        'Open the device’s storage or capacity information.',
+        'Review how much space is free and which categories use the most space.',
+        'Remove or move only files you recognize and no longer need.',
+    ),
+    (
+        'restarting a device',
+        'Save open work and close applications when possible.',
+        'Choose the device’s restart command rather than disconnecting power abruptly.',
+        'Wait for startup to finish, then reopen the needed work.',
+    ),
+    (
+        'pairing Bluetooth headphones',
+        'Charge the headphones and place them in pairing mode.',
+        'Open Bluetooth settings on the device and select the headphones.',
+        'Confirm the connection and test the audio.',
+    ),
+    (
+        'adjusting screen brightness',
+        'Open the display controls or brightness shortcut.',
+        'Move the brightness setting to a comfortable level for the surroundings.',
+        'Check that text remains readable and save or close the controls.',
+    ),
+    (
+        'proofreading a document',
+        'Read the document once for meaning and organization.',
+        'Read it again for grammar, spelling, punctuation, and formatting errors.',
+        'Correct the issues and perform a final review before sharing it.',
+    ),
+    (
+        'naming files consistently',
+        'Choose a naming pattern that includes useful details such as topic and date.',
+        'Rename related files using the same order and separators.',
+        'Check that the names are unique, readable, and correctly matched to their contents.',
+    ),
+    (
+        'scanning a paper document with a phone',
+        'Place the document flat in bright, even light.',
+        'Use a trusted scanning function to capture every page within the frame.',
+        'Review legibility and page order, then save the scan securely.',
+    ),
+    (
+        'leaving a voicemail',
+        'State your name and the person you are trying to reach.',
+        'Give the reason for calling and the key information briefly.',
+        'Leave a callback method, repeat it clearly if needed, and end the message.',
+    ),
+    (
+        'scheduling a meeting',
+        'Identify the purpose, required attendees, and a suitable duration.',
+        'Find a time when the required participants are available.',
+        'Send an invitation with the agenda, time, location or link, and relevant materials.',
+    ),
+    (
+        'replying to an invitation',
+        'Read the invitation and check the date, time, location, and requested response.',
+        'Decide whether to accept, decline, or ask a necessary question.',
+        'Send a clear response and add the event to your calendar if attending.',
+    ),
+    (
+        'reporting a simple technical issue',
+        'Record what you were trying to do and what happened instead.',
+        'Note the device, application, error message, and steps that reproduce the issue.',
+        'Send the concise report through the appropriate support channel.',
+    ),
+    (
+        'planning weekly meals',
+        'Review the week’s schedule and the food already available.',
+        'Choose practical meals that reuse ingredients and fit the available time.',
+        'Create a shopping and preparation plan for the selected meals.',
+    ),
+    (
+        'preparing a meeting agenda',
+        'State the meeting goal and collect the topics that require discussion.',
+        'Order the topics by priority and assign a realistic time to each.',
+        'Share the agenda and any preparation materials before the meeting.',
+    ),
+    (
+        'prioritizing a task list',
+        'Write down the tasks and their deadlines or consequences.',
+        'Rank them by urgency, importance, effort, and dependencies.',
+        'Choose the next action for the highest-priority task and schedule the rest.',
+    ),
+    (
+        'packing a lunch',
+        'Choose a balanced meal and foods that will travel safely.',
+        'Pack the food in clean, leak-resistant containers with an ice pack if needed.',
+        'Add utensils and water, then keep the lunch at a safe temperature.',
+    ),
+    (
+        'organizing a small drawer',
+        'Empty the drawer and discard rubbish or relocate unrelated items.',
+        'Group the remaining items by purpose or frequency of use.',
+        'Return the groups in containers or sections so each item is easy to find.',
+    ),
+    (
+        'preparing clothes for the next day',
+        'Check the next day’s activities and weather.',
+        'Choose clean clothing and any required shoes or accessories.',
+        'Place the complete outfit where it will be easy to find in the morning.',
+    ),
+    (
+        'wiping up a small water spill',
+        'Keep people away from the wet area and move nearby electrical items if it is safe to do so.',
+        'Absorb the water with a towel or mop, working from the edges inward.',
+        'Dry the surface fully and return items only after the area is no longer slippery.',
+    ),
+    (
+        'organizing charging cables',
+        'Unplug the cables and identify which device each one belongs to.',
+        'Coil each cable loosely and label it if the connector is not obvious.',
+        'Store the cables in separate sections where they will not be crushed or tangled.',
+    ),
+]
+
+
+_STRICT_THREE_STEP_PROCEDURES = [
+    (
+        'wrapping a gift',
+        'Place the gift on wrapping paper and cut enough paper to cover it.',
+        'Fold the paper around the gift and secure the seams with tape.',
+        'Add a label, ribbon, or bow if desired.',
+    ),
+    (
+        'mailing a letter',
+        'Place the letter in an envelope and seal it.',
+        'Write the delivery and return addresses on the envelope.',
+        'Add the correct postage and put the envelope in the mail.',
+    ),
+    (
+        'creating a calendar event',
+        'Open a calendar and choose the command for a new event.',
+        'Enter the title, date, time, location or link, and any notes.',
+        'Save the event and add a reminder if needed.',
+    ),
+    (
+        'connecting to a Wi-Fi network',
+        'Open the device’s Wi-Fi settings.',
+        'Select the intended network from the available options.',
+        'Enter the password if required and confirm that the device connects.',
+    ),
+    (
+        'downloading a file',
+        'Open the trusted page or message that contains the file.',
+        'Choose its download link or command.',
+        'Wait for the download to finish and verify the saved file before opening it.',
+    ),
+    (
+        'recycling a cardboard box',
+        'Remove packing material and any non-cardboard parts required by local rules.',
+        'Flatten the box so it takes up less space.',
+        'Place it in the designated cardboard recycling container.',
+    ),
+    (
+        'washing a reusable water bottle',
+        'Separate the bottle, lid, straw, and removable seals.',
+        'Wash every part with warm water and dish soap using an appropriate brush.',
+        'Rinse thoroughly and let all parts dry completely before reassembly.',
+    ),
+    (
+        'making oatmeal',
+        'Combine oats with the measured amount of water or milk.',
+        'Cook according to the package directions, stirring as needed.',
+        'Check that the oats are tender, add toppings if desired, and serve.',
+    ),
+    (
+        'cleaning a phone screen',
+        'Turn off the phone and disconnect cables.',
+        'Wipe the screen gently with a clean microfiber cloth.',
+        'If needed, use a small amount of manufacturer-approved screen cleaner and let it dry.',
+    ),
+    (
+        'setting a timer',
+        'Open a timer function on the chosen device.',
+        'Set the required duration.',
+        'Start the timer and make sure its alert can be heard or seen.',
+    ),
+    (
+        'replacing printer paper',
+        'Open the correct paper tray and remove damaged or unsuitable sheets.',
+        'Align a stack of compatible paper and place it below the fill limit.',
+        'Adjust the guides, close the tray, and confirm the paper setting if prompted.',
+    ),
+    (
+        'organizing digital photos',
+        'Gather the photos in one working location while keeping an untouched backup.',
+        'Sort copies into clearly named folders by date, event, or subject.',
+        'Remove confirmed duplicates, rename important files, and update the backup.',
+    ),
+    (
+        'using a library catalog',
+        'Search the catalog by title, author, keyword, or subject.',
+        'Open a result and check its format, availability, and location.',
+        'Record the call number or place a hold according to the library’s options.',
+    ),
+    (
+        'sorting laundry',
+        'Read care labels and empty every pocket.',
+        'Separate items by color, fabric, and washing requirements.',
+        'Place each group in the appropriate load or basket.',
+    ),
+    (
+        'freezing leftover food',
+        'Cool the food promptly and portion it into freezer-safe containers.',
+        'Seal and label each container with the contents and date.',
+        'Freeze it promptly and use it within an appropriate storage period.',
+    ),
+    (
+        'exporting a document as a PDF',
+        'Open the finished document and choose its export or save-as command.',
+        'Select PDF as the output format and review the page options.',
+        'Save the PDF and open it once to verify the layout.',
+    ),
+    (
+        'sharing a read-only document link',
+        'Open the document’s sharing controls.',
+        'Set link access to viewing only and limit the audience as needed.',
+        'Copy the link, test its permissions, and send it to the intended recipients.',
+    ),
+    (
+        'archiving an email',
+        'Select the email that no longer needs to remain in the inbox.',
+        'Choose the archive command.',
+        'Confirm that the message has left the inbox and remains searchable.',
+    ),
+    (
+        'restoring a recently deleted file',
+        'Open the system or service location for recently deleted items.',
+        'Find and select the correct file.',
+        'Restore it and verify that it returns to the expected folder.',
+    ),
+    (
+        'creating a contact entry',
+        'Open the contacts function and start a new contact.',
+        'Enter the person’s name and verified contact details.',
+        'Save the entry and review it for mistakes.',
+    ),
+    (
+        'compressing a folder into an archive',
+        'Select the folder and choose the command to compress or archive it.',
+        'Choose an archive name and format supported by the recipient.',
+        'Create the archive and verify that it opens and contains the expected files.',
+    ),
+    (
+        'extracting a downloaded archive',
+        'Verify that the archive came from a trusted source.',
+        'Choose an extraction command and select a destination folder.',
+        'Extract the contents and inspect the files before using them.',
+    ),
+    (
+        'printing on both sides of the paper',
+        'Open the print dialog and select a printer that supports duplex printing.',
+        'Enable two-sided printing and check the binding direction in the preview.',
+        'Start the job and verify the first sheet before printing many copies.',
+    ),
+    (
+        'labeling a storage box',
+        'Group the items that will go in the box.',
+        'Write a short label that describes the contents and any relevant date.',
+        'Attach the label where it remains visible when the box is stored.',
+    ),
+    (
+        'returning a library book',
+        'Check the due date and remove personal papers or bookmarks.',
+        'Take the book to an approved return desk or drop box.',
+        'Confirm the return on your account or keep the receipt if one is provided.',
+    ),
+    (
+        'renewing a library loan',
+        'Sign in to the library account and find the borrowed item.',
+        'Check whether the item is eligible for renewal and choose renew.',
+        'Verify the new due date and record it.',
+    ),
+    (
+        'measuring a space for furniture',
+        'Clear access to the space and choose an appropriate measuring tool.',
+        'Measure the width, depth, height, and any doorway or clearance limits.',
+        'Record the measurements with units and compare them with the furniture dimensions.',
+    ),
+    (
+        'replacing batteries in a remote control',
+        'Open the battery compartment and note the required battery type and orientation.',
+        'Remove the old batteries and insert matching new ones with the correct polarity.',
+        'Close the compartment and test the remote.',
+    ),
+    (
+        'cleaning a computer mouse',
+        'Turn off or disconnect the mouse.',
+        'Wipe its exterior and sensor area gently with suitable cleaning materials.',
+        'Let it dry completely, reconnect it, and test its movement and buttons.',
+    ),
+    (
+        'charging wireless earbuds',
+        'Place each earbud correctly in its charged or connected case.',
+        'Connect the case to a compatible power source if its battery is low.',
+        'Wait for the indicators to show sufficient charge, then disconnect the case.',
+    ),
+    (
+        'connecting a laptop to an external monitor',
+        'Connect a compatible video cable or adapter between the laptop and monitor.',
+        'Turn on the monitor and select the correct input.',
+        'Open display settings to choose mirroring or extension and confirm the image is clear.',
+    ),
+    (
+        'using a USB drive safely',
+        'Insert the drive into a compatible port and wait for it to appear.',
+        'Copy or open the needed files without removing the drive during activity.',
+        'Use the eject command, wait for confirmation, and then unplug it.',
+    ),
+    (
+        'preparing meeting notes',
+        'Write the meeting title, date, attendees, and agenda.',
+        'Record decisions, important context, and assigned actions during the discussion.',
+        'Review the notes, add owners and deadlines, and share them with the right people.',
+    ),
+    (
+        'sending a calendar invitation',
+        'Create an event with the correct title, date, time, location or link.',
+        'Add the intended attendees and include an agenda or useful notes.',
+        'Review the details and send the invitation.',
+    ),
+    (
+        'creating a reusable checklist',
+        'Define the repeated task and list every required action.',
+        'Put the actions in order and phrase each one as a clear checkable item.',
+        'Test the checklist once, revise missing items, and save the final version.',
+    ),
+    (
+        'filing a receipt',
+        'Check that the receipt shows the vendor, date, amount, and necessary details.',
+        'Record or label its purpose and expense category.',
+        'Store the paper or digital copy in the correct folder.',
+    ),
+    (
+        'organizing an email inbox',
+        'Identify messages that require action, reference, or deletion.',
+        'Use folders or labels to separate active work from archived mail.',
+        'Handle urgent messages and archive or delete items that no longer need attention.',
+    ),
+    (
+        'unsubscribing from a newsletter',
+        'Open a legitimate message from the newsletter sender.',
+        'Use its unsubscribe link or the mail service’s unsubscribe control.',
+        'Confirm the choice and avoid entering unrelated account information.',
+    ),
+    (
+        'bookmarking a webpage',
+        'Open the exact webpage you want to save.',
+        'Use the browser’s bookmark or favorite command and choose a folder.',
+        'Edit the title if needed and verify that the saved bookmark opens correctly.',
+    ),
+    (
+        'saving a login in a password manager',
+        'Open the trusted password manager and create a new login entry.',
+        'Enter the verified site address, username, and unique password.',
+        'Save the entry and confirm that it is available on the intended account or device.',
+    ),
+    (
+        'enabling a device screen lock',
+        'Open the device’s security or lock settings.',
+        'Choose a strong supported passcode or biometric option and complete setup.',
+        'Set an appropriate automatic-lock delay and test the lock.',
+    ),
+    (
+        'updating an application safely',
+        'Open the application’s official store or trusted update function.',
+        'Check the publisher and update details, then start the update.',
+        'Wait for installation to finish and reopen the application to verify it works.',
+    ),
+    (
+        'scanning a trusted QR code',
+        'Open the device’s camera or QR scanner and point it at the code.',
+        'Read the previewed destination before opening it.',
+        'Proceed only if the address and requested action are expected and trustworthy.',
+    ),
+    (
+        'sharing a photo album',
+        'Create or open the album and include only the photos intended for sharing.',
+        'Choose the recipients and set suitable viewing or contribution permissions.',
+        'Send the invitation or link and verify that the access settings are correct.',
+    ),
+    (
+        'creating a simple spreadsheet',
+        'Open a blank spreadsheet and add clear column headings.',
+        'Enter the data in consistent rows and formats.',
+        'Review the values, save the file, and give it a descriptive name.',
+    ),
+    (
+        'adding page numbers to a document',
+        'Open the document’s header, footer, or page-number controls.',
+        'Choose the position and numbering style.',
+        'Apply the numbering and inspect the first, middle, and last pages.',
+    ),
+    (
+        'reviewing tracked document changes',
+        'Open the document with change tracking or suggestions visible.',
+        'Read each proposed change and its surrounding context.',
+        'Accept, reject, or comment on each change, then save the reviewed version.',
+    ),
+    (
+        'responding to a calendar invitation',
+        'Open the invitation and review its time, location, attendees, and notes.',
+        'Choose accept, decline, or tentative based on your availability.',
+        'Add a brief note if useful and send the response.',
+    ),
+    (
+        'addressing a postcard',
+        'Write the recipient’s full delivery address in the designated area.',
+        'Write the message without covering the address or postage area.',
+        'Add the correct postage and place the postcard in the mail.',
+    ),
+    (
+        'preparing a return shipment',
+        'Check the seller’s return instructions and pack the correct item securely.',
+        'Include required documents and attach the provided label over old shipping labels.',
+        'Seal the package, deliver it to the specified carrier, and keep the tracking receipt.',
+    ),
+    (
+        'recycling a glass jar',
+        'Empty and rinse the jar, then remove parts required by local recycling rules.',
+        'Keep the glass separate from ceramics, mirrors, and other non-container glass.',
+        'Place the jar in the designated glass recycling collection.',
+    ),
+    (
+        'packing a fragile item',
+        'Wrap the item on all sides with cushioning material.',
+        'Place it in a sturdy box and fill empty space so it cannot shift.',
+        'Seal and label the box, then handle it gently.',
+    ),
+    (
+        'planning a focused study session',
+        'Choose one clear study goal and gather the needed materials.',
+        'Set a limited work period and remove likely distractions.',
+        'Study actively, then review what was learned and note the next task.',
+    ),
+    (
+        'planning several errands',
+        'List each errand with its location, deadline, and required items.',
+        'Order the stops by urgency and an efficient route.',
+        'Check opening times, pack what you need, and begin with the first stop.',
+    ),
+    (
+        'creating a reading list',
+        'Collect the titles and verify their authors or sources.',
+        'Group or rank them by topic, priority, or reading order.',
+        'Save the list in an accessible place and mark progress as items are completed.',
+    ),
+    (
+        'preparing travel documents',
+        'Check the trip requirements and the validity of each required document.',
+        'Make secure copies and organize confirmations, tickets, and identification.',
+        'Place originals in a protected, accessible location and keep copies separately.',
+    ),
+]
+
+
 PROCEDURE_FIXTURES = {
     'three_step': {
         'messages': [
             {
                 'role': 'user',
-                'content': [
-                    'Give exactly three numbered steps for {task}.',
-                    'Give exactly three numbered steps for {task}. Stop after step 3.',
-                    'Give exactly three numbered steps for {task}. Do not add extra text.',
-                    'Explain {task} in exactly three numbered steps. Stop after step 3.',
-                    'Provide exactly three numbered steps for {task}. Do not add extra text.',
-                    'List exactly three numbered steps for {task}. Do not include anything after step 3.',
-                    'Describe {task} in exactly three numbered steps. Only provide the steps.',
-                    'Answer with exactly three numbered steps for {task}.',
-                ],
+                'content': list(_THREE_STEP_MESSAGE_TEMPLATES),
             },
             {
                 'role': 'assistant',
@@ -21,413 +860,17 @@ PROCEDURE_FIXTURES = {
         ],
         'examples': [
             {
-                'task': 'cooking a boiled egg',
-                'steps': [
-                    'Place the egg in a pot and cover it with water.',
-                    'Bring the water to a boil, then simmer for 9 to 12 minutes.',
-                    'Cool the egg in cold water, then peel it.',
-                ],
-            },
-            {
-                'task': 'brushing your teeth',
-                'steps': [
-                    'Put toothpaste on a toothbrush.',
-                    'Brush all sides of your teeth for about two minutes.',
-                    'Rinse your mouth and toothbrush with water.',
-                ],
-            },
-            {
-                'task': 'making toast',
-                'steps': [
-                    'Place a slice of bread in the toaster.',
-                    'Toast it until it is golden brown.',
-                    'Remove it carefully and add butter or another topping.',
-                ],
-            },
-            {
-                'task': 'making a cup of tea',
-                'steps': [
-                    'Boil fresh water.',
-                    'Steep the tea bag or leaves in the hot water.',
-                    'Remove the tea and serve it.',
-                ],
-            },
-            {
-                'task': 'making instant coffee',
-                'steps': [
-                    'Add instant coffee to a mug.',
-                    'Pour in hot water and stir.',
-                    'Add milk or sugar if desired.',
-                ],
-            },
-            {
-                'task': 'washing your hands',
-                'steps': [
-                    'Wet your hands with clean water and apply soap.',
-                    'Scrub your hands for at least 20 seconds.',
-                    'Rinse and dry your hands.',
-                ],
-            },
-            {
-                'task': 'charging a phone',
-                'steps': [
-                    'Plug the charger into a power outlet.',
-                    'Connect the cable to the phone.',
-                    'Wait until the battery has enough charge.',
-                ],
-            },
-            {
-                'task': 'sending an email',
-                'steps': [
-                    'Write the recipient, subject, and message.',
-                    'Review the email for mistakes.',
-                    'Click send.',
-                ],
-            },
-            {
-                'task': 'saving a document',
-                'steps': [
-                    'Open the file menu or save command.',
-                    'Choose a folder and file name.',
-                    'Confirm the save action.',
-                ],
-            },
-            {
-                'task': 'packing a school bag',
-                'steps': [
-                    'Check which books and supplies you need.',
-                    'Place the items neatly in the bag.',
-                    'Close the bag and make sure nothing is missing.',
-                ],
-            },
-            {
-                'task': 'planting a seed',
-                'steps': [
-                    'Fill a small pot with soil.',
-                    'Place the seed in the soil and cover it lightly.',
-                    'Water the soil and put the pot in a suitable place.',
-                ],
-            },
-            {
-                'task': 'watering a houseplant',
-                'steps': [
-                    'Check whether the soil feels dry.',
-                    'Pour water slowly onto the soil.',
-                    'Stop when the soil is moist but not flooded.',
-                ],
-            },
-            {
-                'task': 'cleaning a desk',
-                'steps': [
-                    'Remove items that do not belong on the desk.',
-                    'Wipe the surface with a clean cloth.',
-                    'Put the useful items back neatly.',
-                ],
-            },
-            {
-                'task': 'making a sandwich',
-                'steps': [
-                    'Place your chosen filling between two slices of bread.',
-                    'Add any sauce or vegetables you want.',
-                    'Cut the sandwich if desired and serve it.',
-                ],
-            },
-            {
-                'task': 'making a bowl of cereal',
-                'steps': [
-                    'Pour cereal into a bowl.',
-                    'Add milk or another drink of your choice.',
-                    'Eat it with a spoon.',
-                ],
-            },
-            {
-                'task': 'tying your shoes',
-                'steps': [
-                    'Cross the laces and pull them tight.',
-                    'Make a loop with one lace and wrap the other lace around it.',
-                    'Pull the second lace through to form a knot.',
-                ],
-            },
-            {
-                'task': 'folding a shirt',
-                'steps': [
-                    'Lay the shirt flat with the front facing down.',
-                    'Fold the sides inward toward the center.',
-                    'Fold the shirt from bottom to top.',
-                ],
-            },
-            {
-                'task': 'washing a cup',
-                'steps': [
-                    'Rinse the cup with warm water.',
-                    'Scrub it with soap and a sponge.',
-                    'Rinse off the soap and let the cup dry.',
-                ],
-            },
-            {
-                'task': 'taking a screenshot',
-                'steps': [
-                    'Open the screen you want to capture.',
-                    'Press the screenshot shortcut on your device.',
-                    'Save or share the captured image.',
-                ],
-            },
-            {
-                'task': 'setting an alarm',
-                'steps': [
-                    'Open the clock or alarm app.',
-                    'Choose the time you want the alarm to ring.',
-                    'Save or turn on the alarm.',
-                ],
-            },
-            {
-                'task': 'joining a video call',
-                'steps': [
-                    'Open the meeting link or app.',
-                    'Check your camera and microphone settings.',
-                    'Join the call at the scheduled time.',
-                ],
-            },
-            {
-                'task': 'printing a document',
-                'steps': [
-                    'Open the document you want to print.',
-                    'Choose the printer and print settings.',
-                    'Start the print job.',
-                ],
-            },
-            {
-                'task': 'changing a password',
-                'steps': [
-                    'Open the account security settings.',
-                    'Enter your current password and a new password.',
-                    'Save the change.',
-                ],
-            },
-            {
-                'task': 'creating a new folder',
-                'steps': [
-                    'Open the location where you want the folder.',
-                    'Choose the option to create a new folder.',
-                    'Name the folder and save it.',
-                ],
-            },
-            {
-                'task': 'renaming a file',
-                'steps': [
-                    'Select the file you want to rename.',
-                    'Choose the rename option.',
-                    'Type the new name and confirm it.',
-                ],
-            },
-            {
-                'task': 'checking the weather',
-                'steps': [
-                    'Open a weather app or website.',
-                    'Enter your location if needed.',
-                    'Read the forecast for the time you need.',
-                ],
-            },
-            {
-                'task': 'planning a short walk',
-                'steps': [
-                    'Choose a safe route and destination.',
-                    'Check the weather and wear suitable shoes.',
-                    'Bring anything you need and start walking.',
-                ],
-            },
-            {
-                'task': 'feeding a pet',
-                'steps': [
-                    'Check the correct food and portion size.',
-                    'Place the food in a clean bowl.',
-                    'Give the bowl to the pet and provide fresh water.',
-                ],
-            },
-            {
-                'task': 'cleaning your glasses',
-                'steps': [
-                    'Rinse the lenses with clean water.',
-                    'Apply lens cleaner or mild soap.',
-                    'Dry them gently with a microfiber cloth.',
-                ],
-            },
-            {
-                'task': 'making a simple salad',
-                'steps': [
-                    'Wash and chop the vegetables.',
-                    'Place them in a bowl.',
-                    'Add dressing and toss the salad.',
-                ],
-            },
-            {
-                'task': 'boiling pasta',
-                'steps': [
-                    'Bring a pot of salted water to a boil.',
-                    'Add the pasta and cook until tender.',
-                    'Drain the pasta and serve it.',
-                ],
-            },
-            {
-                'task': 'heating soup',
-                'steps': [
-                    'Pour the soup into a pot or microwave-safe bowl.',
-                    'Heat it until it is hot throughout.',
-                    'Stir carefully and serve it.',
-                ],
-            },
-            {
-                'task': 'making scrambled eggs',
-                'steps': [
-                    'Beat the eggs in a bowl.',
-                    'Cook them in a heated pan while stirring.',
-                    'Remove them when they are soft and fully cooked.',
-                ],
-            },
-            {
-                'task': 'preparing rice',
-                'steps': [
-                    'Rinse the rice if needed.',
-                    'Cook it with the correct amount of water.',
-                    'Let it rest briefly before serving.',
-                ],
-            },
-            {
-                'task': 'washing fruit',
-                'steps': [
-                    'Hold the fruit under clean running water.',
-                    'Rub the surface gently with your hands.',
-                    'Dry the fruit before eating or cutting it.',
-                ],
-            },
-            {
-                'task': 'making lemonade',
-                'steps': [
-                    'Squeeze fresh lemon juice into a pitcher.',
-                    'Add water and sugar to taste.',
-                    'Stir well and serve chilled.',
-                ],
-            },
-            {
-                'task': 'organizing a bookshelf',
-                'steps': [
-                    'Remove books that do not belong there.',
-                    'Group the remaining books by size, topic, or author.',
-                    'Place the books neatly back on the shelf.',
-                ],
-            },
-            {
-                'task': 'cleaning a mirror',
-                'steps': [
-                    'Spray glass cleaner onto the mirror or cloth.',
-                    'Wipe the mirror in smooth strokes.',
-                    'Dry any streaks with a clean cloth.',
-                ],
-            },
-            {
-                'task': 'making a grocery list',
-                'steps': [
-                    'Check what food and supplies you already have.',
-                    'Write down the items you need.',
-                    'Group similar items together before shopping.',
-                ],
-            },
-            {
-                'task': 'preparing for bed',
-                'steps': [
-                    'Brush your teeth and wash your face.',
-                    'Set an alarm if you need one.',
-                    'Turn off distractions and get into bed.',
-                ],
-            },
-            {
-                'task': 'studying for a quiz',
-                'steps': [
-                    'Review the main notes or textbook sections.',
-                    'Practice questions about the topic.',
-                    'Rest briefly and review mistakes.',
-                ],
-            },
-            {
-                'task': 'writing a short paragraph',
-                'steps': [
-                    'Choose the main idea you want to explain.',
-                    'Write a few sentences that support the idea.',
-                    'Read it again and fix unclear wording.',
-                ],
-            },
-            {
-                'task': 'summarizing an article',
-                'steps': [
-                    'Read the article carefully.',
-                    'Identify the main point and key details.',
-                    'Write a shorter version in your own words.',
-                ],
-            },
-            {
-                'task': 'checking a math answer',
-                'steps': [
-                    'Review each step of your calculation.',
-                    'Look for arithmetic or copying mistakes.',
-                    'Compare the result with the original question.',
-                ],
-            },
-            {
-                'task': 'backing up files',
-                'steps': [
-                    'Choose the files you want to protect.',
-                    'Copy them to cloud storage or an external drive.',
-                    'Check that the backup was saved correctly.',
-                ],
-            },
-            {
-                'task': 'cleaning a keyboard',
-                'steps': [
-                    'Turn off or unplug the keyboard.',
-                    'Remove loose dust and crumbs carefully.',
-                    'Wipe the keys with a slightly damp cloth.',
-                ],
-            },
-            {
-                'task': 'setting up a workspace',
-                'steps': [
-                    'Choose a clean and comfortable place to work.',
-                    'Arrange the tools and materials you need.',
-                    'Remove distractions before you begin.',
-                ],
-            },
-            {
-                'task': 'starting a simple workout',
-                'steps': [
-                    'Warm up with light movement.',
-                    'Do a few basic exercises at a safe pace.',
-                    'Cool down and stretch gently.',
-                ],
-            },
-            {
-                'task': 'washing a car window',
-                'steps': [
-                    'Spray the window with glass cleaner.',
-                    'Wipe the glass with a clean cloth.',
-                    'Dry the window to remove streaks.',
-                ],
-            },
-            {
-                'task': 'preparing a backpack for travel',
-                'steps': [
-                    'Choose the items you need for the trip.',
-                    'Pack heavy items first and lighter items on top.',
-                    'Check the bag before leaving.',
-                ],
-            },
+                'task': task,
+                'steps': [first_step, second_step, third_step],
+            }
+            for task, first_step, second_step, third_step in _THREE_STEP_PROCEDURES
         ],
     },
-
     'strict_eval_tasks': {
         'messages': [
             {
                 'role': 'user',
-                'content': 'Give exactly three numbered steps for {task}.',
+                'content': list(_STRICT_THREE_STEP_MESSAGE_TEMPLATES),
             },
             {
                 'role': 'assistant',
@@ -436,125 +879,11 @@ PROCEDURE_FIXTURES = {
         ],
         'examples': [
             {
-                'task': 'wrapping a gift',
-                'steps': [
-                    'Place the gift on wrapping paper and cut enough paper to cover it.',
-                    'Fold the paper around the gift and secure the seams with tape.',
-                    'Add a label, ribbon, or bow if desired.',
-                ],
-            },
-            {
-                'task': 'mailing a letter',
-                'steps': [
-                    'Place the letter in an envelope and seal it.',
-                    'Write the delivery and return addresses on the envelope.',
-                    'Add the correct postage and put the envelope in the mail.',
-                ],
-            },
-            {
-                'task': 'creating a calendar event',
-                'steps': [
-                    'Open your calendar app and choose to create a new event.',
-                    'Enter the event title, date, time, and other details.',
-                    'Save the event and add reminders if needed.',
-                ],
-            },
-            {
-                'task': 'connecting to a Wi-Fi network',
-                'steps': [
-                    'Open the Wi-Fi settings on your device.',
-                    'Select the network you want to use.',
-                    'Enter the password if required and connect.',
-                ],
-            },
-            {
-                'task': 'downloading a file',
-                'steps': [
-                    'Open the trusted page or message containing the file.',
-                    'Select the download link or button.',
-                    'Choose a save location and wait for the download to finish.',
-                ],
-            },
-            {
-                'task': 'recycling a cardboard box',
-                'steps': [
-                    'Remove tape, labels, and packing material from the box.',
-                    'Flatten the cardboard so it takes up less space.',
-                    'Place it in the correct recycling container.',
-                ],
-            },
-            {
-                'task': 'washing a reusable water bottle',
-                'steps': [
-                    'Take apart the bottle, lid, and removable seals.',
-                    'Wash each part with warm water and dish soap.',
-                    'Rinse everything well and let the parts dry completely.',
-                ],
-            },
-            {
-                'task': 'making oatmeal',
-                'steps': [
-                    'Combine oats with water or milk in a pot or microwave-safe bowl.',
-                    'Cook the mixture until the oats are soft, stirring as needed.',
-                    'Add fruit, nuts, or another topping and serve.',
-                ],
-            },
-            {
-                'task': 'cleaning a phone screen',
-                'steps': [
-                    'Turn off the phone and disconnect any cables.',
-                    'Wipe the screen gently with a clean microfiber cloth.',
-                    'Use a small amount of screen-safe cleaner if marks remain.',
-                ],
-            },
-            {
-                'task': 'setting a timer',
-                'steps': [
-                    'Open the clock or timer app on your device.',
-                    'Choose the length of time you need.',
-                    'Start the timer and leave the alert enabled.',
-                ],
-            },
-            {
-                'task': 'replacing printer paper',
-                'steps': [
-                    'Open the printer paper tray.',
-                    'Align a stack of suitable paper and place it in the tray.',
-                    'Adjust the guides and close the tray.',
-                ],
-            },
-            {
-                'task': 'organizing digital photos',
-                'steps': [
-                    'Gather the photos you want to organize in one location.',
-                    'Sort them into folders by date, event, or subject.',
-                    'Rename important files and back up the collection.',
-                ],
-            },
-            {
-                'task': 'using a library catalog',
-                'steps': [
-                    'Open the library catalog and enter a title, author, or subject.',
-                    'Review the results and select the item you want.',
-                    'Note its location or place a hold if that option is available.',
-                ],
-            },
-            {
-                'task': 'sorting laundry',
-                'steps': [
-                    'Check clothing labels and empty all pockets.',
-                    'Separate items by color, fabric, and washing instructions.',
-                    'Place each group in the appropriate load or basket.',
-                ],
-            },
-            {
-                'task': 'freezing leftover food',
-                'steps': [
-                    'Let the food cool and place it in a freezer-safe container.',
-                    'Label the container with the contents and date.',
-                    'Seal it tightly and put it in the freezer promptly.',
-                ],
-            },
+                'task': task,
+                'steps': [first_step, second_step, third_step],
+            }
+            for task, first_step, second_step, third_step
+            in _STRICT_THREE_STEP_PROCEDURES
         ],
     },
 }
