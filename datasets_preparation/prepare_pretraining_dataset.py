@@ -103,6 +103,11 @@ def download_and_prepare_data(
 
         transforms = dataset.get('transforms', {})
 
+        start_document = int(transforms.get('start_document', 0))
+        assert start_document >= 0, (
+            f'start_document must be >= 0 for {ds_id}/{name}'
+        )
+
         max_datapoints = transforms.get('max_datapoints', None)
 
         hf_name = None if name == 'default' else name
@@ -117,6 +122,10 @@ def download_and_prepare_data(
         )
 
         columns_to_remove = ds.column_names
+
+        if start_document > 0:
+            logger.info(f'Skipping {start_document:,} documents for {source_key}')
+            ds = ds.skip(start_document)
 
         if max_datapoints is not None:
             max_datapoints = int(max_datapoints)
@@ -188,6 +197,10 @@ def prepare_pretraining_dataset(
 
     #### VERIFY MIX FILE STRUCTURE
     seed, common_settings, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
+
+    offset_datasets = [dataset for dataset in valid_datasets if int(dataset.get('transforms', {}).get('start_document', 0)) > 0]
+    if offset_datasets and len(valid_datasets) != 1:
+        raise ValueError('start_document currently supports only single-source dataset preparation')
 
     target_tokens = common_settings.get('target_tokens')
     if target_tokens is not None:
