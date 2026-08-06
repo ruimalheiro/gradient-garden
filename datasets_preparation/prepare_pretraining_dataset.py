@@ -104,9 +104,8 @@ def download_and_prepare_data(
         transforms = dataset.get('transforms', {})
 
         start_document = int(transforms.get('start_document', 0))
-        assert start_document >= 0, (
-            f'start_document must be >= 0 for {ds_id}/{name}'
-        )
+        if start_document < 0:
+            raise ValueError(f'start_document must be >= 0 for {ds_id}/{name}')
 
         max_datapoints = transforms.get('max_datapoints', None)
 
