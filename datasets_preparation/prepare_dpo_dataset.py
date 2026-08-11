@@ -3,6 +3,7 @@ import numpy as np
 import re
 import copy
 import time
+import math
 
 from functools import partial
 from tokenization.tokenizer import init_tokenizer
@@ -12,9 +13,12 @@ from datasets import (
 )
 from datasets_preparation.data_preparation_utils import (
     assert_common_structure_and_extract,
-    make_source_key
+    make_source_key,
+    token_budget_dataset_mix,
+    compute_stats
 )
 from datasets_preparation.default_mixes import DEFAULT_DPO_MIX
+from recipes.config import MixStrategy
 from logger import logger
 
 
@@ -196,12 +200,17 @@ def tokenize(tokenizer_kwargs, ignore_index, max_seq_len, doc):
         trim_to_context=True
     )
 
+    total_tokens = len(chosen_input_ids) + len(rejected_input_ids)
+    supervised_tokens = sum(label != ignore_index for label in chosen_labels) + sum(label != ignore_index for label in rejected_labels)
+
     return {
         'prompt_input_ids': np.array(prompt_input_ids, dtype=np.uint32),
         'chosen_input_ids': np.array(chosen_input_ids, dtype=np.uint32),
         'chosen_labels': np.array(chosen_labels, dtype=np.int64),
         'rejected_input_ids': np.array(rejected_input_ids, dtype=np.uint32),
         'rejected_labels': np.array(rejected_labels, dtype=np.int64),
+        'total_tokens': total_tokens,
+        'supervised_tokens': supervised_tokens
     }
 
 def download_and_prepare_data(
@@ -211,7 +220,9 @@ def download_and_prepare_data(
     valid_datasets,
     probabilities,
     num_proc,
+    target_tokens,
     validation_ratio,
+    mix_strategy,
     interleave_stopping_strategy
 ):
     tokenizer_kwargs = {
@@ -319,8 +330,9 @@ def download_and_prepare_data(
 
         prepared_datasets.append(tokenized_ds)
 
-    if len(prepared_datasets) > 1:
-        logger.info(f'Preparing Interleaving iterator... This operation can take a few minutes... Using strategy: {interleave_stopping_strategy}')
+    logger.info(f'Using data mix strategy: {mix_strategy.value}')
+    if mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
+        logger.info(f'Preparing HF Interleaving iterator... This operation can take a few minutes... Using stopping strategy: {interleave_stopping_strategy}')
         prepared_dataset = interleave_datasets(
             prepared_datasets,
             probabilities=probabilities,
@@ -328,23 +340,42 @@ def download_and_prepare_data(
             stopping_strategy=interleave_stopping_strategy
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
-        logger.info('Interleaving datasets complete')
+    elif mix_strategy == MixStrategy.TOKEN_BUDGET:
+        if target_tokens is None or target_tokens <= 0:
+            raise ValueError(f'"target_tokens" must be set to a value > 0 when using mix strategy: {mix_strategy}')
+
+        mix_target_tokens = math.ceil(target_tokens / (1 - validation_ratio))
+        logger.info(f'Adjusted token budget from {target_tokens:,} to {mix_target_tokens:,} to account for validation_ratio={validation_ratio}')
+
+        logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
+        prepared_dataset = token_budget_dataset_mix(
+            datasets=prepared_datasets,
+            weights=probabilities,
+            target_tokens=mix_target_tokens,
+            seed=seed
+        )
     else:
-        prepared_dataset = prepared_datasets[0]
+        raise ValueError(f'Invalid mix strategy: {mix_strategy}')
 
-    logger.info('Summary:')
-    for d, ds in zip(valid_datasets, prepared_datasets):
-        logger.info(f'- Total for: {d["id"]} : {len(ds)}')
-
-    logger.info(f'- Mix total len: {len(prepared_dataset)}')
-
+    logger.info(f'Applying {validation_ratio} train/val split...\n')
     splits = prepared_dataset.train_test_split(test_size=validation_ratio, seed=seed)
 
-    logger.info(f'- Train len: {len(splits["train"])} Val len: {len(splits["test"])}\n')
+    train_ds = splits['train']
+    train_ds_stats = compute_stats(train_ds)
+    train_ds = train_ds.remove_columns(['total_tokens', 'supervised_tokens'])
 
-    splits['train'].save_to_disk(os.path.join(config.paths.datasets.training_path, 'train'))
-    splits['test'] .save_to_disk(os.path.join(config.paths.datasets.training_path, 'val'))
+    val_ds = splits['test']
+    val_ds_stats = compute_stats(val_ds)
+    val_ds = val_ds.remove_columns(['total_tokens', 'supervised_tokens'])
 
+    logger.section('Train mixture')
+    logger.info(train_ds_stats, is_json=True)
+
+    logger.section('Validation mixture')
+    logger.info(val_ds_stats, is_json=True)
+
+    train_ds.save_to_disk(os.path.join(config.paths.datasets.training_path, 'train'))
+    val_ds.save_to_disk(os.path.join(config.paths.datasets.training_path, 'val'))
 
 def prepare_dpo_dataset(
     *,
@@ -359,8 +390,10 @@ def prepare_dpo_dataset(
 
     if common_settings.get('shard_size') is not None:
         logger.warning('datasets_common_settings.shard_size is only used for pretraining data preparation.')
-    if common_settings.get('target_tokens') is not None:
-        logger.warning('datasets_common_settings.target_tokens is only used for pretraining data preparation.')
+
+    target_tokens = common_settings.get('target_tokens')
+    if target_tokens is not None:
+        target_tokens = int(target_tokens)
 
     validation_ratio = float(common_settings.get('validation_ratio', 0.01))
     if not 0.0 < validation_ratio < 1.0:
@@ -372,6 +405,8 @@ def prepare_dpo_dataset(
         valid_datasets=valid_datasets,
         probabilities=probabilities,
         num_proc=num_proc,
+        target_tokens=target_tokens,
         validation_ratio=validation_ratio,
+        mix_strategy=MixStrategy(common_settings.get('mix_strategy', MixStrategy.LEGACY_INTERLEAVE)),
         interleave_stopping_strategy=common_settings['interleave_stopping_strategy']
     )
