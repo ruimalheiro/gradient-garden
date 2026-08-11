@@ -353,7 +353,7 @@ def download_and_prepare_data(
             raise ValueError(f'"target_tokens" must be set to a value > 0 when using mix strategy: {mix_strategy}')
 
         mix_target_tokens = math.ceil(target_tokens / (1 - validation_ratio))
-        logger.warning(f'compensating "target_tokens": {target_tokens} due to the "validation_ratio" split: {validation_ratio} - new target: {mix_target_tokens}')
+        logger.info(f'Adjusted token budget from {target_tokens:,} to {mix_target_tokens:,} to account for validation_ratio={validation_ratio}')
 
         logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
         prepared_dataset = token_budget_dataset_mix(
