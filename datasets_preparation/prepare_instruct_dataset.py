@@ -4,6 +4,7 @@ import re
 import random
 import copy
 import time
+import math
 
 from pathlib import Path
 from functools import partial
@@ -16,7 +17,8 @@ from datasets_preparation.data_preparation_utils import (
     stable_hash,
     assert_common_structure_and_extract,
     make_source_key,
-    token_budget_dataset_mix
+    token_budget_dataset_mix,
+    compute_stats
 )
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
 from datasets_preparation.synthetic.instruct.generator import build_instruct_dataset
@@ -234,41 +236,6 @@ def get_dataset_metadata(config, dataset):
     else:
         raise ValueError(f'Invalid dataset id: {ds_id}')
 
-def compute_stats(prepared_dataset):
-    stats_per_dataset = {}
-
-    for source, total_tokens, supervised_tokens in zip(
-        prepared_dataset['source'],
-        prepared_dataset['total_tokens'],
-        prepared_dataset['supervised_tokens']
-    ):
-        if source not in stats_per_dataset:
-            stats_per_dataset[source] = {
-                'examples': 0,
-                'total_tokens': 0,
-                'supervised_tokens': 0,
-            }
-
-        stats_per_dataset[source]['examples'] += 1
-        stats_per_dataset[source]['total_tokens'] += total_tokens
-        stats_per_dataset[source]['supervised_tokens'] += supervised_tokens
-
-    total_examples = sum(s['examples'] for s in stats_per_dataset.values())
-    total_tokens = sum(s['total_tokens'] for s in stats_per_dataset.values())
-    total_supervised_tokens = sum(s['supervised_tokens'] for s in stats_per_dataset.values())
-
-    for source, source_stats in stats_per_dataset.items():
-        stats_per_dataset[source]['examples %'] = f'{source_stats["examples"] / total_examples:.2%}'
-        stats_per_dataset[source]['tokens %'] = f'{source_stats["total_tokens"] / total_tokens:.2%}'
-        stats_per_dataset[source]['supervised_tokens %'] = f'{source_stats["supervised_tokens"] / total_supervised_tokens:.2%}'
-
-    return {
-        'total_examples': total_examples,
-        'total_tokens': total_tokens,
-        'total_supervised_tokens': total_supervised_tokens,
-        'sources': stats_per_dataset
-    }
-
 def download_and_prepare_data(
     *,
     config,
@@ -384,11 +351,15 @@ def download_and_prepare_data(
     elif mix_strategy == MixStrategy.TOKEN_BUDGET:
         if target_tokens is None or target_tokens <= 0:
             raise ValueError(f'"target_tokens" must be set to a value > 0 when using mix strategy: {mix_strategy}')
+
+        mix_target_tokens = math.ceil(target_tokens / (1 - validation_ratio))
+        logger.warning(f'compensating "target_tokens": {target_tokens} due to the "validation_ratio" split: {validation_ratio} - new target: {mix_target_tokens}')
+
         logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
         prepared_dataset = token_budget_dataset_mix(
             datasets=prepared_datasets,
             weights=probabilities,
-            target_tokens=target_tokens,
+            target_tokens=mix_target_tokens,
             seed=seed
         )
     else:
