@@ -14,6 +14,7 @@ from utils import (
     save_json_file
 )
 from dataclasses import dataclass
+from datasets import concatenate_datasets
 
 
 def get_max_number_of_cpu_processes(config):
@@ -559,3 +560,66 @@ def shard_and_tokenize(
     logger.info('Source token counts:')
     for source, count in sorted(state.source_token_counts.items()):
         logger.info(f'- {source}: {count:,}')
+
+def token_budget_dataset_mix(*, datasets, weights, target_tokens, seed):
+    weights_total = sum(weights)
+    target_counts = [int(target_tokens * (weight / weights_total)) for weight in weights]
+
+    prepared_datasets = []
+    for dataset, target_count in zip(datasets, target_counts):
+        if target_count == 0:
+            continue
+
+        shuffled_ds = dataset.shuffle(seed=seed)
+
+        selected_indices = []
+        tokens = 0
+        for i, example in enumerate(shuffled_ds):
+            selected_indices.append(i)
+            tokens += example['supervised_tokens']
+            if tokens >= target_count:
+                break
+
+        if tokens < target_count:
+            logger.warning(f'Dataset exhausted before reaching token target: {dataset} - {tokens:,}/{target_count:,}')
+
+        prepared_datasets.append(shuffled_ds.select(selected_indices))
+
+    prepared_dataset = concatenate_datasets(prepared_datasets)
+
+    return prepared_dataset
+
+def compute_stats(prepared_dataset):
+    stats_per_dataset = {}
+
+    for source, total_tokens, supervised_tokens in zip(
+        prepared_dataset['source'],
+        prepared_dataset['total_tokens'],
+        prepared_dataset['supervised_tokens']
+    ):
+        if source not in stats_per_dataset:
+            stats_per_dataset[source] = {
+                'examples': 0,
+                'total_tokens': 0,
+                'supervised_tokens': 0,
+            }
+
+        stats_per_dataset[source]['examples'] += 1
+        stats_per_dataset[source]['total_tokens'] += total_tokens
+        stats_per_dataset[source]['supervised_tokens'] += supervised_tokens
+
+    total_examples = sum(s['examples'] for s in stats_per_dataset.values())
+    total_tokens = sum(s['total_tokens'] for s in stats_per_dataset.values())
+    total_supervised_tokens = sum(s['supervised_tokens'] for s in stats_per_dataset.values())
+
+    for source, source_stats in stats_per_dataset.items():
+        stats_per_dataset[source]['examples %'] = f'{source_stats["examples"] / total_examples:.2%}'
+        stats_per_dataset[source]['tokens %'] = f'{source_stats["total_tokens"] / total_tokens:.2%}'
+        stats_per_dataset[source]['supervised_tokens %'] = f'{source_stats["supervised_tokens"] / total_supervised_tokens:.2%}'
+
+    return {
+        'total_examples': total_examples,
+        'total_tokens': total_tokens,
+        'total_supervised_tokens': total_supervised_tokens,
+        'sources': stats_per_dataset
+    }

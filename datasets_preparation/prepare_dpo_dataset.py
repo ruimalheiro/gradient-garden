@@ -363,6 +363,8 @@ def prepare_dpo_dataset(
         logger.warning('datasets_common_settings.target_tokens is only used for pretraining data preparation.')
 
     validation_ratio = float(common_settings.get('validation_ratio', 0.01))
+    if not 0.0 < validation_ratio < 1.0:
+        raise ValueError('"validation_ratio" must be > 0 and < 1')
 
     download_and_prepare_data(
         config=config,
