@@ -15,10 +15,12 @@ from datasets import (
 from datasets_preparation.data_preparation_utils import (
     stable_hash,
     assert_common_structure_and_extract,
-    make_source_key
+    make_source_key,
+    token_budget_dataset_mix
 )
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
 from datasets_preparation.synthetic.instruct.generator import build_instruct_dataset
+from recipes.config import MixStrategy
 from logger import logger
 
 
@@ -208,9 +210,14 @@ def tokenize(tokenizer_kwargs, ignore_index, max_seq_len, doc):
         trim_to_context=True
     )
 
+    total_tokens = len(tokens)
+    supervised_tokens = sum(label != ignore_index for label in labels)
+
     return {
         'input_ids': np.array(tokens, dtype=np.uint32),
-        'labels': np.array(labels, dtype=np.int32)
+        'labels': np.array(labels, dtype=np.int32),
+        'total_tokens': total_tokens,
+        'supervised_tokens': supervised_tokens
     }
 
 def get_dataset_metadata(config, dataset):
@@ -227,6 +234,41 @@ def get_dataset_metadata(config, dataset):
     else:
         raise ValueError(f'Invalid dataset id: {ds_id}')
 
+def compute_stats(prepared_dataset):
+    stats_per_dataset = {}
+
+    for source, total_tokens, supervised_tokens in zip(
+        prepared_dataset['source'],
+        prepared_dataset['total_tokens'],
+        prepared_dataset['supervised_tokens']
+    ):
+        if source not in stats_per_dataset:
+            stats_per_dataset[source] = {
+                'examples': 0,
+                'total_tokens': 0,
+                'supervised_tokens': 0,
+            }
+
+        stats_per_dataset[source]['examples'] += 1
+        stats_per_dataset[source]['total_tokens'] += total_tokens
+        stats_per_dataset[source]['supervised_tokens'] += supervised_tokens
+
+    total_examples = sum(s['examples'] for s in stats_per_dataset.values())
+    total_tokens = sum(s['total_tokens'] for s in stats_per_dataset.values())
+    total_supervised_tokens = sum(s['supervised_tokens'] for s in stats_per_dataset.values())
+
+    for source, source_stats in stats_per_dataset.items():
+        stats_per_dataset[source]['examples %'] = f'{source_stats["examples"] / total_examples:.2%}'
+        stats_per_dataset[source]['tokens %'] = f'{source_stats["total_tokens"] / total_tokens:.2%}'
+        stats_per_dataset[source]['supervised_tokens %'] = f'{source_stats["supervised_tokens"] / total_supervised_tokens:.2%}'
+
+    return {
+        'total_examples': total_examples,
+        'total_tokens': total_tokens,
+        'total_supervised_tokens': total_supervised_tokens,
+        'sources': stats_per_dataset
+    }
+
 def download_and_prepare_data(
     *,
     config,
@@ -234,7 +276,9 @@ def download_and_prepare_data(
     valid_datasets,
     probabilities,
     num_proc,
+    target_tokens,
     validation_ratio,
+    mix_strategy,
     interleave_stopping_strategy
 ):
     tokenizer_kwargs = {
@@ -327,8 +371,9 @@ def download_and_prepare_data(
 
         prepared_datasets.append(tokenized_ds)
 
-    if len(prepared_datasets) > 1:
-        logger.info(f'Preparing Interleaving iterator... This operation can take a few minutes... Using strategy: {interleave_stopping_strategy}')
+    logger.info(f'Using data mix strategy: {mix_strategy}')
+    if mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
+        logger.info(f'Preparing HF Interleaving iterator... This operation can take a few minutes... Using stopping strategy: {interleave_stopping_strategy}')
         prepared_dataset = interleave_datasets(
             prepared_datasets,
             probabilities=probabilities,
@@ -336,22 +381,38 @@ def download_and_prepare_data(
             stopping_strategy=interleave_stopping_strategy
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
-        logger.info('Interleaving datasets complete')
+    elif mix_strategy == MixStrategy.TOKEN_BUDGET:
+        if not target_tokens:
+            raise ValueError(f'"target_tokens" must be set to a value > 0 when using mix strategy: {mix_strategy}')
+        logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
+        prepared_dataset = token_budget_dataset_mix(
+            datasets=prepared_datasets,
+            weights=probabilities,
+            target_tokens=target_tokens,
+            seed=seed
+        )
     else:
-        prepared_dataset = prepared_datasets[0]
+        raise ValueError(f'Invalid mix strategy: {mix_strategy}')
 
-    logger.info('Summary:')
-    for d, ds in zip(valid_datasets, prepared_datasets):
-        logger.info(f'- Total for: {d["id"]} : {len(ds)}')
-
-    logger.info(f'- Mix total len: {len(prepared_dataset)}')
-
+    logger.info(f'Applying {validation_ratio} train/val split...\n')
     splits = prepared_dataset.train_test_split(test_size=validation_ratio, seed=seed)
 
-    logger.info(f'- Train len: {len(splits["train"])} Val len: {len(splits["test"])}\n')
+    train_ds = splits['train']
+    train_ds_stats = compute_stats(train_ds)
+    train_ds = train_ds.remove_columns(['total_tokens', 'supervised_tokens'])
 
-    splits['train'].save_to_disk(os.path.join(config.paths.datasets.training_path, 'train'))
-    splits['test'] .save_to_disk(os.path.join(config.paths.datasets.training_path, 'val'))
+    val_ds = splits['test']
+    val_ds_stats = compute_stats(val_ds)
+    val_ds = val_ds.remove_columns(['total_tokens', 'supervised_tokens'])
+
+    logger.section('Train mixture')
+    logger.info(train_ds_stats, is_json=True)
+
+    logger.section('Validation mixture')
+    logger.info(val_ds_stats, is_json=True)
+
+    train_ds.save_to_disk(os.path.join(config.paths.datasets.training_path, 'train'))
+    val_ds.save_to_disk(os.path.join(config.paths.datasets.training_path, 'val'))
 
 def prepare_instruct_dataset(
     *,
@@ -369,8 +430,10 @@ def prepare_instruct_dataset(
 
     if common_settings.get('shard_size') is not None:
         logger.warning('datasets_common_settings.shard_size is only used for pretraining data preparation.')
-    if common_settings.get('target_tokens') is not None:
-        logger.warning('datasets_common_settings.target_tokens is only used for pretraining data preparation.')
+
+    target_tokens = common_settings.get('target_tokens')
+    if target_tokens is not None:
+        target_tokens = int(target_tokens)
 
     validation_ratio = float(common_settings.get('validation_ratio', 0.01))
 
@@ -380,6 +443,8 @@ def prepare_instruct_dataset(
         valid_datasets=valid_datasets,
         probabilities=probabilities,
         num_proc=num_proc,
+        target_tokens=target_tokens,
         validation_ratio=validation_ratio,
+        mix_strategy=common_settings['mix_strategy'],
         interleave_stopping_strategy=common_settings['interleave_stopping_strategy']
     )

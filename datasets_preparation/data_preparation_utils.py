@@ -14,6 +14,7 @@ from utils import (
     save_json_file
 )
 from dataclasses import dataclass
+from datasets import concatenate_datasets
 
 
 def get_max_number_of_cpu_processes(config):
@@ -559,3 +560,25 @@ def shard_and_tokenize(
     logger.info('Source token counts:')
     for source, count in sorted(state.source_token_counts.items()):
         logger.info(f'- {source}: {count:,}')
+
+def token_budget_dataset_mix(*, datasets, weights, target_tokens, seed):
+    weights_total = sum(weights)
+    target_counts = [int(target_tokens * (weight / weights_total)) for weight in weights]
+
+    prepared_datasets = []
+    for dataset, target_count in zip(datasets, target_counts):
+        shuffled_ds = dataset.shuffle(seed=seed)
+
+        selected_indices = []
+        tokens = 0
+        for i, example in enumerate(shuffled_ds):
+            selected_indices.append(i)
+            tokens += example['supervised_tokens']
+            if tokens >= target_count:
+                break
+
+        prepared_datasets.append(dataset.select(selected_indices))
+
+    prepared_dataset = concatenate_datasets(prepared_datasets)
+
+    return prepared_dataset
