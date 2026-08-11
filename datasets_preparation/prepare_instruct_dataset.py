@@ -382,7 +382,7 @@ def download_and_prepare_data(
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
     elif mix_strategy == MixStrategy.TOKEN_BUDGET:
-        if not target_tokens:
+        if target_tokens is None or target_tokens <= 0:
             raise ValueError(f'"target_tokens" must be set to a value > 0 when using mix strategy: {mix_strategy}')
         logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
         prepared_dataset = token_budget_dataset_mix(
@@ -445,6 +445,6 @@ def prepare_instruct_dataset(
         num_proc=num_proc,
         target_tokens=target_tokens,
         validation_ratio=validation_ratio,
-        mix_strategy=common_settings['mix_strategy'],
+        mix_strategy=common_settings.get('mix_strategy', MixStrategy.LEGACY_INTERLEAVE),
         interleave_stopping_strategy=common_settings['interleave_stopping_strategy']
     )

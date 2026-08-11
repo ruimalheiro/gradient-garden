@@ -567,6 +567,9 @@ def token_budget_dataset_mix(*, datasets, weights, target_tokens, seed):
 
     prepared_datasets = []
     for dataset, target_count in zip(datasets, target_counts):
+        if target_count == 0:
+            continue
+
         shuffled_ds = dataset.shuffle(seed=seed)
 
         selected_indices = []
@@ -577,7 +580,10 @@ def token_budget_dataset_mix(*, datasets, weights, target_tokens, seed):
             if tokens >= target_count:
                 break
 
-        prepared_datasets.append(dataset.select(selected_indices))
+        if tokens < target_count:
+            logger.warning(f'Dataset exhausted before reaching token target: {dataset} - {tokens:,}/{target_count:,}')
+
+        prepared_datasets.append(shuffled_ds.select(selected_indices))
 
     prepared_dataset = concatenate_datasets(prepared_datasets)
 
