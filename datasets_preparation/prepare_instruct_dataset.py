@@ -338,7 +338,7 @@ def download_and_prepare_data(
 
         prepared_datasets.append(tokenized_ds)
 
-    logger.info(f'Using data mix strategy: {mix_strategy}')
+    logger.info(f'Using data mix strategy: {mix_strategy.value}')
     if mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
         logger.info(f'Preparing HF Interleaving iterator... This operation can take a few minutes... Using stopping strategy: {interleave_stopping_strategy}')
         prepared_dataset = interleave_datasets(
@@ -407,6 +407,8 @@ def prepare_instruct_dataset(
         target_tokens = int(target_tokens)
 
     validation_ratio = float(common_settings.get('validation_ratio', 0.01))
+    if not 0.0 < validation_ratio < 1.0:
+        raise ValueError('"validation_ratio" must be > 0 and < 1')
 
     download_and_prepare_data(
         config=config,

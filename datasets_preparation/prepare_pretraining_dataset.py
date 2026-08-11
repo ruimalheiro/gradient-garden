@@ -206,6 +206,8 @@ def prepare_pretraining_dataset(
         target_tokens = int(target_tokens)
 
     validation_ratio = float(common_settings.get('validation_ratio', 0.01))
+    if not 0.0 < validation_ratio < 1.0:
+        raise ValueError('"validation_ratio" must be > 0 and < 1')
 
     prepared_dataset = download_and_prepare_data(
         config=config,
