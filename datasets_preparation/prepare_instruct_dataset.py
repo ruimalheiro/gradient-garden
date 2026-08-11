@@ -418,6 +418,6 @@ def prepare_instruct_dataset(
         num_proc=num_proc,
         target_tokens=target_tokens,
         validation_ratio=validation_ratio,
-        mix_strategy=common_settings.get('mix_strategy', MixStrategy.LEGACY_INTERLEAVE),
+        mix_strategy=MixStrategy(common_settings.get('mix_strategy', MixStrategy.LEGACY_INTERLEAVE)),
         interleave_stopping_strategy=common_settings['interleave_stopping_strategy']
     )
