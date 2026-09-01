@@ -384,13 +384,16 @@ def shard_and_tokenize(
         train_buffer = np.load(train_buffer_path)
         val_buffer = np.load(val_buffer_path)
 
+        saved_source_metadata = state_data['source_metadata']
+        assert saved_source_metadata == state.source_metadata, 'Source metadata in preparation state does not match the source metadata from the current recipe.'
+
         state.status = state_data['status']
         state.docs_seen = state_data['docs_seen']
         state.source_doc_counts = state_data['source_doc_counts']
         state.source_token_counts = state_data['source_token_counts']
         state.split_doc_counts = state_data['split_doc_counts']
         state.split_token_counts = state_data['split_token_counts']
-        state.source_metadata = state_data['source_metadata']
+        state.source_metadata = saved_source_metadata
         state.train_writer.load_state_dict(state_data['train_writer_state'])
         state.train_writer.load_buffer_checkpoint(train_buffer)
         state.val_writer.load_state_dict(state_data['val_writer_state'])

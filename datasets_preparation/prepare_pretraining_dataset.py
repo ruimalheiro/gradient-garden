@@ -125,7 +125,7 @@ def download_and_prepare_data(
             'start_document': start_document
         }
 
-        logger.info(f'Using {source_key} at revision {revision}')
+        logger.info(f'Using {source_key} at revision {resolved_revision}')
 
         ds = load_dataset(
             ds_id,
