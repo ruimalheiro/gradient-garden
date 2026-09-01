@@ -6,6 +6,7 @@ pydantic
 pydantic-settings
 torch
 datasets
+huggingface_hub
 transformers
 wandb
 gradio
