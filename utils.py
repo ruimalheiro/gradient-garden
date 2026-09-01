@@ -55,11 +55,11 @@ def load_json_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return json.load(file)
 
-def save_json_file(file_path, data):
+def save_json_file(file_path, data, indent=None):
     file_path = Path(file_path)
     file_path.parent.mkdir(parents=True, exist_ok=True)
     with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, ensure_ascii=False)
+        json.dump(data, file, ensure_ascii=False, indent=indent)
 
 def save_jsonl_file(file_path, items):
     with open(file_path, 'w', encoding='utf-8') as file:
