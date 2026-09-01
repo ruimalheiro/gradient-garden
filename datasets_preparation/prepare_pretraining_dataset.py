@@ -8,6 +8,7 @@ from datasets import (
     load_dataset,
     interleave_datasets
 )
+from huggingface_hub import HfApi
 from datasets_preparation.data_preparation_utils import (
     make_source_key,
     assert_common_structure_and_extract,
@@ -93,6 +94,7 @@ def download_and_prepare_data(
     interleave_stopping_strategy
 ):
     prepared_datasets = []
+    source_metadata = {}
     for dataset in valid_datasets:
         ds_id = dataset['id']
         name = dataset.get('name', None)
@@ -107,16 +109,30 @@ def download_and_prepare_data(
         if start_document < 0:
             raise ValueError(f'start_document must be >= 0 for {ds_id}/{name}')
 
+        revision = transforms.get('revision', 'main')
+        resolved_revision = HfApi(token=config.third_party.hf_token).dataset_info(ds_id, revision=revision).sha
+
         max_datapoints = transforms.get('max_datapoints', None)
 
         hf_name = None if name == 'default' else name
         source_key = make_source_key(ds_id, name)
+
+        source_metadata[source_key] = {
+            'dataset_id': ds_id,
+            'name': name,
+            'split': split,
+            'revision': resolved_revision,
+            'start_document': start_document
+        }
+
+        logger.info(f'Using {source_key} at revision {resolved_revision}')
 
         ds = load_dataset(
             ds_id,
             name=hf_name,
             split=split,
             streaming=True,
+            revision=resolved_revision,
             token=config.third_party.hf_token
         )
 
@@ -168,7 +184,7 @@ def download_and_prepare_data(
     else:
         prepared_dataset = prepared_datasets[0]
 
-    return prepared_dataset
+    return prepared_dataset, source_metadata
 
 tokenizer = None
 def tokenize(tokenizer_kwargs, doc):
@@ -209,7 +225,7 @@ def prepare_pretraining_dataset(
     if not 0.0 < validation_ratio < 1.0:
         raise ValueError('"validation_ratio" must be > 0 and < 1')
 
-    prepared_dataset = download_and_prepare_data(
+    prepared_dataset, source_metadata = download_and_prepare_data(
         config=config,
         seed=seed,
         valid_datasets=valid_datasets,
@@ -236,5 +252,6 @@ def prepare_pretraining_dataset(
         target_tokens=target_tokens,
         validation_ratio=validation_ratio,
         num_proc=num_proc,
-        chunksize=config.data_preparation.mp_pool_chunk_size
+        chunksize=config.data_preparation.mp_pool_chunk_size,
+        source_metadata=source_metadata
     )
