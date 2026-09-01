@@ -385,7 +385,8 @@ def shard_and_tokenize(
         val_buffer = np.load(val_buffer_path)
 
         saved_source_metadata = state_data['source_metadata']
-        assert saved_source_metadata == state.source_metadata, 'Source metadata in preparation state does not match the source metadata from the current recipe.'
+        if saved_source_metadata != state.source_metadata:
+            raise ValueError('Source metadata in preparation state does not match the source metadata from the current recipe.')
 
         state.status = state_data['status']
         state.docs_seen = state_data['docs_seen']
