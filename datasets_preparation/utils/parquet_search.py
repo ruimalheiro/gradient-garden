@@ -3,6 +3,7 @@ import pyarrow.parquet as pq
 from huggingface_hub import HfApi, HfFileSystem
 from concurrent.futures import ThreadPoolExecutor
 from datasets import load_dataset
+from tqdm.auto import tqdm
 from logger import logger
 
 
@@ -53,23 +54,27 @@ def find_parquet_cursor(
             return pq.ParquetFile(f).metadata.num_rows
 
     current_document = 0
-    for i in range(0, len(files), batch_size):
-        batch_files = files[i:i + batch_size]
 
-        with ThreadPoolExecutor(max_workers=min(num_proc, len(batch_files))) as pool:
-            row_counts = list(pool.map(count_rows, batch_files))
+    with tqdm(total=len(files), desc='Searching parquet shards', unit='shards') as progress:
+        for i in range(0, len(files), batch_size):
+            batch_files = files[i:i + batch_size]
 
-        for path, rows in zip(batch_files, row_counts):
-            next_document = current_document + rows
+            with ThreadPoolExecutor(max_workers=min(num_proc, len(batch_files))) as pool:
+                row_counts = list(pool.map(count_rows, batch_files))
 
-            if offset < next_document:
-                return {
-                    'next_document': offset,
-                    'next_file': path,
-                    'next_row': offset - current_document
-                }
+            progress.update(len(batch_files))
 
-            current_document = next_document
+            for path, rows in zip(batch_files, row_counts):
+                next_document = current_document + rows
+
+                if offset < next_document:
+                    return {
+                        'next_document': offset,
+                        'next_file': path,
+                        'next_row': offset - current_document
+                    }
+
+                current_document = next_document
 
     if offset == current_document:
         return {
@@ -91,6 +96,8 @@ def load_parquet_from_cursor(
     token
 ):
     next_file = cursor['next_file']
+    logger.info(f'Loading parquet dataset from {cursor["next_file"]}, row {cursor["next_row"]:,}')
+
     if next_file is None:
         raise ValueError('Cannot load cursor as it points to the end of the dataset')
 
@@ -100,6 +107,8 @@ def load_parquet_from_cursor(
         raise ValueError(f'The cursor file: {next_file!r} was not found in the parquet index')
 
     remaining_files = files[file_index:]
+
+    logger.info(f'Using {len(remaining_files):,} parquet files from cursor onward')
 
     data_files = { split: [f'hf://datasets/{ds_id}@{revision}/{path}' for path in remaining_files] }
 
@@ -159,6 +168,6 @@ def load_dataset_with_search_parquet(
         cursor=cursor,
         token=token
     )
-    logger.info('ds loaded.')
+    logger.info('Dataset loaded.')
 
     return ds
