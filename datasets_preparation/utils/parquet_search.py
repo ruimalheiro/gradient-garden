@@ -3,6 +3,7 @@ import pyarrow.parquet as pq
 from huggingface_hub import HfApi, HfFileSystem
 from concurrent.futures import ThreadPoolExecutor
 from datasets import load_dataset
+from logger import logger
 
 
 def find_parquet_files(
@@ -128,12 +129,15 @@ def load_dataset_with_search_parquet(
     num_proc,
     batch_size=64
 ):
+    logger.info('finding parquet files...')
     files = find_parquet_files(
         ds_id=ds_id,
         revision=revision,
         token=token
     )
+    logger.info(f'found {len(files)} files.')
 
+    logger.info('finding parquet cursor...')
     cursor = find_parquet_cursor(
         ds_id=ds_id,
         revision=revision,
@@ -143,7 +147,9 @@ def load_dataset_with_search_parquet(
         num_proc=num_proc,
         batch_size=batch_size
     )
+    logger.info('found cursor.')
 
+    logger.info('loading the dataset using cursor...')
     ds = load_parquet_from_cursor(
         ds_id=ds_id,
         revision=revision,
@@ -153,5 +159,6 @@ def load_dataset_with_search_parquet(
         cursor=cursor,
         token=token
     )
+    logger.info('ds loaded.')
 
     return ds

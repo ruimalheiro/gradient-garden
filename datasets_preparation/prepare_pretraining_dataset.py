@@ -139,7 +139,7 @@ def download_and_prepare_data(
                 ds_id=ds_id,
                 split=split,
                 streaming=True,
-                revision=revision,
+                revision=resolved_revision,
                 start_document=start_document,
                 token=config.third_party.hf_token,
                 num_proc=num_proc
