@@ -1,5 +1,6 @@
 pyyaml
 pytest
+pyarrow
 numpy
 tqdm
 pydantic

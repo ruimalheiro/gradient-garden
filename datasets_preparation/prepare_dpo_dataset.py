@@ -11,7 +11,7 @@ from datasets import (
     load_dataset,
     interleave_datasets
 )
-from datasets_preparation.data_preparation_utils import (
+from datasets_preparation.utils.common import (
     assert_common_structure_and_extract,
     make_source_key,
     token_budget_dataset_mix,

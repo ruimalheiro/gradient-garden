@@ -4,9 +4,11 @@ import json
 
 from logger import logger
 from config import load_config, TrainingStage
-from utils import load_json_file
+from utils import (
+    get_max_number_of_cpu_processes,
+    load_json_file
+)
 from recipes.config import load_recipe
-from datasets_preparation.data_preparation_utils import get_max_number_of_cpu_processes
 from datasets_preparation.evals.prepare_hellaswag_dataset import prepare_hellaswag_dataset
 from datasets_preparation.evals.prepare_winogrande_dataset import prepare_winogrande_dataset
 from datasets_preparation.evals.prepare_arc_challenge_dataset import prepare_arc_challenge_dataset
@@ -84,6 +86,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     num_proc = get_max_number_of_cpu_processes(cfg)
+    logger.info(f'Number of CPU processes: {num_proc}\n')
 
     if args.recipe:
         prepare_recipe_data(recipe=recipe, num_proc=num_proc)
