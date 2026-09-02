@@ -13,7 +13,7 @@ from datasets import (
     load_dataset,
     interleave_datasets
 )
-from datasets_preparation.data_preparation_utils import (
+from datasets_preparation.utils.common import (
     stable_hash,
     assert_common_structure_and_extract,
     make_source_key,

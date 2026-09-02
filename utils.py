@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import torch
@@ -6,8 +7,14 @@ import numpy as np
 
 from pathlib import Path
 from datetime import datetime, timezone
-from config import ModelConfig, ModelArchitecture
+from config import GlobalConfig, ModelConfig, ModelArchitecture
 
+
+def get_max_number_of_cpu_processes(config: GlobalConfig):
+    num_processes = max(1, os.cpu_count() // 2)
+    if config.runtime.number_of_cpu_processes != 0:
+        num_processes = max(1, min(config.runtime.number_of_cpu_processes, os.cpu_count()))
+    return num_processes
 
 def clean_name(name):
     return re.sub(r'[^a-zA-Z0-9._-]+', '_', name).strip('_').lower()

@@ -1,7 +1,7 @@
 from datasets import Dataset
-from datasets_preparation.data_preparation_utils import (
+from datasets_preparation.utils.common import (
     compute_stats,
-    token_budget_dataset_mix,
+    token_budget_dataset_mix
 )
 
 

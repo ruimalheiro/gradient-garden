@@ -9,11 +9,11 @@ from datasets import (
     interleave_datasets
 )
 from huggingface_hub import HfApi
-from datasets_preparation.data_preparation_utils import (
+from datasets_preparation.utils.common import (
     make_source_key,
-    assert_common_structure_and_extract,
-    shard_and_tokenize
+    assert_common_structure_and_extract
 )
+from datasets_preparation.utils.shard_writter import shard_and_tokenize
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
 from logger import logger
 
@@ -117,12 +117,15 @@ def download_and_prepare_data(
         hf_name = None if name == 'default' else name
         source_key = make_source_key(ds_id, name)
 
+        search_parquet = transforms.get('search_parquet', False)
+
         source_metadata[source_key] = {
             'dataset_id': ds_id,
             'name': name,
             'split': split,
             'revision': resolved_revision,
-            'start_document': start_document
+            'start_document': start_document,
+            'search_parquet': search_parquet
         }
 
         logger.info(f'Using {source_key} at revision {resolved_revision}')
