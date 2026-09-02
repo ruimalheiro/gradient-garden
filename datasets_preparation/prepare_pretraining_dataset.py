@@ -13,7 +13,7 @@ from datasets_preparation.utils.common import (
     make_source_key,
     assert_common_structure_and_extract
 )
-from datasets_preparation.utils.shard_writter import shard_and_tokenize
+from datasets_preparation.utils.shard_writer import shard_and_tokenize
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
 from logger import logger
 
