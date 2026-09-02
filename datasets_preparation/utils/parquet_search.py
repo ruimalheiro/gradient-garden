@@ -39,6 +39,26 @@ def get_parquet_row_counts(
     with ThreadPoolExecutor(max_workers=num_proc) as pool:
         return list(pool.map(count_rows, files))
 
+def build_parquet_index(*, files, row_counts):
+    if len(files) != len(row_counts):
+        raise ValueError('files and row_counts must have the same length')
+
+    indexed_files = []
+    current_document = 0
+
+    for path, rows in zip(files, row_counts):
+        indexed_files.append({
+            'path': path,
+            'rows': rows ,
+            'start_document': current_document
+        })
+        current_document += rows
+
+    return {
+        'files': indexed_files,
+        'total_rows': current_document
+    }
+
 def find_document_cursor(index, offset):
     if offset < 0:
         raise ValueError('offset must be >= 0')
