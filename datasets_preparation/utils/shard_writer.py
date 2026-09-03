@@ -249,7 +249,7 @@ def shard_and_tokenize(
         split_doc_counts: dict
         split_token_counts: dict
         source_metadata: dict
-        source_cursor: dict
+        source_cursor: dict | None
 
     def save_state(state: ShardAndTokenizeState):
         state_data = {
@@ -380,7 +380,7 @@ def shard_and_tokenize(
         split_doc_counts={ 'train': 0, 'val': 0 },
         split_token_counts={ 'train': 0, 'val': 0 },
         source_metadata=source_metadata or {},
-        source_cursor=source_cursor or {}
+        source_cursor=source_cursor
     )
     state, loaded = load_state(state)
     if state.status == 'completed':
