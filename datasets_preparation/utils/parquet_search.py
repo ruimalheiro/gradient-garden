@@ -101,7 +101,7 @@ def get_file_index_from_cursor(files, cursor):
     try:
         return files.index(next_file)
     except ValueError:
-        raise ValueError(f'The cursor file: {next_file!r} was not found in the parquet index')
+        raise ValueError(f'The cursor file: {next_file!r} was not found in the parquet files')
 
 def load_parquet_from_cursor(
     *,
@@ -197,7 +197,7 @@ def advance_parquet_cursor(
         raise ValueError('n_documents must be >= 0')
 
     if n_documents == 0:
-        return cursor
+        return dict(cursor)
 
     file_index = get_file_index_from_cursor(files, cursor)
 
