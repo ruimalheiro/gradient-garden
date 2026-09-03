@@ -181,7 +181,7 @@ def load_dataset_with_search_parquet(
     )
     logger.info('Dataset loaded.')
 
-    return ds
+    return ds, cursor
 
 def advance_parquet_cursor(
     *,
