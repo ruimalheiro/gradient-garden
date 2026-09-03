@@ -97,7 +97,7 @@ def download_and_prepare_data(
 ):
     prepared_datasets = []
     source_metadata = {}
-    source_cursors = {}
+    source_cursor = None
     for dataset in valid_datasets:
         ds_id = dataset['id']
         name = dataset.get('name', None)
@@ -131,14 +131,12 @@ def download_and_prepare_data(
             'search_parquet': search_parquet
         }
 
-        source_cursors[source_key] = None
-
         logger.info(f'Using {source_key} at revision {resolved_revision}')
 
         if search_parquet is True:
             logger.info(f'The "search_parquet" flag is set. Using parquet loader...')
 
-            ds, cursor = load_dataset_with_search_parquet(
+            ds, source_cursor = load_dataset_with_search_parquet(
                 ds_id=ds_id,
                 split=split,
                 streaming=True,
@@ -147,8 +145,6 @@ def download_and_prepare_data(
                 token=config.third_party.hf_token,
                 num_proc=num_proc
             )
-
-            source_cursors[source_key] = cursor
         else:
             ds = load_dataset(
                 ds_id,
@@ -207,7 +203,7 @@ def download_and_prepare_data(
     else:
         prepared_dataset = prepared_datasets[0]
 
-    return prepared_dataset, source_metadata, source_cursors
+    return prepared_dataset, source_metadata, source_cursor
 
 tokenizer = None
 def tokenize(tokenizer_kwargs, doc):
@@ -248,7 +244,10 @@ def prepare_pretraining_dataset(
     if not 0.0 < validation_ratio < 1.0:
         raise ValueError('"validation_ratio" must be > 0 and < 1')
 
-    prepared_dataset, source_metadata, source_cursors = download_and_prepare_data(
+    if any(dataset.get('transforms', {}).get('search_parquet', False) for dataset in valid_datasets) and len(valid_datasets) > 1:
+        raise ValueError('The "search_parquet" transform is currently supported only for single source dataset preparation.')
+
+    prepared_dataset, source_metadata, source_cursor = download_and_prepare_data(
         config=config,
         seed=seed,
         valid_datasets=valid_datasets,
@@ -278,5 +277,5 @@ def prepare_pretraining_dataset(
         num_proc=num_proc,
         chunksize=config.data_preparation.mp_pool_chunk_size,
         source_metadata=source_metadata,
-        source_cursors=source_cursors
+        source_cursor=source_cursor
     )
