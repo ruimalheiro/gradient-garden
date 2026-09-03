@@ -94,7 +94,6 @@ def find_parquet_cursor(
 
 def get_file_index_from_cursor(files, cursor):
     next_file = cursor['next_file']
-    logger.info(f'Loading parquet dataset from {cursor["next_file"]}, row {cursor["next_row"]:,}')
 
     if next_file is None:
         raise ValueError('Cannot load cursor as it points to the end of the dataset')
@@ -114,6 +113,8 @@ def load_parquet_from_cursor(
     cursor,
     token
 ):
+    logger.info(f'Loading parquet dataset from {cursor["next_file"]}, row {cursor["next_row"]:,}')
+
     file_index = get_file_index_from_cursor(files, cursor)
 
     remaining_files = files[file_index:]
