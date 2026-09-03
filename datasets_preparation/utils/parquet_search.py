@@ -4,6 +4,7 @@ from huggingface_hub import HfApi, HfFileSystem
 from concurrent.futures import ThreadPoolExecutor
 from datasets import load_dataset
 from tqdm.auto import tqdm
+from functools import partial
 from logger import logger
 
 
@@ -23,6 +24,16 @@ def find_parquet_files(
         raise ValueError(f'No parquet files found for {ds_id}@{revision}')
 
     return parquet_files
+
+def count_rows(fs, ds_id, revision, cache, path):
+    if cache is not None and path in cache:
+        return cache[path]
+
+    with fs.open(f'datasets/{ds_id}@{revision}/{path}', 'rb') as f:
+        row_count = pq.ParquetFile(f).metadata.num_rows
+        if cache is not None:
+            cache[path] = row_count
+        return row_count
 
 def find_parquet_cursor(
     *,
@@ -49,10 +60,6 @@ def find_parquet_cursor(
 
     fs = HfFileSystem(token=token)
 
-    def count_rows(path):
-        with fs.open(f'datasets/{ds_id}@{revision}/{path}', 'rb') as f:
-            return pq.ParquetFile(f).metadata.num_rows
-
     current_document = 0
 
     with tqdm(total=len(files), desc='Searching parquet shards', unit='shards') as progress:
@@ -60,7 +67,7 @@ def find_parquet_cursor(
             batch_files = files[i:i + batch_size]
 
             with ThreadPoolExecutor(max_workers=min(num_proc, len(batch_files))) as pool:
-                row_counts = list(pool.map(count_rows, batch_files))
+                row_counts = list(pool.map(partial(count_rows, fs, ds_id, revision, None), batch_files))
 
             progress.update(len(batch_files))
 
@@ -85,6 +92,17 @@ def find_parquet_cursor(
 
     raise ValueError(f'offset={offset:,} exceeds the dataset size of {current_document:,} documents')
 
+def get_file_index_from_cursor(files, cursor):
+    next_file = cursor['next_file']
+
+    if next_file is None:
+        raise ValueError('Cannot load cursor as it points to the end of the dataset')
+
+    try:
+        return files.index(next_file)
+    except ValueError:
+        raise ValueError(f'The cursor file: {next_file!r} was not found in the parquet files')
+
 def load_parquet_from_cursor(
     *,
     ds_id,
@@ -95,16 +113,9 @@ def load_parquet_from_cursor(
     cursor,
     token
 ):
-    next_file = cursor['next_file']
     logger.info(f'Loading parquet dataset from {cursor["next_file"]}, row {cursor["next_row"]:,}')
 
-    if next_file is None:
-        raise ValueError('Cannot load cursor as it points to the end of the dataset')
-
-    try:
-        file_index = files.index(next_file)
-    except ValueError:
-        raise ValueError(f'The cursor file: {next_file!r} was not found in the parquet index')
+    file_index = get_file_index_from_cursor(files, cursor)
 
     remaining_files = files[file_index:]
 
@@ -171,3 +182,66 @@ def load_dataset_with_search_parquet(
     logger.info('Dataset loaded.')
 
     return ds
+
+def advance_parquet_cursor(
+    *,
+    ds_id,
+    revision,
+    files,
+    cursor,
+    n_documents,
+    token,
+    row_count_cache=None
+):
+    if n_documents < 0:
+        raise ValueError('n_documents must be >= 0')
+
+    if n_documents == 0:
+        return dict(cursor)
+
+    file_index = get_file_index_from_cursor(files, cursor)
+
+    if row_count_cache is None:
+        row_count_cache = {}
+
+    fs = HfFileSystem(token=token)
+
+    next_document = cursor['next_document']
+    next_row = cursor['next_row']
+
+    while n_documents > 0:
+        path = files[file_index]
+        rows = count_rows(fs, ds_id, revision, row_count_cache, path)
+
+        if next_row < 0 or next_row >= rows:
+            raise ValueError(f'Cursor row {next_row:,} is outside {path} with {rows:,} rows')
+
+        remaining_rows = rows - next_row
+
+        if n_documents < remaining_rows:
+            next_row += n_documents
+            next_document += n_documents
+            n_documents = 0
+            break
+
+        n_documents -= remaining_rows
+        next_document += remaining_rows
+
+        file_index += 1
+        next_row = 0
+
+        if file_index == len(files):
+            if n_documents == 0:
+                return {
+                    'next_document': next_document,
+                    'next_file': None,
+                    'next_row': 0
+                }
+
+            raise ValueError('Cannot advance cursor beyond the end of the dataset')
+
+    return {
+        'next_document': next_document,
+        'next_file': files[file_index],
+        'next_row': next_row
+    }
