@@ -16,19 +16,18 @@ class DatasetSourceWrapper:
         token,
         max_datapoints=None,
         search_parquet=False,
-        num_proc=None,
+        num_proc=None
     ):
+        self.ds_id = ds_id
+        self.name = name
         self.source_key = source_key
-        self.documents_seen = start_document
+        self.split = split
+        self.resolved_revision = resolved_revision
+        self.start_document = start_document
+        self.max_datapoints = max_datapoints
+        self.search_parquet = search_parquet
 
-        self.metadata = {
-            'dataset_id': ds_id,
-            'name': name,
-            'split': split,
-            'revision': resolved_revision,
-            'start_document': start_document,
-            'search_parquet': search_parquet
-        }
+        self.documents_seen = 0
 
         hf_name = None if name == 'default' else name
 
@@ -61,8 +60,16 @@ class DatasetSourceWrapper:
             assert max_datapoints > 0
             self.dataset = self.dataset.take(max_datapoints)
 
+    @property
     def metadata(self):
-        return self.metadata
+        return {
+            'dataset_id': self.ds_id,
+            'name': self.name,
+            'split': self.split,
+            'revision': self.resolved_revision,
+            'start_document': self.start_document,
+            'search_parquet': self.search_parquet
+        }
 
     def __iter__(self):
         yield from self.dataset
