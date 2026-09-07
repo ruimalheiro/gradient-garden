@@ -1,5 +1,6 @@
 from datasets import load_dataset
 from datasets_preparation.utils.parquet_search import load_dataset_with_search_parquet
+from logger import logger
 
 
 class DatasetSourceWrapper:
@@ -53,7 +54,7 @@ class DatasetSourceWrapper:
 
             if start_document > 0:
                 logger.info(f'Skipping {start_document:,} documents for {source_key}')
-                ds = ds.skip(start_document)
+                self.dataset = self.dataset.skip(start_document)
 
         if max_datapoints is not None:
             max_datapoints = int(max_datapoints)
