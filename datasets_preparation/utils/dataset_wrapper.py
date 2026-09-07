@@ -21,6 +21,8 @@ class PretrainingSource:
     def load_state_dict(self, state):
         if self.source_key != state['source_key']:
             raise ValueError(f'Source mismatch: expected {self.source_key!r}, got {state["source_key"]!r}')
+        if state['documents_seen'] < 0:
+            raise ValueError('documents_seen must be >= 0')
         self.documents_seen = state['documents_seen']
 
 class PretrainingDataset:
