@@ -1,14 +1,15 @@
 class PretrainingSource:
     def __init__(self, *, dataset, source_key, documents_seen=0):
-        self.dataset = dataset,
-        self.source_key = source_key,
+        self.dataset = dataset
+        self.source_key = source_key
         self.documents_seen = documents_seen
 
     def __iter__(self):
-        for doc in self.dataset:
-            yield doc
+        yield from self.dataset
 
     def commit(self, n_documents=1):
+        if n_documents < 0:
+            raise ValueError('n_documents must be >= 0')
         self.documents_seen += n_documents
 
     def state_dict(self):
