@@ -4,17 +4,14 @@ import time
 import copy
 
 from tokenization.tokenizer import init_tokenizer
-from datasets import (
-    load_dataset,
-    interleave_datasets
-)
+from datasets import interleave_datasets
 from huggingface_hub import HfApi
 from datasets_preparation.utils.common import (
     make_source_key,
     assert_common_structure_and_extract
 )
 from datasets_preparation.utils.shard_writer import shard_and_tokenize
-from datasets_preparation.utils.parquet_search import load_dataset_with_search_parquet
+from datasets_preparation.utils.dataset_wrapper import DatasetSourceWrapper
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
 from logger import logger
 
@@ -96,10 +93,11 @@ def download_and_prepare_data(
     num_proc
 ):
     prepared_datasets = []
-    source_metadata = {}
     for dataset in valid_datasets:
         ds_id = dataset['id']
         name = dataset.get('name', None)
+
+        source_key = make_source_key(ds_id, name)
 
         dataset_config = SUPPORTED_HF_DATASETS[ds_id][name]
         split = dataset_config['split']
@@ -107,63 +105,32 @@ def download_and_prepare_data(
 
         transforms = dataset.get('transforms', {})
 
+        revision = transforms.get('revision', 'main')
+        max_datapoints = transforms.get('max_datapoints', None)
+        search_parquet = transforms.get('search_parquet', False)
+
         start_document = int(transforms.get('start_document', 0))
         if start_document < 0:
             raise ValueError(f'start_document must be >= 0 for {ds_id}/{name}')
 
-        revision = transforms.get('revision', 'main')
         resolved_revision = HfApi(token=config.third_party.hf_token).dataset_info(ds_id, revision=revision).sha
-
-        max_datapoints = transforms.get('max_datapoints', None)
-
-        hf_name = None if name == 'default' else name
-        source_key = make_source_key(ds_id, name)
-
-        search_parquet = transforms.get('search_parquet', False)
-
-        source_metadata[source_key] = {
-            'dataset_id': ds_id,
-            'name': name,
-            'split': split,
-            'revision': resolved_revision,
-            'start_document': start_document,
-            'search_parquet': search_parquet
-        }
-
         logger.info(f'Using {source_key} at revision {resolved_revision}')
 
         if search_parquet is True:
             logger.info(f'The "search_parquet" flag is set. Using parquet loader...')
 
-            ds = load_dataset_with_search_parquet(
-                ds_id=ds_id,
-                split=split,
-                streaming=True,
-                revision=resolved_revision,
-                start_document=start_document,
-                token=config.third_party.hf_token,
-                num_proc=num_proc
-            )
-        else:
-            ds = load_dataset(
-                ds_id,
-                name=hf_name,
-                split=split,
-                streaming=True,
-                revision=resolved_revision,
-                token=config.third_party.hf_token
-            )
-
-            if start_document > 0:
-                logger.info(f'Skipping {start_document:,} documents for {source_key}')
-                ds = ds.skip(start_document)
-
-        columns_to_remove = ds.column_names
-
-        if max_datapoints is not None:
-            max_datapoints = int(max_datapoints)
-            assert max_datapoints > 0
-            ds = ds.take(max_datapoints)
+        ds_source = DatasetSourceWrapper(
+            ds_id=ds_id,
+            name=name,
+            source_key=source_key,
+            split=split,
+            resolved_revision=resolved_revision,
+            start_document=start_document,
+            token=config.third_party.hf_token,
+            max_datapoints=max_datapoints,
+            search_parquet=search_parquet,
+            num_proc=num_proc
+        )
 
         def normalize(
             batch,
@@ -180,19 +147,19 @@ def download_and_prepare_data(
                 'source': [source_key] * len(texts)
             }
 
-        ds = ds.map(
+        ds_source = ds_source.map(
             normalize,
             batched=True,
             batch_size=config.data_preparation.hf_map_batch_size,
-            remove_columns=columns_to_remove
+            remove_columns=ds_source.column_names
         )
 
-        prepared_datasets.append(ds)
+        prepared_datasets.append(ds_source)
 
     if len(prepared_datasets) > 1:
         logger.info(f'Preparing Interleaving iterator... This operation can take a few minutes... Using strategy: {interleave_stopping_strategy}')
         prepared_dataset = interleave_datasets(
-            prepared_datasets,
+            [source.dataset for source in prepared_datasets],
             probabilities=probabilities,
             seed=seed,
             stopping_strategy=interleave_stopping_strategy
@@ -202,7 +169,7 @@ def download_and_prepare_data(
     else:
         prepared_dataset = prepared_datasets[0]
 
-    return prepared_dataset, source_metadata
+    return prepared_dataset
 
 tokenizer = None
 def tokenize(tokenizer_kwargs, doc):
@@ -243,7 +210,7 @@ def prepare_pretraining_dataset(
     if not 0.0 < validation_ratio < 1.0:
         raise ValueError('"validation_ratio" must be > 0 and < 1')
 
-    prepared_dataset, source_metadata = download_and_prepare_data(
+    prepared_dataset = download_and_prepare_data(
         config=config,
         seed=seed,
         valid_datasets=valid_datasets,
@@ -271,6 +238,5 @@ def prepare_pretraining_dataset(
         target_tokens=target_tokens,
         validation_ratio=validation_ratio,
         num_proc=num_proc,
-        chunksize=config.data_preparation.mp_pool_chunk_size,
-        source_metadata=source_metadata
+        chunksize=config.data_preparation.mp_pool_chunk_size
     )
