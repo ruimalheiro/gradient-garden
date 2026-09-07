@@ -399,6 +399,9 @@ def prepare_dpo_dataset(
     if not 0.0 < validation_ratio < 1.0:
         raise ValueError('"validation_ratio" must be > 0 and < 1')
 
+    if any(dataset.get('transforms', {}).get('search_parquet', False) for dataset in valid_datasets):
+        raise ValueError('The "search_parquet" transform is currently supported only for pretraining datasets.')
+
     download_and_prepare_data(
         config=config,
         seed=seed,
