@@ -226,8 +226,7 @@ def shard_and_tokenize(
     target_tokens,
     validation_ratio,
     num_proc,
-    chunksize,
-    source_metadata=None
+    chunksize
 ):
     root_path = Path(train_path).parent
     state_dir = root_path / '.prep_state'
@@ -365,6 +364,9 @@ def shard_and_tokenize(
         return train_writer.is_done() and val_writer.is_done()
 
     checkpoint_interval_docs = max(1, num_proc * chunksize) # save every time all workers complete.
+
+    # TODO extract from the future dataset wrapper
+    source_metadata = {}
 
     state = ShardAndTokenizeState(
         train_writer=train_writer,
