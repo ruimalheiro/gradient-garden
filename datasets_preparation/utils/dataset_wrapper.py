@@ -32,6 +32,7 @@ class DatasetSourceWrapper:
         hf_name = None if name == 'default' else name
 
         if search_parquet is True:
+            logger.info(f'The "search_parquet" flag is set. Using parquet loader...')
             self.dataset = load_dataset_with_search_parquet(
                 ds_id=ds_id,
                 split=split,

@@ -116,9 +116,6 @@ def download_and_prepare_data(
         resolved_revision = HfApi(token=config.third_party.hf_token).dataset_info(ds_id, revision=revision).sha
         logger.info(f'Using {source_key} at revision {resolved_revision}')
 
-        if search_parquet is True:
-            logger.info(f'The "search_parquet" flag is set. Using parquet loader...')
-
         ds_source = DatasetSourceWrapper(
             ds_id=ds_id,
             name=name,
