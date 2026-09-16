@@ -58,9 +58,11 @@ class DatasetSourceWrapper:
                 token=token
             )
 
-            if start_document > 0:
-                logger.info(f'Skipping {start_document:,} documents for {source_key}')
-                self.dataset = self.dataset.skip(start_document)
+            offset = self.start_document + self.documents_seen
+
+            if offset > 0:
+                logger.info(f'Skipping {offset:,} documents for {source_key} (start={self.start_document:,}, committed={self.documents_seen:,})')
+                self.dataset = self.dataset.skip(offset)
 
         if max_datapoints is not None:
             max_datapoints = int(max_datapoints)
