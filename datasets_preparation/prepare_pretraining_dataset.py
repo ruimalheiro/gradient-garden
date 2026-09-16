@@ -124,17 +124,20 @@ def download_and_prepare_data(
         resolved_revision = HfApi(token=config.third_party.hf_token).dataset_info(ds_id, revision=revision).sha
         logger.info(f'Using {source_key} at revision {resolved_revision}')
 
-        if source_key not in state.source_metadata:
-            state.source_metadata[source_key] = {
-                'dataset_id': ds_id,
-                'name': name,
-                'split': split,
-                'revision': resolved_revision,
-                'start_document': start_document,
-                'search_parquet': search_parquet
-            }
+        metadata = {
+            'dataset_id': ds_id,
+            'name': name,
+            'split': split,
+            'revision': resolved_revision,
+            'start_document': start_document,
+            'search_parquet': search_parquet
+        }
 
-        saved_source_state = state.source_states.get(source_key)
+        if source_key in state.source_metadata:
+            if state.source_metadata[source_key] != metadata:
+                raise ValueError(f'Source metadata mismatch for {source_key}')
+        else:
+            state.source_metadata[source_key] = metadata
 
         ds_source = DatasetSourceWrapper(
             ds_id=ds_id,
@@ -147,7 +150,7 @@ def download_and_prepare_data(
             max_datapoints=max_datapoints,
             search_parquet=search_parquet,
             num_proc=num_proc,
-            state=saved_source_state
+            state=state
         )
 
         def normalize(
@@ -208,11 +211,9 @@ def init_or_load_preparation_state(dataset_path: Path):
     train_buffer_path = state_dir / 'train_buffer.npy'
     val_buffer_path = state_dir / 'val_buffer.npy'
 
-    if not (
-        state_path.exists() and
-        train_buffer_path.exists() and
-        val_buffer_path.exists()
-    ):
+    paths_exist = [state_path.exists(), train_buffer_path.exists(), val_buffer_path.exists()]
+
+    if not any(paths_exist):
         return PreparationState(
             path=str(state_path),
             status='preparing',
@@ -228,6 +229,9 @@ def init_or_load_preparation_state(dataset_path: Path):
             val_writer_state={},
             val_writer_buffer_file_path=str(val_buffer_path)
         )
+
+    if not all(paths_exist):
+        raise ValueError(f'Preparation state is incomplete/corrupted: {state_dir}')
 
     logger.info(f'Loading state from: {state_dir}')
     state_data = load_json_file(state_path)

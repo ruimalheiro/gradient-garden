@@ -31,6 +31,10 @@ class DatasetSourceWrapper:
 
         self.documents_seen = 0
 
+        source_state = state.source_states.get(source_key)
+        if source_state is not None:
+            self.load_state_dict(source_state)
+
         hf_name = None if name == 'default' else name
 
         if search_parquet is True:
