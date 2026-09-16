@@ -3,6 +3,8 @@ import numpy as np
 import time
 import copy
 
+from dataclasses import dataclass
+from pathlib import Path
 from tokenization.tokenizer import init_tokenizer
 from datasets import interleave_datasets
 from huggingface_hub import HfApi
@@ -10,9 +12,14 @@ from datasets_preparation.utils.common import (
     make_source_key,
     assert_common_structure_and_extract
 )
+from datasets_preparation.utils.state import PreparationState
 from datasets_preparation.utils.shard_writer import shard_and_tokenize
 from datasets_preparation.utils.dataset_wrapper import DatasetSourceWrapper
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
+from utils import (
+    load_json_file,
+    save_json_file
+)
 from logger import logger
 
 
@@ -90,7 +97,8 @@ def download_and_prepare_data(
     valid_datasets,
     probabilities,
     interleave_stopping_strategy,
-    num_proc
+    num_proc,
+    state: PreparationState
 ):
     prepared_datasets = []
     for dataset in valid_datasets:
@@ -116,6 +124,18 @@ def download_and_prepare_data(
         resolved_revision = HfApi(token=config.third_party.hf_token).dataset_info(ds_id, revision=revision).sha
         logger.info(f'Using {source_key} at revision {resolved_revision}')
 
+        if source_key not in state.source_metadata:
+            state.source_metadata[source_key] = {
+                'dataset_id': ds_id,
+                'name': name,
+                'split': split,
+                'revision': resolved_revision,
+                'start_document': start_document,
+                'search_parquet': search_parquet
+            }
+
+        saved_source_state = state.source_states.get(source_key)
+
         ds_source = DatasetSourceWrapper(
             ds_id=ds_id,
             name=name,
@@ -126,7 +146,8 @@ def download_and_prepare_data(
             token=config.third_party.hf_token,
             max_datapoints=max_datapoints,
             search_parquet=search_parquet,
-            num_proc=num_proc
+            num_proc=num_proc,
+            state=saved_source_state
         )
 
         def normalize(
@@ -179,6 +200,39 @@ def tokenize(tokenizer_kwargs, doc):
     tokens_np[-1] = tokenizer.eos_id
     return tokens_np
 
+def init_or_load_preparation_state(dataset_path: Path):
+    state_dir = dataset_path / '.prep_state'
+    state_dir.mkdir(parents=True, exist_ok=True)
+
+    state_path = state_dir / 'state.json'
+    train_buffer_path = state_dir / 'train_buffer.npy'
+    val_buffer_path = state_dir / 'val_buffer.npy'
+
+    if not (
+        state_path.exists() and
+        train_buffer_path.exists() and
+        val_buffer_path.exists()
+    ):
+        return PreparationState(
+            path=str(state_path),
+            status='preparing',
+            docs_seen=0,
+            source_metadata={},
+            source_states={},
+            source_doc_counts={},
+            source_token_counts={},
+            split_doc_counts={ 'train': 0, 'val': 0 },
+            split_token_counts={ 'train': 0, 'val': 0 },
+            train_writer_state={},
+            train_writer_buffer_file_path=str(train_buffer_path),
+            val_writer_state={},
+            val_writer_buffer_file_path=str(val_buffer_path)
+        )
+
+    logger.info(f'Loading state from: {state_dir}')
+    state_data = load_json_file(state_path)
+    return PreparationState(**state_data)
+
 def prepare_pretraining_dataset(
     *,
     config,
@@ -207,13 +261,20 @@ def prepare_pretraining_dataset(
     if not 0.0 < validation_ratio < 1.0:
         raise ValueError('"validation_ratio" must be > 0 and < 1')
 
+    train_path = os.path.join(config.paths.datasets.training_path, 'train')
+    val_path = os.path.join(config.paths.datasets.training_path, 'val')
+    dataset_path = Path(train_path).parent
+
+    state = init_or_load_preparation_state(dataset_path)
+
     prepared_dataset = download_and_prepare_data(
         config=config,
         seed=seed,
         valid_datasets=valid_datasets,
         probabilities=probabilities,
         interleave_stopping_strategy=common_settings['interleave_stopping_strategy'],
-        num_proc=num_proc
+        num_proc=num_proc,
+        state=state
     )
 
     tokenizer_kwargs = {
@@ -228,12 +289,13 @@ def prepare_pretraining_dataset(
         dataset=prepared_dataset,
         tokenize_function=tokenize,
         tokenizer_kwargs=tokenizer_kwargs,
-        train_path=os.path.join(config.paths.datasets.training_path, 'train'),
-        val_path=os.path.join(config.paths.datasets.training_path, 'val'),
+        train_path=train_path,
+        val_path=val_path,
         shard_file_prefix='data',
         shard_size=shard_size,
         target_tokens=target_tokens,
         validation_ratio=validation_ratio,
         num_proc=num_proc,
-        chunksize=config.data_preparation.mp_pool_chunk_size
+        chunksize=config.data_preparation.mp_pool_chunk_size,
+        state=state
     )

@@ -1,5 +1,6 @@
 from datasets import load_dataset
 from datasets_preparation.utils.parquet_search import load_dataset_with_search_parquet
+from datasets_preparation.utils.state import PreparationState
 from logger import logger
 
 
@@ -14,6 +15,7 @@ class DatasetSourceWrapper:
         resolved_revision,
         start_document,
         token,
+        state: PreparationState,
         max_datapoints=None,
         search_parquet=False,
         num_proc=None
