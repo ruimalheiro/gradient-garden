@@ -5,7 +5,6 @@ import copy
 from dataclasses import dataclass
 from pathlib import Path
 from tokenization.tokenizer import init_tokenizer
-from datasets import interleave_datasets
 from huggingface_hub import HfApi
 from datasets_preparation.utils.common import (
     make_source_key,

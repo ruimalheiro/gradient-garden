@@ -138,7 +138,7 @@ class DatasetWrapper:
         self.stopping_strategy = stopping_strategy
         self.documents_seen = documents_seen
 
-    def select_source(self, logical_index):
+    def _select_source(self, logical_index):
         # Deterministic weighted source selection from the global logical index. This avoids persisting mutable RNG state.
         x = stable_hash(str(logical_index), seed=self.seed) / (1 << 64)
 
@@ -156,7 +156,7 @@ class DatasetWrapper:
         logical_index = self.documents_seen
 
         while True:
-            source_key = self.select_source(logical_index)
+            source_key = self._select_source(logical_index)
 
             try:
                 doc = next(iterators[source_key])
