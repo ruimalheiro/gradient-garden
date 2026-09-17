@@ -39,12 +39,15 @@ class DatasetSourceWrapper:
 
         if search_parquet is True:
             logger.info(f'The "search_parquet" flag is set. Using parquet loader...')
+
+            resume_document = self.start_document + self.documents_seen
+
             self.dataset = load_dataset_with_search_parquet(
                 ds_id=ds_id,
                 split=split,
                 streaming=True,
                 revision=resolved_revision,
-                start_document=start_document,
+                start_document=resume_document,
                 token=token,
                 num_proc=num_proc
             )
