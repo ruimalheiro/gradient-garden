@@ -174,6 +174,10 @@ def download_and_prepare_data(
 
         prepared_datasets.append(ds_source)
 
+    # TODO remove once custom interleave is implemented. Resume is temporarily disabled for multi source due to breaking changes.
+    if state.docs_seen > 0 and len(prepared_datasets) > 1:
+        raise ValueError('Resuming multi source pretraining preparation is not yet supported... ')
+
     if len(prepared_datasets) > 1:
         logger.info(f'Preparing Interleaving iterator... This operation can take a few minutes... Using strategy: {interleave_stopping_strategy}')
         prepared_dataset = interleave_datasets(
