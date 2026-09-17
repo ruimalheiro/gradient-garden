@@ -232,6 +232,8 @@ def shard_and_tokenize(
         train_writer: ShardWriter,
         val_writer: ShardWriter
     ):
+        state.source_states = dataset.state_dict()
+
         state_data = {
             'path': state.path,
             'status': state.status,

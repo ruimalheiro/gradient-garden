@@ -16,10 +16,7 @@ from datasets_preparation.utils.state import PreparationState
 from datasets_preparation.utils.shard_writer import shard_and_tokenize
 from datasets_preparation.utils.dataset_wrapper import DatasetSourceWrapper, DatasetWrapper
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
-from utils import (
-    load_json_file,
-    save_json_file
-)
+from utils import load_json_file
 from logger import logger
 
 
