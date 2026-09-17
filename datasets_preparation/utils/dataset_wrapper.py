@@ -67,7 +67,9 @@ class DatasetSourceWrapper:
         if max_datapoints is not None:
             max_datapoints = int(max_datapoints)
             assert max_datapoints > 0
-            self.dataset = self.dataset.take(max_datapoints)
+
+            remaining_datapoints = max_datapoints - self.documents_seen
+            self.dataset = self.dataset.take(max(0, remaining_datapoints))
 
         state.source_states[source_key] = self.state_dict()
 
