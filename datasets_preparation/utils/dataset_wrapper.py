@@ -1,6 +1,7 @@
 from datasets import load_dataset
 from datasets_preparation.utils.parquet_search import load_dataset_with_search_parquet
 from datasets_preparation.utils.state import PreparationState
+from datasets_preparation.utils.common import stable_hash
 from logger import logger
 
 
@@ -117,15 +118,56 @@ class DatasetSourceWrapper:
         return self
 
 class DatasetWrapper:
-    def __init__(self, dataset, sources: list[DatasetSourceWrapper]):
-        self.dataset = dataset
+    def __init__(
+        self,
+        sources: list[DatasetSourceWrapper],
+        probabilities,
+        seed,
+        stopping_strategy,
+        documents_seen=0
+    ):
         self.sources = { source.source_key: source for source in sources }
+        self.source_keys = list(self.sources.keys())
+        self.probabilities = probabilities
+        self.seed = seed
+        self.stopping_strategy = stopping_strategy
+        self.documents_seen = documents_seen
+
+        if len(self.sources) > 1:
+            logger.info(f'Using interleaving strategy: {stopping_strategy}')
+
+    def select_source(self, logical_index):
+        # This is basically to implement the weighted random choice to simulate the interleaver but needs to be somewhat deterministc and reproducible
+        # so stable hash helps and we don't need to save an RNG state.
+        x = stable_hash(str(logical_index), seed=self.seed) / (1 << 64)
+
+        acc = 0.0
+        for source_key, probability in zip(self.source_keys, self.probabilities):
+            acc += probability
+            if x < acc:
+                return source_key
+
+        return self.source_keys[-1]
 
     def __iter__(self):
-        yield from self.dataset
+        iterators = { source_key: iter(source) for source_key, source in self.sources.items() }
+
+        logical_index = self.documents_seen
+
+        while True:
+            source_key = self.select_source(logical_index)
+
+            try:
+                doc = next(iterators[source_key])
+            except StopIteration:
+                return
+
+            yield doc
+            logical_index += 1
 
     def commit(self, source_key, n_documents=1):
         self.sources[source_key].commit(n_documents)
+        self.documents_seen += n_documents
 
     def state_dict(self):
         return { source_key: source.state_dict() for source_key, source in self.sources.items() }
