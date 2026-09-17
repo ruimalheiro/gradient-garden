@@ -177,7 +177,8 @@ def download_and_prepare_data(
         sources=prepared_datasets,
         probabilities=probabilities,
         seed=seed,
-        stopping_strategy=interleave_stopping_strategy
+        stopping_strategy=interleave_stopping_strategy,
+        documents_seen=state.docs_seen
     )
 
 tokenizer = None

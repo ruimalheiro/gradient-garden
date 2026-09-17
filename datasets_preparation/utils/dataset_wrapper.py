@@ -137,8 +137,7 @@ class DatasetWrapper:
             logger.info(f'Using interleaving strategy: {stopping_strategy}')
 
     def select_source(self, logical_index):
-        # This is basically to implement the weighted random choice to simulate the interleaver but needs to be somewhat deterministc and reproducible
-        # so stable hash helps and we don't need to save an RNG state.
+        # Deterministic weighted source selection from the global logical index. This avoids persisting mutable RNG state.
         x = stable_hash(str(logical_index), seed=self.seed) / (1 << 64)
 
         acc = 0.0
