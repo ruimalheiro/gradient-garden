@@ -1,12 +1,10 @@
 import os
 import numpy as np
-import time
 import copy
 
 from dataclasses import dataclass
 from pathlib import Path
 from tokenization.tokenizer import init_tokenizer
-from datasets import interleave_datasets
 from huggingface_hub import HfApi
 from datasets_preparation.utils.common import (
     make_source_key,
@@ -174,24 +172,13 @@ def download_and_prepare_data(
 
         prepared_datasets.append(ds_source)
 
-    # TODO remove once custom interleave is implemented. Resume is temporarily disabled for multi source due to breaking changes.
-    if state.docs_seen > 0 and len(prepared_datasets) > 1:
-        raise ValueError('Resuming multi source pretraining preparation is not yet supported... ')
-
-    if len(prepared_datasets) > 1:
-        logger.info(f'Preparing Interleaving iterator... This operation can take a few minutes... Using strategy: {interleave_stopping_strategy}')
-        prepared_dataset = interleave_datasets(
-            [source.dataset for source in prepared_datasets],
-            probabilities=probabilities,
-            seed=seed,
-            stopping_strategy=interleave_stopping_strategy
-        )
-        time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
-        logger.info('Interleaving datasets complete')
-    else:
-        prepared_dataset = prepared_datasets[0]
-
-    return DatasetWrapper(dataset=prepared_dataset, sources=prepared_datasets)
+    return DatasetWrapper(
+        sources=prepared_datasets,
+        probabilities=probabilities,
+        seed=seed,
+        stopping_strategy=interleave_stopping_strategy,
+        documents_seen=state.docs_seen
+    )
 
 tokenizer = None
 def tokenize(tokenizer_kwargs, doc):
