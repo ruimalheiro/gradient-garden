@@ -69,6 +69,8 @@ class DatasetSourceWrapper:
             assert max_datapoints > 0
             self.dataset = self.dataset.take(max_datapoints)
 
+        state.source_states[source_key] = self.state_dict()
+
     @property
     def metadata(self):
         return {
@@ -110,14 +112,15 @@ class DatasetSourceWrapper:
         return self
 
 class DatasetWrapper:
-    def __init__(self, sources: list[DatasetSourceWrapper]):
-        self.sources = sources
+    def __init__(self, dataset, sources: list[DatasetSourceWrapper]):
+        self.dataset = dataset
+        self.sources = { source.source_key: source for source in sources }
 
     def __iter__(self):
-        yield from self.sources
+        yield from self.dataset
 
-    def commit(self):
-        pass
+    def commit(self, source_key, n_documents=1):
+        self.sources[source_key].commit(n_documents)
 
     def state_dict(self):
-        pass
+        return { source_key: source.state_dict() for source_key, source in self.sources.items() }

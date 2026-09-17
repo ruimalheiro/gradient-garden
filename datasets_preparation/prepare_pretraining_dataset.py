@@ -14,7 +14,7 @@ from datasets_preparation.utils.common import (
 )
 from datasets_preparation.utils.state import PreparationState
 from datasets_preparation.utils.shard_writer import shard_and_tokenize
-from datasets_preparation.utils.dataset_wrapper import DatasetSourceWrapper
+from datasets_preparation.utils.dataset_wrapper import DatasetSourceWrapper, DatasetWrapper
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
 from utils import (
     load_json_file,
@@ -190,7 +190,7 @@ def download_and_prepare_data(
     else:
         prepared_dataset = prepared_datasets[0]
 
-    return prepared_dataset
+    return DatasetWrapper(dataset=prepared_dataset, sources=prepared_datasets)
 
 tokenizer = None
 def tokenize(tokenizer_kwargs, doc):

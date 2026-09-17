@@ -228,6 +228,7 @@ def shard_and_tokenize(
 ):
     def save_state(
         state: PreparationState,
+        dataset,
         train_writer: ShardWriter,
         val_writer: ShardWriter
     ):
@@ -373,6 +374,7 @@ def shard_and_tokenize(
     )
     for source, tokens, split in iterator:
         state.docs_seen += 1
+        dataset.commit(source)
 
         if tokens.size == 0:
             continue
@@ -394,7 +396,7 @@ def shard_and_tokenize(
         state.split_token_counts[split] += written
 
         if state.docs_seen % checkpoint_interval_docs == 0:
-            save_state(state, train_writer, val_writer)
+            save_state(state, dataset, train_writer, val_writer)
 
         if reached_target():
             stop_event.set()
@@ -406,7 +408,7 @@ def shard_and_tokenize(
 
     if target_tokens is not None and not reached_target():
         state.status = 'exhausted_before_target'
-        save_state(state, train_writer, val_writer)
+        save_state(state, dataset, dataset, train_writer, val_writer)
         raise RuntimeError(
             'Pretraining dataset exhausted before reaching target tokens. '
             f'train_tokens={train_writer.total_tokens:,}/{target_tokens:,}, '
@@ -414,7 +416,7 @@ def shard_and_tokenize(
         )
 
     state.status = 'completed'
-    save_state(state, train_writer, val_writer)
+    save_state(state, dataset, train_writer, val_writer)
 
     if stopped_on_target:
         logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
