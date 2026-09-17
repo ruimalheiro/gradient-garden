@@ -96,6 +96,9 @@ def download_and_prepare_data(
     num_proc,
     state: PreparationState
 ):
+    if interleave_stopping_strategy == 'all_exhausted':
+        raise ValueError('"all_exhausted" is not supported by the custom pretraining interleaver. Use "first_exhausted" or "all_exhausted_without_replacement".')
+
     prepared_datasets = []
     for dataset in valid_datasets:
         ds_id = dataset['id']
