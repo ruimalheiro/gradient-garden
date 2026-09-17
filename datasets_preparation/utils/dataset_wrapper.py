@@ -126,15 +126,17 @@ class DatasetWrapper:
         stopping_strategy,
         documents_seen=0
     ):
+        if stopping_strategy != 'first_exhausted':
+            raise ValueError(f'Pretraining custom interleave currently only supports "first_exhausted", got {stopping_strategy!r}')
+
+        logger.info(f'Using interleaving strategy: {stopping_strategy}')
+
         self.sources = { source.source_key: source for source in sources }
         self.source_keys = list(self.sources.keys())
         self.probabilities = probabilities
         self.seed = seed
         self.stopping_strategy = stopping_strategy
         self.documents_seen = documents_seen
-
-        if len(self.sources) > 1:
-            logger.info(f'Using interleaving strategy: {stopping_strategy}')
 
     def select_source(self, logical_index):
         # Deterministic weighted source selection from the global logical index. This avoids persisting mutable RNG state.
