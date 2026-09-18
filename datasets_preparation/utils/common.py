@@ -64,7 +64,7 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
             assert name in supported_datasets[dataset_id]
 
             if mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
-                assert datasets[dataset_id][name].get('target_tokens') is None
+                assert datasets[dataset_id][name].get('target_tokens') is None, '"target_tokens" per ds cannot be set with the current mix strategy'
                 assert 'weight' in datasets[dataset_id][name]
                 assert datasets[dataset_id][name]['weight'] is not None, 'weight needs to be specified per dataset.'
                 weight = float(datasets[dataset_id][name].get('weight', 0.0))
@@ -77,7 +77,7 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
                         'weight': weight,
                     })
             elif mix_strategy == MixStrategy.TOKEN_BUDGET:
-                assert datasets[dataset_id][name].get('weight') is None
+                assert datasets[dataset_id][name].get('weight') is None, '"weight" per ds cannot be set with the current mix strategy'
                 assert 'target_tokens' in datasets[dataset_id][name]
                 assert datasets[dataset_id][name]['target_tokens'] is not None, 'target_tokens needs to be specified per dataset.'
                 target_tokens = int(datasets[dataset_id][name].get('target_tokens', 0))
