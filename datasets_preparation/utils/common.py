@@ -26,11 +26,14 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
 
     # Validate common settings if present.
     common_settings = datasets_mix.get('datasets_common_settings', {})
-    mix_strategy = common_settings['mix_strategy']
 
     shard_size = None
     target_tokens = None
     validation_ratio = None
+
+    assert 'mix_strategy' in common_settings, 'common_settings.mix_strategy is required'
+    mix_strategy = common_settings['mix_strategy']
+
     if 'shard_size' in common_settings:
         shard_size = common_settings['shard_size']
         assert shard_size is None or int(shard_size) > 0, 'datasets_common_settings.shard_size must be > 0'
@@ -45,7 +48,7 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
         validation_ratio = common_settings['validation_ratio']
         assert validation_ratio is None or isinstance(validation_ratio, float), 'datasets_common_settings.validation_ratio must be a float'
     assert 'interleave_stopping_strategy' in common_settings, 'common_settings.interleave_stopping_strategy is required'
-    assert 'mix_strategy' in common_settings, 'common_settings.mix_strategy is required'
+
 
     assert 'datasets' in datasets_mix
     datasets = datasets_mix['datasets']
@@ -61,6 +64,7 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
             assert name in supported_datasets[dataset_id]
 
             if mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
+                assert datasets[dataset_id][name].get('target_tokens') is None
                 assert 'weight' in datasets[dataset_id][name]
                 assert datasets[dataset_id][name]['weight'] is not None, 'weight needs to be specified per dataset.'
                 weight = float(datasets[dataset_id][name].get('weight', 0.0))
@@ -73,6 +77,7 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
                         'weight': weight,
                     })
             elif mix_strategy == MixStrategy.TOKEN_BUDGET:
+                assert datasets[dataset_id][name].get('weight') is None
                 assert 'target_tokens' in datasets[dataset_id][name]
                 assert datasets[dataset_id][name]['target_tokens'] is not None, 'target_tokens needs to be specified per dataset.'
                 target_tokens = int(datasets[dataset_id][name].get('target_tokens', 0))
