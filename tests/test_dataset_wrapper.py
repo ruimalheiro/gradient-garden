@@ -11,6 +11,7 @@ class MockDatasetSourceWrapper(DatasetSourceWrapper):
     ):
         self.source_key = source_key
         self.documents_seen = documents_seen
+        self.parquet_cursor = None
 
         items = [
             {
