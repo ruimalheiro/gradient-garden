@@ -58,6 +58,10 @@ class DatasetSourceWrapper:
 
             resume_document = self.start_document + self.documents_seen
 
+            if self.parquet_cursor is not None:
+                if self.parquet_cursor['next_document'] != resume_document:
+                    raise ValueError('Parquet cursor is inconsistent with stored source position')
+
             self.dataset, self.parquet_files, self.parquet_cursor = load_dataset_with_search_parquet(
                 ds_id=ds_id,
                 split=split,
@@ -132,7 +136,8 @@ class DatasetSourceWrapper:
     def state_dict(self):
         return {
             'source_key': self.source_key,
-            'documents_seen': self.documents_seen
+            'documents_seen': self.documents_seen,
+            'parquet_cursor': self.parquet_cursor
         }
 
     def load_state_dict(self, state):
@@ -141,6 +146,7 @@ class DatasetSourceWrapper:
         if state['documents_seen'] < 0:
             raise ValueError('documents_seen must be >= 0')
         self.documents_seen = state['documents_seen']
+        self.parquet_cursor = state.get('parquet_cursor')
 
     @property
     def column_names(self):
