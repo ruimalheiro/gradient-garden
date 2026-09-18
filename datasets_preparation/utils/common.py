@@ -81,6 +81,7 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
                 assert 'target_tokens' in datasets[dataset_id][name]
                 assert datasets[dataset_id][name]['target_tokens'] is not None, 'target_tokens needs to be specified per dataset.'
                 target_tokens = int(datasets[dataset_id][name].get('target_tokens', 0))
+                assert target_tokens >= 0, f'target_tokens must be >= 0 for {dataset_id}/{name}'
                 if target_tokens > 0:
                     valid_datasets.append({
                         'id': dataset_id,

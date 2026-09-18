@@ -175,7 +175,7 @@ class DatasetWrapper:
             raise ValueError(f'Pretraining custom interleave currently only supports "first_exhausted", got {stopping_strategy!r}')
 
         if mix_strategy == MixStrategy.TOKEN_BUDGET:
-            raise ValueError('Token budget mix strategy is not yet full implemented.')
+            raise ValueError('Token budget mix strategy is not yet fully implemented.')
 
         logger.info(f'Using data mix strategy: {mix_strategy.value}')
         logger.info(f'Using interleaving strategy: {stopping_strategy}')
