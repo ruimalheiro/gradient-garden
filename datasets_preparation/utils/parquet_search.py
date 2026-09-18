@@ -12,11 +12,9 @@ def find_parquet_files(
     *,
     ds_id,
     revision,
-    token
+    hf_api: HfApi
 ):
-    api = HfApi(token=token)
-
-    files = api.list_repo_files(ds_id, repo_type='dataset', revision=revision)
+    files = hf_api.list_repo_files(ds_id, repo_type='dataset', revision=revision)
 
     parquet_files = sorted(path for path in files if path.endswith('.parquet'))
 
@@ -25,11 +23,11 @@ def find_parquet_files(
 
     return parquet_files
 
-def count_rows(fs, ds_id, revision, cache, path):
+def count_rows(hf_file_system, ds_id, revision, cache, path):
     if cache is not None and path in cache:
         return cache[path]
 
-    with fs.open(f'datasets/{ds_id}@{revision}/{path}', 'rb') as f:
+    with hf_file_system.open(f'datasets/{ds_id}@{revision}/{path}', 'rb') as f:
         row_count = pq.ParquetFile(f).metadata.num_rows
         if cache is not None:
             cache[path] = row_count
@@ -41,9 +39,9 @@ def find_parquet_cursor(
     revision,
     files,
     offset,
-    token,
     num_proc,
-    batch_size=64
+    hf_file_system: HfFileSystem,
+    batch_size=64,
 ):
     if offset < 0:
         raise ValueError('offset must be >= 0')
@@ -58,8 +56,6 @@ def find_parquet_cursor(
             'next_row': 0
         }
 
-    fs = HfFileSystem(token=token)
-
     current_document = 0
 
     with tqdm(total=len(files), desc='Searching parquet shards', unit='shards') as progress:
@@ -67,7 +63,7 @@ def find_parquet_cursor(
             batch_files = files[i:i + batch_size]
 
             with ThreadPoolExecutor(max_workers=min(num_proc, len(batch_files))) as pool:
-                row_counts = list(pool.map(partial(count_rows, fs, ds_id, revision, None), batch_files))
+                row_counts = list(pool.map(partial(count_rows, hf_file_system, ds_id, revision, None), batch_files))
 
             progress.update(len(batch_files))
 
@@ -147,27 +143,33 @@ def load_dataset_with_search_parquet(
     start_document,
     token,
     num_proc,
-    batch_size=64
+    hf_api: HfApi,
+    hf_file_system: HfFileSystem,
+    batch_size=64,
+    cursor=None
 ):
     logger.info('finding parquet files...')
     files = find_parquet_files(
         ds_id=ds_id,
         revision=revision,
-        token=token
+        hf_api=hf_api
     )
     logger.info(f'found {len(files)} files.')
 
-    logger.info('finding parquet cursor...')
-    cursor = find_parquet_cursor(
-        ds_id=ds_id,
-        revision=revision,
-        files=files,
-        offset=start_document,
-        token=token,
-        num_proc=num_proc,
-        batch_size=batch_size
-    )
-    logger.info('found cursor.')
+    if cursor is None:
+        logger.info('finding parquet cursor...')
+        cursor = find_parquet_cursor(
+            ds_id=ds_id,
+            revision=revision,
+            files=files,
+            offset=start_document,
+            hf_file_system=hf_file_system,
+            num_proc=num_proc,
+            batch_size=batch_size
+        )
+        logger.info('found cursor.')
+    else:
+        logger.info('using stored cursor...')
 
     logger.info('loading the dataset using cursor...')
     ds = load_parquet_from_cursor(
@@ -181,16 +183,17 @@ def load_dataset_with_search_parquet(
     )
     logger.info('Dataset loaded.')
 
-    return ds
+    return ds, files, cursor
 
 def advance_parquet_cursor(
     *,
     ds_id,
     revision,
     files,
+    file_indices,
     cursor,
     n_documents,
-    token,
+    hf_file_system: HfFileSystem,
     row_count_cache=None
 ):
     if n_documents < 0:
@@ -199,19 +202,17 @@ def advance_parquet_cursor(
     if n_documents == 0:
         return dict(cursor)
 
-    file_index = get_file_index_from_cursor(files, cursor)
+    file_index = file_indices[cursor['next_file']]
 
     if row_count_cache is None:
         row_count_cache = {}
-
-    fs = HfFileSystem(token=token)
 
     next_document = cursor['next_document']
     next_row = cursor['next_row']
 
     while n_documents > 0:
         path = files[file_index]
-        rows = count_rows(fs, ds_id, revision, row_count_cache, path)
+        rows = count_rows(hf_file_system, ds_id, revision, row_count_cache, path)
 
         if next_row < 0 or next_row >= rows:
             raise ValueError(f'Cursor row {next_row:,} is outside {path} with {rows:,} rows')

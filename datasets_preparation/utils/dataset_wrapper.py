@@ -1,5 +1,9 @@
 from datasets import load_dataset
-from datasets_preparation.utils.parquet_search import load_dataset_with_search_parquet
+from huggingface_hub import HfApi, HfFileSystem
+from datasets_preparation.utils.parquet_search import (
+    load_dataset_with_search_parquet,
+    advance_parquet_cursor
+)
 from datasets_preparation.utils.state import PreparationState
 from datasets_preparation.utils.common import stable_hash
 from logger import logger
@@ -32,6 +36,14 @@ class DatasetSourceWrapper:
 
         self.documents_seen = 0
 
+        self.hf_api = None
+        self.hf_file_system = None
+        self.parquet_row_count_cache = None
+        self.parquet_files = None
+        self.parquet_file_indices = None
+        self.parquet_cursor = None
+
+        # Loading state
         source_state = state.source_states.get(source_key)
         if source_state is not None:
             self.load_state_dict(source_state)
@@ -41,17 +53,30 @@ class DatasetSourceWrapper:
         if search_parquet is True:
             logger.info(f'The "search_parquet" flag is set. Using parquet loader...')
 
+            self.hf_api = HfApi(token=token)
+            self.hf_file_system = HfFileSystem(token=token)
+            self.parquet_row_count_cache = {}
+
             resume_document = self.start_document + self.documents_seen
 
-            self.dataset = load_dataset_with_search_parquet(
+            if self.parquet_cursor is not None:
+                if self.parquet_cursor['next_document'] != resume_document:
+                    raise ValueError('Parquet cursor is inconsistent with stored source position')
+
+            self.dataset, self.parquet_files, self.parquet_cursor = load_dataset_with_search_parquet(
                 ds_id=ds_id,
                 split=split,
                 streaming=True,
                 revision=resolved_revision,
                 start_document=resume_document,
                 token=token,
-                num_proc=num_proc
+                hf_api=self.hf_api,
+                hf_file_system=self.hf_file_system,
+                num_proc=num_proc,
+                cursor=self.parquet_cursor
             )
+
+            self.parquet_file_indices = { path: i for i, path in enumerate(self.parquet_files) }
         else:
             self.dataset = load_dataset(
                 ds_id,
@@ -94,12 +119,29 @@ class DatasetSourceWrapper:
     def commit(self, n_documents=1):
         if n_documents < 0:
             raise ValueError('n_documents must be >= 0')
+
+        if self.parquet_cursor is not None:
+            if self.hf_file_system is None:
+                raise ValueError('hf file system was not initialized...')
+
+            self.parquet_cursor = advance_parquet_cursor(
+                ds_id=self.ds_id,
+                revision=self.resolved_revision,
+                files=self.parquet_files,
+                file_indices=self.parquet_file_indices,
+                cursor=self.parquet_cursor,
+                n_documents=n_documents,
+                hf_file_system=self.hf_file_system,
+                row_count_cache=self.parquet_row_count_cache
+            )
+
         self.documents_seen += n_documents
 
     def state_dict(self):
         return {
             'source_key': self.source_key,
-            'documents_seen': self.documents_seen
+            'documents_seen': self.documents_seen,
+            'parquet_cursor': self.parquet_cursor
         }
 
     def load_state_dict(self, state):
@@ -108,6 +150,7 @@ class DatasetSourceWrapper:
         if state['documents_seen'] < 0:
             raise ValueError('documents_seen must be >= 0')
         self.documents_seen = state['documents_seen']
+        self.parquet_cursor = state.get('parquet_cursor')
 
     @property
     def column_names(self):
