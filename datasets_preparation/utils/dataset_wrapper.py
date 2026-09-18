@@ -40,6 +40,7 @@ class DatasetSourceWrapper:
         self.hf_file_system = None
         self.parquet_row_count_cache = None
         self.parquet_files = None
+        self.parquet_file_indices = None
         self.parquet_cursor = None
 
         # Loading state
@@ -74,6 +75,8 @@ class DatasetSourceWrapper:
                 num_proc=num_proc,
                 cursor=self.parquet_cursor
             )
+
+            self.parquet_file_indices = { path: i for i, path in enumerate(self.parquet_files) }
         else:
             self.dataset = load_dataset(
                 ds_id,
@@ -125,6 +128,7 @@ class DatasetSourceWrapper:
                 ds_id=self.ds_id,
                 revision=self.resolved_revision,
                 files=self.parquet_files,
+                file_indices=self.parquet_file_indices,
                 cursor=self.parquet_cursor,
                 n_documents=n_documents,
                 hf_file_system=self.hf_file_system,

@@ -190,6 +190,7 @@ def advance_parquet_cursor(
     ds_id,
     revision,
     files,
+    file_indices,
     cursor,
     n_documents,
     hf_file_system: HfFileSystem,
@@ -201,7 +202,7 @@ def advance_parquet_cursor(
     if n_documents == 0:
         return dict(cursor)
 
-    file_index = get_file_index_from_cursor(files, cursor)
+    file_index = file_indices[cursor['next_file']]
 
     if row_count_cache is None:
         row_count_cache = {}
