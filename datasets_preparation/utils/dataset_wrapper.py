@@ -6,6 +6,7 @@ from datasets_preparation.utils.parquet_search import (
 )
 from datasets_preparation.utils.state import PreparationState
 from datasets_preparation.utils.common import stable_hash
+from recipes.config import MixStrategy
 from logger import logger
 
 
@@ -166,12 +167,17 @@ class DatasetWrapper:
         sources: list[DatasetSourceWrapper],
         probabilities,
         seed,
+        mix_strategy: MixStrategy,
         stopping_strategy,
         documents_seen=0
     ):
         if stopping_strategy != 'first_exhausted':
             raise ValueError(f'Pretraining custom interleave currently only supports "first_exhausted", got {stopping_strategy!r}')
 
+        if mix_strategy == MixStrategy.TOKEN_BUDGET:
+            raise ValueError('Token budget mix strategy is not yet full implemented.')
+
+        logger.info(f'Using data mix strategy: {mix_strategy.value}')
         logger.info(f'Using interleaving strategy: {stopping_strategy}')
 
         self.sources = { source.source_key: source for source in sources }

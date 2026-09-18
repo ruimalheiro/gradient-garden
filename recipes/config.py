@@ -22,7 +22,8 @@ class DatasetsCommonSettings(BaseModel):
 
 class DatasetEntryConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    weight: float
+    weight: float | None = None
+    target_tokens: int | None = None
     transforms: dict[str, Any] = Field(default_factory=dict)
 
 class RecipeEvalDatasetConfig(BaseModel):

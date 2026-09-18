@@ -14,6 +14,7 @@ from datasets_preparation.utils.state import PreparationState
 from datasets_preparation.utils.shard_writer import shard_and_tokenize
 from datasets_preparation.utils.dataset_wrapper import DatasetSourceWrapper, DatasetWrapper
 from datasets_preparation.default_mixes import DEFAULT_PRETRAINING_MIX
+from recipes.config import MixStrategy
 from utils import load_json_file
 from logger import logger
 
@@ -91,6 +92,7 @@ def download_and_prepare_data(
     seed,
     valid_datasets,
     probabilities,
+    mix_strategy,
     interleave_stopping_strategy,
     num_proc,
     state: PreparationState
@@ -176,6 +178,7 @@ def download_and_prepare_data(
         sources=prepared_datasets,
         probabilities=probabilities,
         seed=seed,
+        mix_strategy=mix_strategy,
         stopping_strategy=interleave_stopping_strategy,
         documents_seen=state.docs_seen
     )
@@ -264,6 +267,7 @@ def prepare_pretraining_dataset(
         seed=seed,
         valid_datasets=valid_datasets,
         probabilities=probabilities,
+        mix_strategy=MixStrategy(common_settings.get('mix_strategy', MixStrategy.LEGACY_INTERLEAVE)),
         interleave_stopping_strategy=common_settings['interleave_stopping_strategy'],
         num_proc=num_proc,
         state=state

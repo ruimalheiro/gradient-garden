@@ -1,6 +1,7 @@
 import hashlib
 
 from datasets import concatenate_datasets
+from recipes.config import MixStrategy
 from logger import logger
 
 
@@ -25,6 +26,8 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
 
     # Validate common settings if present.
     common_settings = datasets_mix.get('datasets_common_settings', {})
+    mix_strategy = common_settings['mix_strategy']
+
     shard_size = None
     target_tokens = None
     validation_ratio = None
@@ -34,13 +37,20 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
     if 'target_tokens' in common_settings:
         target_tokens = common_settings['target_tokens']
         assert target_tokens is None or isinstance(target_tokens, int), 'datasets_common_settings.target_tokens must be an integer'
+
+        if mix_strategy == MixStrategy.TOKEN_BUDGET:
+            assert target_tokens is None, 'common_settings.target_tokens cannot be set when using mix strategy token_budget. Targets must be set per dataset.'
+
     if 'validation_ratio' in common_settings:
         validation_ratio = common_settings['validation_ratio']
         assert validation_ratio is None or isinstance(validation_ratio, float), 'datasets_common_settings.validation_ratio must be a float'
     assert 'interleave_stopping_strategy' in common_settings, 'common_settings.interleave_stopping_strategy is required'
+    assert 'mix_strategy' in common_settings, 'common_settings.mix_strategy is required'
 
     assert 'datasets' in datasets_mix
     datasets = datasets_mix['datasets']
+
+    probabilities = None
 
     # Validate candidates
     valid_datasets = []
@@ -49,31 +59,56 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
 
         for name in names:
             assert name in supported_datasets[dataset_id]
-            assert 'weight' in datasets[dataset_id][name]
-            weight = float(datasets[dataset_id][name].get('weight', 0.0))
-            assert weight >= 0.0, f'weight must be >= 0 for {dataset_id}/{name}'
-            if weight > 0:
-                valid_datasets.append({
-                    'id': dataset_id,
-                    'name': name,
-                    **datasets[dataset_id][name],
-                    'weight': weight,
-                })
 
-    assert valid_datasets, 'No datasets with weight > 0'
+            if mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
+                assert 'weight' in datasets[dataset_id][name]
+                assert datasets[dataset_id][name]['weight'] is not None, 'weight needs to be specified per dataset.'
+                weight = float(datasets[dataset_id][name].get('weight', 0.0))
+                assert weight >= 0.0, f'weight must be >= 0 for {dataset_id}/{name}'
+                if weight > 0:
+                    valid_datasets.append({
+                        'id': dataset_id,
+                        'name': name,
+                        **datasets[dataset_id][name],
+                        'weight': weight,
+                    })
+            elif mix_strategy == MixStrategy.TOKEN_BUDGET:
+                assert 'target_tokens' in datasets[dataset_id][name]
+                assert datasets[dataset_id][name]['target_tokens'] is not None, 'target_tokens needs to be specified per dataset.'
+                target_tokens = int(datasets[dataset_id][name].get('target_tokens', 0))
+                if target_tokens > 0:
+                    valid_datasets.append({
+                        'id': dataset_id,
+                        'name': name,
+                        **datasets[dataset_id][name],
+                        'target_tokens': target_tokens,
+                    })
 
-    probabilities = [ds['weight'] for ds in valid_datasets]
+    if mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
+        assert valid_datasets, 'No datasets with weight > 0'
 
-    # normalize probabilities
-    total_p = sum(probabilities)
-    assert total_p > 0.0, 'weight distribution must have positive total weight'
-    probabilities = [p / total_p for p in probabilities]
+        probabilities = [ds['weight'] for ds in valid_datasets]
 
-    mixture_probs = [
-        {make_source_key(ds['id'], ds.get('name', None)): round(p, 3)}
-        for ds, p in zip(valid_datasets, probabilities)
-    ]
-    logger.info(f'Mixture probabilities: {mixture_probs}\n')
+        # normalize probabilities
+        total_p = sum(probabilities)
+        assert total_p > 0.0, 'weight distribution must have positive total weight'
+        probabilities = [p / total_p for p in probabilities]
+
+        mixture_probs = [
+            {make_source_key(ds['id'], ds.get('name', None)): round(p, 3)}
+            for ds, p in zip(valid_datasets, probabilities)
+        ]
+        logger.info(f'Mixture probabilities: {mixture_probs}\n')
+    elif mix_strategy == MixStrategy.TOKEN_BUDGET:
+        assert valid_datasets, 'No datasets with target_tokens > 0'
+
+        total_target_tokens = sum([ds['target_tokens'] for ds in valid_datasets])
+        mixture_target_tokens = [
+            {make_source_key(ds['id'], ds.get('name', None)): ds['target_tokens']}
+            for ds in valid_datasets
+        ]
+        logger.info(f'Mixture target_tokens: {mixture_target_tokens}')
+        logger.info(f'Total target tokens: {total_target_tokens}\n')
 
     return seed, common_settings, valid_datasets, probabilities
 
