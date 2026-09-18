@@ -1,5 +1,6 @@
 from itertools import islice
 from datasets_preparation.utils.dataset_wrapper import DatasetSourceWrapper, DatasetWrapper
+from recipes.config import MixStrategy
 
 
 class MockDatasetSourceWrapper(DatasetSourceWrapper):
@@ -47,6 +48,7 @@ def make_wrapper(
         sources=sources,
         probabilities=[0.6, 0.4],
         seed=42,
+        mix_strategy=MixStrategy.LEGACY_INTERLEAVE,
         stopping_strategy='first_exhausted',
         documents_seen=documents_seen
     )
