@@ -400,7 +400,7 @@ def shard_and_tokenize(
         state.split_doc_counts[split] += 1
         state.split_token_counts[split] += written
 
-        if dataset.documents_seen % checkpoint_interval_docs == 0:
+        if dataset.mix_position % checkpoint_interval_docs == 0:
             save_state(state, dataset, train_writer, val_writer)
 
         if reached_target():
