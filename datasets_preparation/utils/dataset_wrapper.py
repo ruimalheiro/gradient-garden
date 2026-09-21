@@ -142,7 +142,6 @@ class DatasetSourceWrapper:
         return {
             'source_key': self.source_key,
             'documents_seen': self.documents_seen,
-            'mix_position': self.mix_position,
             'parquet_cursor': self.parquet_cursor
         }
 
@@ -152,7 +151,6 @@ class DatasetSourceWrapper:
         if state['documents_seen'] < 0:
             raise ValueError('documents_seen must be >= 0')
         self.documents_seen = state['documents_seen']
-        self.mix_position = state['mix_position']
         self.parquet_cursor = state.get('parquet_cursor')
 
     @property
