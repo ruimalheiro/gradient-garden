@@ -180,7 +180,7 @@ def download_and_prepare_data(
         seed=seed,
         mix_strategy=mix_strategy,
         stopping_strategy=interleave_stopping_strategy,
-        documents_seen=state.docs_seen,
+        documents_seen=state.documents_seen,
         mix_position=state.mix_position
     )
 
@@ -209,7 +209,8 @@ def init_or_load_preparation_state(dataset_path: Path):
         return PreparationState(
             path=str(state_path),
             status='preparing',
-            docs_seen=0,
+            documents_seen=0,
+            mix_position=0,
             source_metadata={},
             source_states={},
             source_doc_counts={},

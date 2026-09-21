@@ -70,6 +70,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence():
         doc = next(iterator)
         prefix.append(doc)
 
+        wrapper.advance()
         wrapper.commit(doc['source'])
 
     assert prefix == expected[:8]
@@ -105,6 +106,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position():
     # Commit the first 8 documents.
     for _ in range(8):
         doc = next(iterator)
+        wrapper.advance()
         wrapper.commit(doc['source'])
 
     assert wrapper.documents_seen == 8
@@ -163,6 +165,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence_with_token_budget
         doc = next(iterator)
         prefix.append(doc)
 
+        wrapper.advance()
         wrapper.commit(doc['source'])
 
     assert prefix == expected[:7]
@@ -206,6 +209,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
     # Commit the first 7 documents.
     for _ in range(7):
         doc = next(iterator)
+        wrapper.advance()
         wrapper.commit(doc['source'])
 
     assert wrapper.documents_seen == 7

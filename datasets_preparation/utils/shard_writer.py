@@ -237,7 +237,8 @@ def shard_and_tokenize(
         state_data = {
             'path': state.path,
             'status': state.status,
-            'docs_seen': state.docs_seen,
+            'documents_seen': state.documents_seen,
+            'mix_position:': state.mix_position,
             'source_metadata': state.source_metadata,
             'source_states': state.source_states,
             'source_doc_counts': state.source_doc_counts,
@@ -329,7 +330,7 @@ def shard_and_tokenize(
         logger.info(f'Pretraining data preparation already completed: {state.path}')
         return
 
-    if state.docs_seen == 0:
+    if state.documents_seen == 0:
         for folder in [Path(train_path), Path(val_path)]:
             existing = sorted(folder.glob(f'{shard_file_prefix}_*.npy'))
             assert not existing, (
@@ -375,7 +376,7 @@ def shard_and_tokenize(
         chunksize=chunksize
     )
     for source, tokens, split in iterator:
-        state.docs_seen += 1
+        dataset.advance()
         dataset.commit(source)
 
         if tokens.size == 0:
@@ -397,7 +398,7 @@ def shard_and_tokenize(
         state.split_doc_counts[split] += 1
         state.split_token_counts[split] += written
 
-        if state.docs_seen % checkpoint_interval_docs == 0:
+        if dataset.documents_seen % checkpoint_interval_docs == 0:
             save_state(state, dataset, train_writer, val_writer)
 
         if reached_target():
