@@ -191,7 +191,7 @@ class DatasetWrapper:
         elif self.mix_strategy == MixStrategy.TOKEN_BUDGET:
             return self._select_round_robin_source(logical_index)
         else:
-            raise ValueError(f'invalid mix_strategy: {self.mix_strategy }')
+            raise ValueError(f'invalid mix_strategy: {self.mix_strategy}')
 
     def _select_weighted_source(self, logical_index):
         # Deterministic weighted source selection from the global logical index. This avoids persisting mutable RNG state.
