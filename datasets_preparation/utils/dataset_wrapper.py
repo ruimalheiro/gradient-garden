@@ -174,9 +174,6 @@ class DatasetWrapper:
         if stopping_strategy != 'first_exhausted':
             raise ValueError(f'Pretraining custom interleave currently only supports "first_exhausted", got {stopping_strategy!r}')
 
-        if mix_strategy == MixStrategy.TOKEN_BUDGET:
-            raise ValueError('Token budget mix strategy is not yet fully implemented.')
-
         logger.info(f'Using data mix strategy: {mix_strategy.value}')
         logger.info(f'Using interleaving strategy: {stopping_strategy}')
 
@@ -184,10 +181,19 @@ class DatasetWrapper:
         self.source_keys = list(self.sources.keys())
         self.probabilities = probabilities
         self.seed = seed
+        self.mix_strategy = mix_strategy
         self.stopping_strategy = stopping_strategy
         self.documents_seen = documents_seen
 
     def _select_source(self, logical_index):
+        if self.mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
+            return self._select_weighted_source(logical_index)
+        elif self.mix_strategy == MixStrategy.TOKEN_BUDGET:
+            return self._select_round_robin_source(logical_index)
+        else:
+            raise ValueError(f'invalid mix_strategy: {self.mix_strategy}')
+
+    def _select_weighted_source(self, logical_index):
         # Deterministic weighted source selection from the global logical index. This avoids persisting mutable RNG state.
         x = stable_hash(str(logical_index), seed=self.seed) / (1 << 64)
 
@@ -198,6 +204,9 @@ class DatasetWrapper:
                 return source_key
 
         return self.source_keys[-1]
+
+    def _select_round_robin_source(self, logical_index):
+        return self.source_keys[logical_index % len(self.source_keys)]
 
     def __iter__(self):
         iterators = { source_key: iter(source) for source_key, source in self.sources.items() }
