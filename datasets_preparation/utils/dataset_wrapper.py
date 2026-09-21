@@ -226,6 +226,11 @@ class DatasetWrapper:
             yield doc
             logical_index += 1
 
+    def advance(self, n_documents=1):
+        if n_documents < 0:
+            raise ValueError('n_documents must be >= 0')
+        self.mix_position += n_documents
+
     def commit(self, source_key, n_documents=1):
         self.sources[source_key].commit(n_documents)
         self.documents_seen += n_documents
