@@ -232,13 +232,15 @@ def shard_and_tokenize(
         train_writer: ShardWriter,
         val_writer: ShardWriter
     ):
+        state.documents_seen = dataset.documents_seen
+        state.mix_position = dataset.mix_position
         state.source_states = dataset.state_dict()
 
         state_data = {
             'path': state.path,
             'status': state.status,
             'documents_seen': state.documents_seen,
-            'mix_position:': state.mix_position,
+            'mix_position': state.mix_position,
             'source_metadata': state.source_metadata,
             'source_states': state.source_states,
             'source_doc_counts': state.source_doc_counts,
