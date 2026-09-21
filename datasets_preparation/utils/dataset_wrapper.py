@@ -169,7 +169,8 @@ class DatasetWrapper:
         seed,
         mix_strategy: MixStrategy,
         stopping_strategy,
-        documents_seen=0
+        documents_seen=0,
+        mix_position=0
     ):
         if stopping_strategy != 'first_exhausted':
             raise ValueError(f'Pretraining custom interleave currently only supports "first_exhausted", got {stopping_strategy!r}')
@@ -184,6 +185,7 @@ class DatasetWrapper:
         self.mix_strategy = mix_strategy
         self.stopping_strategy = stopping_strategy
         self.documents_seen = documents_seen
+        self.mix_position = mix_position
 
     def _select_source(self, logical_index):
         if self.mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
@@ -211,7 +213,7 @@ class DatasetWrapper:
     def __iter__(self):
         iterators = { source_key: iter(source) for source_key, source in self.sources.items() }
 
-        logical_index = self.documents_seen
+        logical_index = self.mix_position
 
         while True:
             source_key = self._select_source(logical_index)
@@ -223,6 +225,11 @@ class DatasetWrapper:
 
             yield doc
             logical_index += 1
+
+    def advance(self, n_documents=1):
+        if n_documents < 0:
+            raise ValueError('n_documents must be >= 0')
+        self.mix_position += n_documents
 
     def commit(self, source_key, n_documents=1):
         self.sources[source_key].commit(n_documents)

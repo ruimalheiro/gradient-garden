@@ -30,6 +30,7 @@ def make_wrapper(
     a_seen=0,
     b_seen=0,
     documents_seen=0,
+    mix_position=0,
     probabilities=[0.6, 0.4],
     mix_strategy=MixStrategy.LEGACY_INTERLEAVE
 ):
@@ -52,7 +53,8 @@ def make_wrapper(
         seed=42,
         mix_strategy=mix_strategy,
         stopping_strategy='first_exhausted',
-        documents_seen=documents_seen
+        documents_seen=documents_seen,
+        mix_position=mix_position
     )
 
 def test_dataset_wrapper_resume_matches_uninterrupted_sequence():
@@ -70,6 +72,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence():
         doc = next(iterator)
         prefix.append(doc)
 
+        wrapper.advance()
         wrapper.commit(doc['source'])
 
     assert prefix == expected[:8]
@@ -78,6 +81,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence():
     a_seen = wrapper.sources['a'].documents_seen
     b_seen = wrapper.sources['b'].documents_seen
     documents_seen = wrapper.documents_seen
+    mix_position = wrapper.mix_position
 
     assert a_seen + b_seen == documents_seen
     assert documents_seen == 8
@@ -86,7 +90,8 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence():
     resumed_wrapper = make_wrapper(
         a_seen=a_seen,
         b_seen=b_seen,
-        documents_seen=documents_seen
+        documents_seen=documents_seen,
+        mix_position=mix_position
     )
 
     resumed = list(islice(resumed_wrapper, 12))
@@ -105,9 +110,11 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position():
     # Commit the first 8 documents.
     for _ in range(8):
         doc = next(iterator)
+        wrapper.advance()
         wrapper.commit(doc['source'])
 
     assert wrapper.documents_seen == 8
+    assert wrapper.mix_position == 8
 
     # Simulate multiprocessing prefetch. The producer yields another 5 documents, but the parent has not committed them yet.
     prefetched = list(islice(iterator, 5))
@@ -116,13 +123,15 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position():
 
     # Yielding must not mutate committed state.
     assert wrapper.documents_seen == 8
+    assert wrapper.mix_position == 8
     assert wrapper.sources['a'].documents_seen + wrapper.sources['b'].documents_seen == 8
 
     # Recreate from committed state only.
     resumed_wrapper = make_wrapper(
         a_seen=wrapper.sources['a'].documents_seen,
         b_seen=wrapper.sources['b'].documents_seen,
-        documents_seen=wrapper.documents_seen
+        documents_seen=wrapper.documents_seen,
+        mix_position=wrapper.mix_position
     )
 
     resumed = list(islice(resumed_wrapper, 12))
@@ -163,6 +172,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence_with_token_budget
         doc = next(iterator)
         prefix.append(doc)
 
+        wrapper.advance()
         wrapper.commit(doc['source'])
 
     assert prefix == expected[:7]
@@ -171,6 +181,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence_with_token_budget
     a_seen = wrapper.sources['a'].documents_seen
     b_seen = wrapper.sources['b'].documents_seen
     documents_seen = wrapper.documents_seen
+    mix_position = wrapper.mix_position
 
     assert a_seen + b_seen == documents_seen
     assert documents_seen == 7
@@ -180,6 +191,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence_with_token_budget
         a_seen=a_seen,
         b_seen=b_seen,
         documents_seen=documents_seen,
+        mix_position=mix_position,
         probabilities=None,
         mix_strategy=MixStrategy.TOKEN_BUDGET
     )
@@ -206,9 +218,11 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
     # Commit the first 7 documents.
     for _ in range(7):
         doc = next(iterator)
+        wrapper.advance()
         wrapper.commit(doc['source'])
 
     assert wrapper.documents_seen == 7
+    assert wrapper.mix_position == 7
 
     # Simulate multiprocessing prefetch. The producer yields another 6 documents, but the parent has not committed them yet.
     prefetched = list(islice(iterator, 6))
@@ -217,6 +231,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
 
     # Yielding must not mutate committed state.
     assert wrapper.documents_seen == 7
+    assert wrapper.mix_position == 7
     assert wrapper.sources['a'].documents_seen + wrapper.sources['b'].documents_seen == 7
 
     # Recreate from committed state only.
@@ -224,6 +239,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
         a_seen=wrapper.sources['a'].documents_seen,
         b_seen=wrapper.sources['b'].documents_seen,
         documents_seen=wrapper.documents_seen,
+        mix_position=wrapper.mix_position,
         probabilities=None,
         mix_strategy=MixStrategy.TOKEN_BUDGET
     )
