@@ -191,10 +191,16 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence_with_token_budget
 
 def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_budget():
     # Reference uninterrupted sequence.
-    full_wrapper = make_wrapper()
+    full_wrapper = make_wrapper(
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
     expected = list(islice(full_wrapper, 20))
 
-    wrapper = make_wrapper()
+    wrapper = make_wrapper(
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
     iterator = iter(wrapper)
 
     # Commit the first 7 documents.
@@ -217,7 +223,9 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
     resumed_wrapper = make_wrapper(
         a_seen=wrapper.sources['a'].documents_seen,
         b_seen=wrapper.sources['b'].documents_seen,
-        documents_seen=wrapper.documents_seen
+        documents_seen=wrapper.documents_seen,
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
     )
 
     resumed = list(islice(resumed_wrapper, 13))
