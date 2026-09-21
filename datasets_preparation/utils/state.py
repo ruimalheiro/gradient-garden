@@ -6,6 +6,7 @@ class PreparationState:
     path: str
     status: str
     docs_seen: int
+    mix_position: int
     source_metadata: dict
     source_states: dict
     source_doc_counts: dict

@@ -180,7 +180,8 @@ def download_and_prepare_data(
         seed=seed,
         mix_strategy=mix_strategy,
         stopping_strategy=interleave_stopping_strategy,
-        documents_seen=state.docs_seen
+        documents_seen=state.docs_seen,
+        mix_position=state.mix_position
     )
 
 tokenizer = None
