@@ -114,6 +114,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position():
         wrapper.commit(doc['source'])
 
     assert wrapper.documents_seen == 8
+    assert wrapper.mix_position == 8
 
     # Simulate multiprocessing prefetch. The producer yields another 5 documents, but the parent has not committed them yet.
     prefetched = list(islice(iterator, 5))
@@ -122,6 +123,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position():
 
     # Yielding must not mutate committed state.
     assert wrapper.documents_seen == 8
+    assert wrapper.mix_position == 8
     assert wrapper.sources['a'].documents_seen + wrapper.sources['b'].documents_seen == 8
 
     # Recreate from committed state only.
@@ -220,6 +222,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
         wrapper.commit(doc['source'])
 
     assert wrapper.documents_seen == 7
+    assert wrapper.mix_position == 7
 
     # Simulate multiprocessing prefetch. The producer yields another 6 documents, but the parent has not committed them yet.
     prefetched = list(islice(iterator, 6))
@@ -228,6 +231,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
 
     # Yielding must not mutate committed state.
     assert wrapper.documents_seen == 7
+    assert wrapper.mix_position == 7
     assert wrapper.sources['a'].documents_seen + wrapper.sources['b'].documents_seen == 7
 
     # Recreate from committed state only.
