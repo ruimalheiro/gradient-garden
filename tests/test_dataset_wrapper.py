@@ -210,7 +210,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
 
     assert wrapper.documents_seen == 7
 
-    # Simulate multiprocessing prefetch. The producer yields another 7 documents, but the parent has not committed them yet.
+    # Simulate multiprocessing prefetch. The producer yields another 6 documents, but the parent has not committed them yet.
     prefetched = list(islice(iterator, 6))
 
     assert len(prefetched) == 6
@@ -230,5 +230,5 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
 
     resumed = list(islice(resumed_wrapper, 13))
 
-    # Resume must start from logical position 7, not from the producer's prefetched position 14.
+    # Resume must start from logical position 7, not from the producer's prefetched position 13.
     assert resumed == expected[7:20]
