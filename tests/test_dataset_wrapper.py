@@ -30,6 +30,7 @@ def make_wrapper(
     a_seen=0,
     b_seen=0,
     documents_seen=0,
+    mix_position=0,
     probabilities=[0.6, 0.4],
     mix_strategy=MixStrategy.LEGACY_INTERLEAVE
 ):
@@ -52,7 +53,8 @@ def make_wrapper(
         seed=42,
         mix_strategy=mix_strategy,
         stopping_strategy='first_exhausted',
-        documents_seen=documents_seen
+        documents_seen=documents_seen,
+        mix_position=mix_position
     )
 
 def test_dataset_wrapper_resume_matches_uninterrupted_sequence():
@@ -79,6 +81,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence():
     a_seen = wrapper.sources['a'].documents_seen
     b_seen = wrapper.sources['b'].documents_seen
     documents_seen = wrapper.documents_seen
+    mix_position = wrapper.mix_position
 
     assert a_seen + b_seen == documents_seen
     assert documents_seen == 8
@@ -87,7 +90,8 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence():
     resumed_wrapper = make_wrapper(
         a_seen=a_seen,
         b_seen=b_seen,
-        documents_seen=documents_seen
+        documents_seen=documents_seen,
+        mix_position=mix_position
     )
 
     resumed = list(islice(resumed_wrapper, 12))
@@ -124,7 +128,8 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position():
     resumed_wrapper = make_wrapper(
         a_seen=wrapper.sources['a'].documents_seen,
         b_seen=wrapper.sources['b'].documents_seen,
-        documents_seen=wrapper.documents_seen
+        documents_seen=wrapper.documents_seen,
+        mix_position=wrapper.mix_position
     )
 
     resumed = list(islice(resumed_wrapper, 12))
@@ -174,6 +179,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence_with_token_budget
     a_seen = wrapper.sources['a'].documents_seen
     b_seen = wrapper.sources['b'].documents_seen
     documents_seen = wrapper.documents_seen
+    mix_position = wrapper.mix_position
 
     assert a_seen + b_seen == documents_seen
     assert documents_seen == 7
@@ -183,6 +189,7 @@ def test_dataset_wrapper_resume_matches_uninterrupted_sequence_with_token_budget
         a_seen=a_seen,
         b_seen=b_seen,
         documents_seen=documents_seen,
+        mix_position=mix_position,
         probabilities=None,
         mix_strategy=MixStrategy.TOKEN_BUDGET
     )
@@ -228,6 +235,7 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
         a_seen=wrapper.sources['a'].documents_seen,
         b_seen=wrapper.sources['b'].documents_seen,
         documents_seen=wrapper.documents_seen,
+        mix_position=wrapper.mix_position,
         probabilities=None,
         mix_strategy=MixStrategy.TOKEN_BUDGET
     )
