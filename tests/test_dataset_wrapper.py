@@ -371,8 +371,7 @@ def test_dataset_wrapper_token_budget_completed_source_preserves_logical_positio
         mix_strategy=MixStrategy.TOKEN_BUDGET
     )
 
-    # Simulate shard_and_tokenize reconstructing completion from persisted
-    # source_train_token_counts.
+    # Simulate shard_and_tokenize reconstructing completion from persisted source_train_token_counts.
     wrapper.mark_source_complete('b')
 
     iterator = iter(wrapper)
