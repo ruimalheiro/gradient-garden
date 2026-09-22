@@ -9,6 +9,7 @@ from pathlib import Path
 from utils import save_json_file
 from datasets_preparation.utils.common import stable_hash
 from datasets_preparation.utils.state import PreparationState
+from recipes.config import MixStrategy
 from logger import logger
 
 
@@ -326,6 +327,17 @@ def shard_and_tokenize(
         if target_tokens is None:
             return False
         return train_writer.is_done() and val_writer.is_done()
+
+    def source_reached_target(source):
+        target_tokens = dataset.sources[source].target_tokens
+        if target_tokens is None:
+            return False
+        return state.source_train_token_counts.get(source, 0) >= target_tokens
+
+    def all_sources_reached_target():
+        if dataset.mix_strategy != MixStrategy.TOKEN_BUDGET:
+            return False
+        return all(source_reached_target(source) for source in dataset.source_keys)
 
     checkpoint_interval_docs = max(1, num_proc * chunksize) # save every time all workers complete.
 

@@ -129,7 +129,8 @@ def download_and_prepare_data(
             'split': split,
             'revision': resolved_revision,
             'start_document': start_document,
-            'search_parquet': search_parquet
+            'search_parquet': search_parquet,
+            'target_tokens': target_tokens
         }
 
         if source_key in state.source_metadata:
