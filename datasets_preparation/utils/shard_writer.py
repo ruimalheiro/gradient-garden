@@ -290,6 +290,10 @@ def shard_and_tokenize(
 
             sys.exit(1)
 
+    def checkpoint_if_needed():
+        if dataset.mix_position % checkpoint_interval_docs == 0:
+            save_state(state, dataset, train_writer, val_writer)
+
     shard_size = int(shard_size)
     assert shard_size > 0
 
@@ -409,6 +413,7 @@ def shard_and_tokenize(
                 stop_event.set()
                 stopped_on_target = True
                 break
+            checkpoint_if_needed()
             continue
 
         if status == 'exhausted':
@@ -422,14 +427,17 @@ def shard_and_tokenize(
                 stopped_on_target = True
                 break
 
+            checkpoint_if_needed()
             continue
 
         if source_reached_target(source):
+            checkpoint_if_needed()
             continue
 
         dataset.commit(source)
 
         if tokens.size == 0:
+            checkpoint_if_needed()
             continue
         if split == 'val':
             written = val_writer.write(tokens)
@@ -454,8 +462,7 @@ def shard_and_tokenize(
             if source_reached_target(source):
                 dataset.mark_source_complete(source)
 
-        if dataset.mix_position % checkpoint_interval_docs == 0:
-            save_state(state, dataset, train_writer, val_writer)
+        checkpoint_if_needed()
 
         if reached_target() or all_sources_reached_target():
             stop_event.set()
