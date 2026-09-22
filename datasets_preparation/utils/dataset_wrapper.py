@@ -189,6 +189,7 @@ class DatasetWrapper:
         self.stopping_strategy = stopping_strategy
         self.documents_seen = documents_seen
         self.mix_position = mix_position
+        self.completed_sources = set()
 
     def _select_source(self, logical_index):
         if self.mix_strategy == MixStrategy.LEGACY_INTERLEAVE:
@@ -221,6 +222,11 @@ class DatasetWrapper:
         while True:
             source_key = self._select_source(logical_index)
 
+            if self.mix_strategy == MixStrategy.TOKEN_BUDGET and source_key in self.completed_sources:
+                yield {'source': source_key, 'skip': True}
+                logical_index += 1
+                continue
+
             try:
                 doc = next(iterators[source_key])
             except StopIteration:
@@ -237,6 +243,9 @@ class DatasetWrapper:
     def commit(self, source_key, n_documents=1):
         self.sources[source_key].commit(n_documents)
         self.documents_seen += n_documents
+
+    def mark_source_complete(self, source_key):
+        self.completed_sources.add(source_key)
 
     def state_dict(self):
         return { source_key: source.state_dict() for source_key, source in self.sources.items() }

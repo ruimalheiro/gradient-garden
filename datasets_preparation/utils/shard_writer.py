@@ -198,6 +198,10 @@ def tokenize_and_route(
     doc,
 ):
     source = doc.get('source', 'unknown')
+
+    if doc.get('skip', False):
+        return source, None, None
+
     tokens = tokenize_function(tokenizer_kwargs, doc)
 
     # Makes assignment of 'train' or 'val' to the doc deterministic.
@@ -362,6 +366,11 @@ def shard_and_tokenize(
         if state.val_writer_buffer_file_path:
             val_writer.load_buffer_checkpoint(np.load(state.val_writer_buffer_file_path))
 
+        if dataset.mix_strategy == MixStrategy.TOKEN_BUDGET:
+            for source in dataset.source_keys:
+                if source_reached_target(source):
+                    dataset.mark_source_complete(source)
+
     # delete stale shards...
     train_writer.delete_shards_from_current_index()
     val_writer.delete_shards_from_current_index()
@@ -393,7 +402,12 @@ def shard_and_tokenize(
     for source, tokens, split in iterator:
         dataset.advance()
 
+        if tokens is None:
+            continue
+
         if source_reached_target(source):
+            dataset.mark_source_complete(source)
+
             if all_sources_reached_target():
                 stop_event.set()
                 stopped_on_target = True
