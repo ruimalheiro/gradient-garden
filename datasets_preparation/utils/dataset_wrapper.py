@@ -23,6 +23,7 @@ class DatasetSourceWrapper:
         token,
         state: PreparationState,
         max_datapoints=None,
+        target_tokens=None,
         search_parquet=False,
         num_proc=None
     ):
@@ -33,6 +34,7 @@ class DatasetSourceWrapper:
         self.resolved_revision = resolved_revision
         self.start_document = start_document
         self.max_datapoints = max_datapoints
+        self.target_tokens = target_tokens
         self.search_parquet = search_parquet
 
         self.documents_seen = 0

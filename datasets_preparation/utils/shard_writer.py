@@ -245,6 +245,7 @@ def shard_and_tokenize(
             'source_states': state.source_states,
             'source_doc_counts': state.source_doc_counts,
             'source_token_counts': state.source_token_counts,
+            'source_train_token_counts': state.source_train_token_counts,
             'split_doc_counts': state.split_doc_counts,
             'split_token_counts': state.split_token_counts,
             'train_writer_state': train_writer.get_state_dict(),
