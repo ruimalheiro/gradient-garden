@@ -199,8 +199,10 @@ def tokenize_and_route(
 ):
     source = doc.get('source', 'unknown')
 
-    if doc.get('skip', False):
-        return source, None, None
+    if doc.get('completed', False):
+        return source, None, None, 'completed'
+    if doc.get('exhausted', False):
+        return source, None, None, 'exhausted'
 
     tokens = tokenize_function(tokenizer_kwargs, doc)
 
@@ -213,7 +215,7 @@ def tokenize_and_route(
 
     split = 'val' if is_val else 'train'
 
-    return source, tokens, split
+    return source, tokens, split, None
 
 def shard_and_tokenize(
     *,
@@ -399,14 +401,22 @@ def shard_and_tokenize(
         stoppable_dataset(dataset, stop_event),
         chunksize=chunksize
     )
-    for source, tokens, split in iterator:
+    for source, tokens, split, status in iterator:
         dataset.advance()
 
-        if tokens is None or source_reached_target(source):
+        if status == 'completed':
             if all_sources_reached_target():
                 stop_event.set()
                 stopped_on_target = True
                 break
+            continue
+
+        if status == 'exhausted':
+            if not source_reached_target(source):
+                raise RuntimeError(f'Pretraining dataset source "{source}" exhausted before reaching token target')
+            continue
+
+        if source_reached_target(source):
             continue
 
         dataset.commit(source)
