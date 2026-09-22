@@ -394,6 +394,10 @@ def shard_and_tokenize(
         dataset.advance()
 
         if source_reached_target(source):
+            if all_sources_reached_target():
+                stop_event.set()
+                stopped_on_target = True
+                break
             continue
 
         dataset.commit(source)
@@ -417,10 +421,13 @@ def shard_and_tokenize(
         state.split_doc_counts[split] += 1
         state.split_token_counts[split] += written
 
+        if split == 'train':
+            state.source_train_token_counts[source] = state.source_train_token_counts.get(source, 0) + written
+
         if dataset.mix_position % checkpoint_interval_docs == 0:
             save_state(state, dataset, train_writer, val_writer)
 
-        if reached_target():
+        if reached_target() or all_sources_reached_target():
             stop_event.set()
             stopped_on_target = True
             break
@@ -436,6 +443,16 @@ def shard_and_tokenize(
             f'train_tokens={train_writer.total_tokens:,}/{target_tokens:,}, '
             f'val_tokens={val_writer.total_tokens:,}/{val_target_tokens:,}'
         )
+
+    if dataset.mix_strategy == MixStrategy.TOKEN_BUDGET and not all_sources_reached_target():
+        state.status = 'exhausted_before_target'
+        save_state(state, dataset, train_writer, val_writer)
+        unfinished = [
+            (source, state.source_train_token_counts.get(source, 0), dataset.sources[source].target_tokens)
+            for source in dataset.source_keys if not source_reached_target(source)
+        ]
+        details = ', '.join(f'{source}={current:,}/{target:,}' for source, current, target in unfinished)
+        raise RuntimeError(f'Pretraining dataset exhausted before reaching per-source token targets. {details}')
 
     state.status = 'completed'
     save_state(state, dataset, train_writer, val_writer)
