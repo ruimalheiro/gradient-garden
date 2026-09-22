@@ -290,10 +290,6 @@ def shard_and_tokenize(
 
             sys.exit(1)
 
-    def checkpoint_if_needed():
-        if dataset.mix_position % checkpoint_interval_docs == 0:
-            save_state(state, dataset, train_writer, val_writer)
-
     shard_size = int(shard_size)
     assert shard_size > 0
 
@@ -350,6 +346,10 @@ def shard_and_tokenize(
         return all(source_reached_target(source) for source in dataset.source_keys)
 
     checkpoint_interval_docs = max(1, num_proc * chunksize) # save every time all workers complete.
+
+    def checkpoint_if_needed():
+        if dataset.mix_position % checkpoint_interval_docs == 0:
+            save_state(state, dataset, train_writer, val_writer)
 
     if state.status == 'completed':
         logger.info(f'Pretraining data preparation already completed: {state.path}')
