@@ -402,12 +402,7 @@ def shard_and_tokenize(
     for source, tokens, split in iterator:
         dataset.advance()
 
-        if tokens is None:
-            continue
-
-        if source_reached_target(source):
-            dataset.mark_source_complete(source)
-
+        if tokens is None or source_reached_target(source):
             if all_sources_reached_target():
                 stop_event.set()
                 stopped_on_target = True
@@ -437,6 +432,9 @@ def shard_and_tokenize(
 
         if split == 'train':
             state.source_train_token_counts[source] = state.source_train_token_counts.get(source, 0) + written
+
+            if source_reached_target(source):
+                dataset.mark_source_complete(source)
 
         if dataset.mix_position % checkpoint_interval_docs == 0:
             save_state(state, dataset, train_writer, val_writer)
