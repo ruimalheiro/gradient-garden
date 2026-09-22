@@ -392,6 +392,10 @@ def shard_and_tokenize(
     )
     for source, tokens, split in iterator:
         dataset.advance()
+
+        if source_reached_target(source):
+            continue
+
         dataset.commit(source)
 
         if tokens.size == 0:

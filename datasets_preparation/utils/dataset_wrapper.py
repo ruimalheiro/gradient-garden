@@ -113,7 +113,8 @@ class DatasetSourceWrapper:
             'split': self.split,
             'revision': self.resolved_revision,
             'start_document': self.start_document,
-            'search_parquet': self.search_parquet
+            'search_parquet': self.search_parquet,
+            'target_tokens': self.target_tokens
         }
 
     def __iter__(self):
