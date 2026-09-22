@@ -413,7 +413,15 @@ def shard_and_tokenize(
 
         if status == 'exhausted':
             if not source_reached_target(source):
-                raise RuntimeError(f'Pretraining dataset source "{source}" exhausted before reaching token target')
+                stop_event.set()
+                break
+            dataset.mark_source_complete(source)
+
+            if all_sources_reached_target():
+                stop_event.set()
+                stopped_on_target = True
+                break
+
             continue
 
         if source_reached_target(source):

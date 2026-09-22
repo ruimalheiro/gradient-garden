@@ -223,8 +223,13 @@ class DatasetWrapper:
         while True:
             source_key = self._select_source(logical_index)
 
-            if self.mix_strategy == MixStrategy.TOKEN_BUDGET and source_key in self.completed_sources:
-                yield {'source': source_key, 'completed': True}
+            if self.mix_strategy == MixStrategy.TOKEN_BUDGET:
+                if source_key in self.completed_sources:
+                    yield {'source': source_key, 'completed': True}
+
+                if source_key in self.exhausted_sources:
+                    yield {'source': source_key, 'exhausted': True}
+
                 logical_index += 1
                 continue
 
