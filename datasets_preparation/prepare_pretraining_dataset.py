@@ -108,6 +108,8 @@ def download_and_prepare_data(
         split = dataset_config['split']
         adapter = dataset_config['adapter']
 
+        target_tokens = dataset.get('target_tokens', None)
+
         transforms = dataset.get('transforms', {})
 
         revision = transforms.get('revision', 'main')
@@ -127,7 +129,8 @@ def download_and_prepare_data(
             'split': split,
             'revision': resolved_revision,
             'start_document': start_document,
-            'search_parquet': search_parquet
+            'search_parquet': search_parquet,
+            'target_tokens': target_tokens
         }
 
         if source_key in state.source_metadata:
@@ -145,6 +148,7 @@ def download_and_prepare_data(
             start_document=start_document,
             token=config.third_party.hf_token,
             max_datapoints=max_datapoints,
+            target_tokens=target_tokens,
             search_parquet=search_parquet,
             num_proc=num_proc,
             state=state
@@ -215,6 +219,7 @@ def init_or_load_preparation_state(dataset_path: Path):
             source_states={},
             source_doc_counts={},
             source_token_counts={},
+            source_train_token_counts={},
             split_doc_counts={ 'train': 0, 'val': 0 },
             split_token_counts={ 'train': 0, 'val': 0 },
             train_writer_state={},

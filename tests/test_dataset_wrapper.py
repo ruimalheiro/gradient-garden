@@ -13,6 +13,7 @@ class MockDatasetSourceWrapper(DatasetSourceWrapper):
         self.source_key = source_key
         self.documents_seen = documents_seen
         self.parquet_cursor = None
+        self.yield_count = 0
 
         items = [
             {
@@ -25,10 +26,17 @@ class MockDatasetSourceWrapper(DatasetSourceWrapper):
         # Simulate the real DatasetSourceWrapper, where self.dataset is already positioned at the committed resume offset.
         self.dataset = items[documents_seen:]
 
+    def __iter__(self):
+        for item in self.dataset:
+            self.yield_count += 1
+            yield item
+
 def make_wrapper(
     *,
     a_seen=0,
     b_seen=0,
+    a_size=100,
+    b_size=100,
     documents_seen=0,
     mix_position=0,
     probabilities=[0.6, 0.4],
@@ -37,12 +45,12 @@ def make_wrapper(
     sources = [
         MockDatasetSourceWrapper(
             source_key='a',
-            size=100,
+            size=a_size,
             documents_seen=a_seen
         ),
         MockDatasetSourceWrapper(
             source_key='b',
-            size=100,
+            size=b_size,
             documents_seen=b_seen
         ),
     ]
@@ -248,3 +256,139 @@ def test_dataset_wrapper_resume_uses_committed_not_yielded_position_with_token_b
 
     # Resume must start from logical position 7, not from the producer's prefetched position 13.
     assert resumed == expected[7:20]
+
+def test_dataset_wrapper_token_budget_completed_source_is_not_consumed():
+    wrapper = make_wrapper(
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
+    iterator = iter(wrapper)
+
+    # Consume one full round.
+    assert next(iterator)['id'] == 'a-0'
+    assert next(iterator)['id'] == 'b-0'
+
+    assert wrapper.sources['a'].yield_count == 1
+    assert wrapper.sources['b'].yield_count == 1
+
+    # B has now reached its token target.
+    wrapper.mark_source_complete('b')
+
+    # Next A slot still consumes a real document.
+    assert next(iterator)['id'] == 'a-1'
+
+    # Next B slot becomes a control event and must not consume b-1.
+    completed = next(iterator)
+
+    assert completed == {
+        'source': 'b',
+        'completed': True
+    }
+
+    assert wrapper.sources['a'].yield_count == 2
+    assert wrapper.sources['b'].yield_count == 1
+
+    # And this remains true on later B slots.
+    assert next(iterator)['id'] == 'a-2'
+    completed = next(iterator)
+
+    assert completed == {
+        'source': 'b',
+        'completed': True
+    }
+    assert wrapper.sources['b'].yield_count == 1
+
+def test_dataset_wrapper_token_budget_source_exhaustion_does_not_stop_other_sources():
+    wrapper = make_wrapper(
+        a_size=10,
+        b_size=1,
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
+    iterator = iter(wrapper)
+
+    assert next(iterator)['id'] == 'a-0'
+    assert next(iterator)['id'] == 'b-0'
+    assert next(iterator)['id'] == 'a-1'
+
+    exhausted = next(iterator)
+
+    assert exhausted == {
+        'source': 'b',
+        'exhausted': True
+    }
+
+    # A must continue even though B physically exhausted.
+    assert next(iterator)['id'] == 'a-2'
+
+    # Future B positions remain exhaustion control slots.
+    exhausted = next(iterator)
+
+    assert exhausted == {
+        'source': 'b',
+        'exhausted': True
+    }
+
+    assert next(iterator)['id'] == 'a-3'
+
+def test_dataset_wrapper_token_budget_exhausted_source_is_not_consumed_again():
+    wrapper = make_wrapper(
+        a_size=10,
+        b_size=1,
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
+    iterator = iter(wrapper)
+
+    next(iterator)  # a-0
+    next(iterator)  # b-0
+    next(iterator)  # a-1
+
+    first_exhausted = next(iterator)
+
+    assert first_exhausted['exhausted'] is True
+    assert 'b' in wrapper.exhausted_sources
+    assert wrapper.sources['b'].yield_count == 1
+
+    # Go through several more logical positions.
+    docs = list(islice(iterator, 6))
+
+    assert wrapper.sources['b'].yield_count == 1
+
+    assert [
+        doc.get('exhausted', False)
+        for doc in docs
+        if doc['source'] == 'b'
+    ] == [True, True, True]
+
+def test_dataset_wrapper_token_budget_completed_source_preserves_logical_position_on_resume():
+    wrapper = make_wrapper(
+        a_seen=2,
+        b_seen=2,
+        documents_seen=4,
+        mix_position=5,
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
+
+    # Simulate shard_and_tokenize reconstructing completion from persisted source_train_token_counts.
+    wrapper.mark_source_complete('b')
+
+    iterator = iter(wrapper)
+
+    # mix_position=5 is B's logical slot.
+    completed = next(iterator)
+
+    assert completed == {
+        'source': 'b',
+        'completed': True
+    }
+
+    # Logical position 6 is A again, and physical A resumes from a-2.
+    doc = next(iterator)
+
+    assert doc['source'] == 'a'
+    assert doc['id'] == 'a-2'
+
+    # B has not been physically consumed after resume.
+    assert wrapper.sources['b'].yield_count == 0
