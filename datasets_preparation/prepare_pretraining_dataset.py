@@ -255,9 +255,9 @@ def prepare_pretraining_dataset(
     if offset_datasets and len(valid_datasets) != 1:
         raise ValueError('start_document currently supports only single-source dataset preparation')
 
-    target_tokens = common_settings.get('target_tokens')
-    if target_tokens is not None:
-        target_tokens = int(target_tokens)
+    train_mix_target_tokens = common_settings.get('target_tokens')
+    if train_mix_target_tokens is not None:
+        train_mix_target_tokens = int(train_mix_target_tokens)
 
     validation_ratio = float(common_settings.get('validation_ratio', 0.01))
     if not 0.0 < validation_ratio < 1.0:
@@ -296,7 +296,7 @@ def prepare_pretraining_dataset(
         val_path=val_path,
         shard_file_prefix='data',
         shard_size=shard_size,
-        target_tokens=target_tokens,
+        train_mix_target_tokens=train_mix_target_tokens,
         validation_ratio=validation_ratio,
         num_proc=num_proc,
         chunksize=config.data_preparation.mp_pool_chunk_size,

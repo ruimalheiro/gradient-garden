@@ -1,7 +1,8 @@
 from datasets import Dataset
 from datasets_preparation.utils.common import (
     compute_stats,
-    token_budget_dataset_mix
+    token_budget_dataset_mix,
+    select_to_token_target
 )
 
 
@@ -25,8 +26,7 @@ def test_token_budget_mix_respects_source_targets():
 
     mixed = token_budget_dataset_mix(
         datasets=[dataset_a, dataset_b],
-        weights=[0.75, 0.25],
-        target_tokens=100,
+        source_target_tokens=[75, 25],
         seed=42
     )
 
@@ -50,8 +50,7 @@ def test_token_budget_mix_allows_final_example_overshoot():
 
     mixed = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=target_tokens,
+        source_target_tokens=[45],
         seed=42
     )
 
@@ -70,15 +69,13 @@ def test_token_budget_mix_is_deterministic():
 
     mixed_a = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=50,
+        source_target_tokens=[50],
         seed=42
     )
 
     mixed_b = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=50,
+        source_target_tokens=[50],
         seed=42
     )
 
@@ -101,8 +98,7 @@ def test_token_budget_mix_selects_from_shuffled_dataset():
 
     mixed = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=target_tokens,
+        source_target_tokens=[30],
         seed=seed
     )
 
@@ -116,8 +112,7 @@ def test_token_budget_mix_uses_all_available_data_when_source_exhausts():
 
     mixed = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=100,
+        source_target_tokens=[100],
         seed=42
     )
 
@@ -154,3 +149,38 @@ def test_compute_stats():
         'tokens %': '57.14%',
         'supervised_tokens %': '57.14%'
     }
+
+def test_select_to_token_target_respects_target():
+    dataset = make_dataset('a', [10, 10, 10, 10])
+
+    selected = select_to_token_target(
+        dataset,
+        target_tokens=25
+    )
+
+    assert sum(selected['supervised_tokens']) == 30
+
+def test_select_to_token_target_preserves_order():
+    dataset = make_dataset('a', [10] * 10)
+
+    selected = select_to_token_target(
+        dataset,
+        target_tokens=30
+    )
+
+    assert selected['row_id'] == [
+        'a-0',
+        'a-1',
+        'a-2'
+    ]
+
+def test_select_to_token_target_uses_all_data_when_exhausted():
+    dataset = make_dataset('a', [10, 20])
+
+    selected = select_to_token_target(
+        dataset,
+        target_tokens=100
+    )
+
+    assert len(selected) == 2
+    assert sum(selected['supervised_tokens']) == 30
