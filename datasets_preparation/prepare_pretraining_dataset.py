@@ -251,10 +251,6 @@ def prepare_pretraining_dataset(
     #### VERIFY MIX FILE STRUCTURE
     seed, common_settings, valid_datasets, probabilities = assert_common_structure_and_extract(datasets_mix, SUPPORTED_HF_DATASETS)
 
-    offset_datasets = [dataset for dataset in valid_datasets if int(dataset.get('transforms', {}).get('start_document', 0)) > 0]
-    if offset_datasets and len(valid_datasets) != 1:
-        raise ValueError('start_document currently supports only single-source dataset preparation')
-
     train_mix_target_tokens = common_settings.get('target_tokens')
     if train_mix_target_tokens is not None:
         train_mix_target_tokens = int(train_mix_target_tokens)
