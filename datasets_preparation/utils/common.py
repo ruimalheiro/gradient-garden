@@ -118,29 +118,28 @@ def assert_common_structure_and_extract(datasets_mix, supported_datasets):
 
     return seed, common_settings, valid_datasets, probabilities
 
-def token_budget_dataset_mix(*, datasets, weights, target_tokens, seed):
-    weights_total = sum(weights)
-    target_counts = [int(target_tokens * (weight / weights_total)) for weight in weights]
+def select_to_token_target(dataset, target_tokens):
+    selected_indices = []
+    tokens = 0
 
+    for i, example in enumerate(dataset):
+        selected_indices.append(i)
+        tokens += example['supervised_tokens']
+
+        if tokens >= target_tokens:
+            break
+
+    if tokens < target_tokens:
+        logger.warning(f'Dataset exhausted before reaching token target: {dataset} - {tokens:,}/{target_tokens:,}')
+
+    return dataset.select(selected_indices)
+
+def token_budget_dataset_mix(*, datasets, source_target_tokens, seed):
     prepared_datasets = []
-    for dataset, target_count in zip(datasets, target_counts):
-        if target_count == 0:
-            continue
-
+    for dataset, target_tokens in zip(datasets, source_target_tokens):
         shuffled_ds = dataset.shuffle(seed=seed)
 
-        selected_indices = []
-        tokens = 0
-        for i, example in enumerate(shuffled_ds):
-            selected_indices.append(i)
-            tokens += example['supervised_tokens']
-            if tokens >= target_count:
-                break
-
-        if tokens < target_count:
-            logger.warning(f'Dataset exhausted before reaching token target: {dataset} - {tokens:,}/{target_count:,}')
-
-        prepared_datasets.append(shuffled_ds.select(selected_indices))
+        prepared_datasets.append(select_to_token_target(shuffled_ds, target_tokens))
 
     prepared_dataset = concatenate_datasets(prepared_datasets)
 

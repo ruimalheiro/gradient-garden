@@ -25,8 +25,7 @@ def test_token_budget_mix_respects_source_targets():
 
     mixed = token_budget_dataset_mix(
         datasets=[dataset_a, dataset_b],
-        weights=[0.75, 0.25],
-        target_tokens=100,
+        source_target_tokens=[75, 25],
         seed=42
     )
 
@@ -50,8 +49,7 @@ def test_token_budget_mix_allows_final_example_overshoot():
 
     mixed = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=target_tokens,
+        source_target_tokens=[45],
         seed=42
     )
 
@@ -70,15 +68,13 @@ def test_token_budget_mix_is_deterministic():
 
     mixed_a = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=50,
+        source_target_tokens=[50],
         seed=42
     )
 
     mixed_b = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=50,
+        source_target_tokens=[50],
         seed=42
     )
 
@@ -101,8 +97,7 @@ def test_token_budget_mix_selects_from_shuffled_dataset():
 
     mixed = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=target_tokens,
+        source_target_tokens=[30],
         seed=seed
     )
 
@@ -116,8 +111,7 @@ def test_token_budget_mix_uses_all_available_data_when_source_exhausts():
 
     mixed = token_budget_dataset_mix(
         datasets=[dataset],
-        weights=[1.0],
-        target_tokens=100,
+        source_target_tokens=[100],
         seed=42
     )
 

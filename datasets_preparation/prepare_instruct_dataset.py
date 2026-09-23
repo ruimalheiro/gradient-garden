@@ -18,6 +18,7 @@ from datasets_preparation.utils.common import (
     assert_common_structure_and_extract,
     make_source_key,
     token_budget_dataset_mix,
+    select_to_token_target,
     compute_stats
 )
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
@@ -353,18 +354,23 @@ def download_and_prepare_data(
             stopping_strategy=interleave_stopping_strategy
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
-    elif mix_strategy == MixStrategy.TOKEN_BUDGET:
-        if train_mix_target_tokens is None or train_mix_target_tokens <= 0:
-            raise ValueError(f'"target_tokens" must be set to a value > 0 when using mix strategy: {mix_strategy}')
 
-        adjusted_train_mix_target_tokens = math.ceil(train_mix_target_tokens / (1 - validation_ratio))
-        logger.info(f'Adjusted token budget from {train_mix_target_tokens:,} to {adjusted_train_mix_target_tokens:,} to account for validation_ratio={validation_ratio}')
+        if train_mix_target_tokens is not None:
+            adjusted_train_mix_target_tokens = math.ceil(train_mix_target_tokens / (1 - validation_ratio))
+            logger.info(f'Adjusted token budget from {source_target_tokens:,} to {adjusted_train_mix_target_tokens:,} to account for validation_ratio={validation_ratio}')
+
+            logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
+            prepared_dataset = select_to_token_target(prepared_dataset, adjusted_train_mix_target_tokens)
+
+    elif mix_strategy == MixStrategy.TOKEN_BUDGET:
+        adjusted_source_target_tokens = [math.ceil(target_tokens / (1 - validation_ratio)) for target_tokens in source_target_tokens]
+
+        logger.info(f'Adjusted token budget from {source_target_tokens:,} to {adjusted_source_target_tokens:,} to account for validation_ratio={validation_ratio}')
 
         logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
         prepared_dataset = token_budget_dataset_mix(
             datasets=prepared_datasets,
-            weights=probabilities,
-            target_tokens=adjusted_train_mix_target_tokens,
+            source_target_tokens=adjusted_source_target_tokens,
             seed=seed
         )
     else:
