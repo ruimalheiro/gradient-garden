@@ -227,7 +227,7 @@ def shard_and_tokenize(
     val_path,
     shard_file_prefix,
     shard_size,
-    target_tokens,
+    train_mix_target_tokens,
     validation_ratio,
     num_proc,
     chunksize,
@@ -293,27 +293,27 @@ def shard_and_tokenize(
     shard_size = int(shard_size)
     assert shard_size > 0
 
-    if target_tokens is not None:
-        target_tokens = int(target_tokens)
-        assert target_tokens > 0
+    if train_mix_target_tokens is not None:
+        train_mix_target_tokens = int(train_mix_target_tokens)
+        assert train_mix_target_tokens > 0
 
     validation_ratio = float(validation_ratio)
     assert 0.0 <= validation_ratio < 1.0
 
-    val_target_tokens = None
-    if target_tokens is not None:
+    val_mix_target_tokens = None
+    if train_mix_target_tokens is not None:
         if validation_ratio > 0.0:
-            val_target_tokens = math.ceil(
-                target_tokens * validation_ratio / (1.0 - validation_ratio)
+            val_mix_target_tokens = math.ceil(
+                train_mix_target_tokens * validation_ratio / (1.0 - validation_ratio)
             )
         else:
-            val_target_tokens = 0
+            val_mix_target_tokens = 0
 
     train_writer = ShardWriter(
         target_folder=train_path,
         shard_file_prefix=shard_file_prefix,
         shard_size=shard_size,
-        target_tokens=target_tokens,
+        target_tokens=train_mix_target_tokens,
         split_name='train',
         shard_bar_position=0,
         target_bar_position=2
@@ -323,22 +323,22 @@ def shard_and_tokenize(
         target_folder=val_path,
         shard_file_prefix=shard_file_prefix,
         shard_size=shard_size,
-        target_tokens=val_target_tokens,
+        target_tokens=val_mix_target_tokens,
         split_name='val',
         shard_bar_position=1,
         target_bar_position=3
     )
 
-    def reached_target():
-        if target_tokens is None:
+    def reached_mix_target():
+        if train_mix_target_tokens is None:
             return False
         return train_writer.is_done() and val_writer.is_done()
 
     def source_reached_target(source):
-        target_tokens = dataset.sources[source].target_tokens
-        if target_tokens is None:
+        source_target_tokens = dataset.sources[source].target_tokens
+        if source_target_tokens is None:
             return False
-        return state.source_train_token_counts.get(source, 0) >= target_tokens
+        return state.source_train_token_counts.get(source, 0) >= source_target_tokens
 
     def all_sources_reached_target():
         if dataset.mix_strategy != MixStrategy.TOKEN_BUDGET:
@@ -445,7 +445,7 @@ def shard_and_tokenize(
             written = train_writer.write(tokens)
 
         if written == 0:
-            if reached_target():
+            if reached_mix_target():
                 stop_event.set()
                 stopped_on_target = True
                 break
@@ -464,7 +464,7 @@ def shard_and_tokenize(
 
         checkpoint_if_needed()
 
-        if reached_target() or all_sources_reached_target():
+        if reached_mix_target() or all_sources_reached_target():
             stop_event.set()
             stopped_on_target = True
             break
@@ -472,13 +472,13 @@ def shard_and_tokenize(
     train_writer.finish()
     val_writer.finish()
 
-    if target_tokens is not None and not reached_target():
+    if train_mix_target_tokens is not None and not reached_mix_target():
         state.status = 'exhausted_before_target'
         save_state(state, dataset, train_writer, val_writer)
         raise RuntimeError(
             'Pretraining dataset exhausted before reaching target tokens. '
-            f'train_tokens={train_writer.total_tokens:,}/{target_tokens:,}, '
-            f'val_tokens={val_writer.total_tokens:,}/{val_target_tokens:,}'
+            f'train_tokens={train_writer.total_tokens:,}/{train_mix_target_tokens:,}, '
+            f'val_tokens={val_writer.total_tokens:,}/{val_mix_target_tokens:,}'
         )
 
     if dataset.mix_strategy == MixStrategy.TOKEN_BUDGET and not all_sources_reached_target():

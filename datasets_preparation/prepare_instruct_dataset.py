@@ -243,7 +243,7 @@ def download_and_prepare_data(
     valid_datasets,
     probabilities,
     num_proc,
-    target_tokens,
+    train_mix_target_tokens,
     validation_ratio,
     mix_strategy,
     interleave_stopping_strategy
@@ -256,6 +256,7 @@ def download_and_prepare_data(
     }
 
     prepared_datasets = []
+    source_target_tokens = []
     for dataset in valid_datasets:
         ds_id, name, transforms, dataset_config = get_dataset_metadata(config, dataset)
 
@@ -270,6 +271,10 @@ def download_and_prepare_data(
 
         split = dataset_config['split']
         adapter = dataset_config['adapter']
+
+        target_tokens = dataset.get('target_tokens', None)
+        if target_tokens:
+            source_target_tokens.append(target_tokens)
 
         max_datapoints = transforms.get('max_datapoints', None)
 
@@ -349,17 +354,17 @@ def download_and_prepare_data(
         )
         time.sleep(2) # Workaround for occasional streaming/interleave iterator shutdown issue.
     elif mix_strategy == MixStrategy.TOKEN_BUDGET:
-        if target_tokens is None or target_tokens <= 0:
+        if train_mix_target_tokens is None or train_mix_target_tokens <= 0:
             raise ValueError(f'"target_tokens" must be set to a value > 0 when using mix strategy: {mix_strategy}')
 
-        mix_target_tokens = math.ceil(target_tokens / (1 - validation_ratio))
-        logger.info(f'Adjusted token budget from {target_tokens:,} to {mix_target_tokens:,} to account for validation_ratio={validation_ratio}')
+        adjusted_train_mix_target_tokens = math.ceil(train_mix_target_tokens / (1 - validation_ratio))
+        logger.info(f'Adjusted token budget from {train_mix_target_tokens:,} to {adjusted_train_mix_target_tokens:,} to account for validation_ratio={validation_ratio}')
 
         logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
         prepared_dataset = token_budget_dataset_mix(
             datasets=prepared_datasets,
             weights=probabilities,
-            target_tokens=mix_target_tokens,
+            target_tokens=adjusted_train_mix_target_tokens,
             seed=seed
         )
     else:
@@ -402,9 +407,9 @@ def prepare_instruct_dataset(
     if common_settings.get('shard_size') is not None:
         logger.warning('datasets_common_settings.shard_size is only used for pretraining data preparation.')
 
-    target_tokens = common_settings.get('target_tokens')
-    if target_tokens is not None:
-        target_tokens = int(target_tokens)
+    train_mix_target_tokens = common_settings.get('target_tokens')
+    if train_mix_target_tokens is not None:
+        train_mix_target_tokens = int(train_mix_target_tokens)
 
     validation_ratio = float(common_settings.get('validation_ratio', 0.01))
     if not 0.0 < validation_ratio < 1.0:
@@ -419,7 +424,7 @@ def prepare_instruct_dataset(
         valid_datasets=valid_datasets,
         probabilities=probabilities,
         num_proc=num_proc,
-        target_tokens=target_tokens,
+        train_mix_target_tokens=train_mix_target_tokens,
         validation_ratio=validation_ratio,
         mix_strategy=MixStrategy(common_settings.get('mix_strategy', MixStrategy.LEGACY_INTERLEAVE)),
         interleave_stopping_strategy=common_settings['interleave_stopping_strategy']
