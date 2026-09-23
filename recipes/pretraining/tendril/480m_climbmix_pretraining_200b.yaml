@@ -122,6 +122,7 @@ data:
         weight: 1.0
         transforms:
           revision: 915333b4f8b8684f39aeaafea600fea6f43fb703
+          search_parquet: True
     
   evals:
     hellaswag:
