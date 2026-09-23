@@ -8,10 +8,12 @@ class MockDatasetSourceWrapper(DatasetSourceWrapper):
         self,
         source_key,
         size,
-        documents_seen=0
+        documents_seen=0,
+        start_document=0
     ):
         self.source_key = source_key
         self.documents_seen = documents_seen
+        self.start_document = start_document
         self.parquet_cursor = None
         self.yield_count = 0
 
@@ -23,8 +25,9 @@ class MockDatasetSourceWrapper(DatasetSourceWrapper):
             for i in range(size)
         ]
 
-        # Simulate the real DatasetSourceWrapper, where self.dataset is already positioned at the committed resume offset.
-        self.dataset = items[documents_seen:]
+        # Simulate the real DatasetSourceWrapper, where physical position = start_document + committed documents_seen.
+        offset = start_document + documents_seen
+        self.dataset = items[offset:]
 
     def __iter__(self):
         for item in self.dataset:
@@ -35,6 +38,8 @@ def make_wrapper(
     *,
     a_seen=0,
     b_seen=0,
+    a_start=0,
+    b_start=0,
     a_size=100,
     b_size=100,
     documents_seen=0,
@@ -46,12 +51,14 @@ def make_wrapper(
         MockDatasetSourceWrapper(
             source_key='a',
             size=a_size,
-            documents_seen=a_seen
+            documents_seen=a_seen,
+            start_document=a_start
         ),
         MockDatasetSourceWrapper(
             source_key='b',
             size=b_size,
-            documents_seen=b_seen
+            documents_seen=b_seen,
+            start_document=b_start
         ),
     ]
 
@@ -392,3 +399,78 @@ def test_dataset_wrapper_token_budget_completed_source_preserves_logical_positio
 
     # B has not been physically consumed after resume.
     assert wrapper.sources['b'].yield_count == 0
+
+def test_dataset_wrapper_supports_independent_source_start_documents():
+    wrapper = make_wrapper(
+        a_start=5,
+        b_start=0,
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
+
+    docs = list(islice(wrapper, 6))
+
+    assert [doc['id'] for doc in docs] == [
+        'a-5',
+        'b-0',
+        'a-6',
+        'b-1',
+        'a-7',
+        'b-2'
+    ]
+
+def test_dataset_wrapper_resume_preserves_independent_start_documents():
+    a_start = 5
+    b_start = 20
+
+    wrapper = make_wrapper(
+        a_start=a_start,
+        b_start=b_start,
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
+
+    iterator = iter(wrapper)
+
+    prefix = []
+
+    for _ in range(6):
+        doc = next(iterator)
+        prefix.append(doc)
+
+        wrapper.advance()
+        wrapper.commit(doc['source'])
+
+    assert [doc['id'] for doc in prefix] == [
+        'a-5',
+        'b-20',
+        'a-6',
+        'b-21',
+        'a-7',
+        'b-22'
+    ]
+
+    assert wrapper.sources['a'].documents_seen == 3
+    assert wrapper.sources['b'].documents_seen == 3
+    assert wrapper.documents_seen == 6
+    assert wrapper.mix_position == 6
+
+    resumed_wrapper = make_wrapper(
+        a_start=a_start,
+        b_start=b_start,
+        a_seen=wrapper.sources['a'].documents_seen,
+        b_seen=wrapper.sources['b'].documents_seen,
+        documents_seen=wrapper.documents_seen,
+        mix_position=wrapper.mix_position,
+        probabilities=None,
+        mix_strategy=MixStrategy.TOKEN_BUDGET
+    )
+
+    resumed = list(islice(resumed_wrapper, 4))
+
+    assert [doc['id'] for doc in resumed] == [
+        'a-8',
+        'b-23',
+        'a-9',
+        'b-24'
+    ]
