@@ -351,7 +351,7 @@ def download_and_prepare_data(
             adjusted_train_mix_target_tokens = math.ceil(train_mix_target_tokens / (1 - validation_ratio))
             logger.info(f'Adjusted token budget from {train_mix_target_tokens:,} to {adjusted_train_mix_target_tokens:,} to account for validation_ratio={validation_ratio}')
 
-            logger.info(f'Mixing data based in token budget... This operation can take a few minutes...')
+            logger.info(f'Selecting data up to the configured token target...')
             prepared_dataset = select_to_token_target(prepared_dataset, adjusted_train_mix_target_tokens)
 
     elif mix_strategy == MixStrategy.TOKEN_BUDGET:
