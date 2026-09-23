@@ -135,6 +135,8 @@ def select_to_token_target(dataset, target_tokens):
     return dataset.select(selected_indices)
 
 def token_budget_dataset_mix(*, datasets, source_target_tokens, seed):
+    assert len(datasets) == len(source_target_tokens)
+
     prepared_datasets = []
     for dataset, target_tokens in zip(datasets, source_target_tokens):
         shuffled_ds = dataset.shuffle(seed=seed)

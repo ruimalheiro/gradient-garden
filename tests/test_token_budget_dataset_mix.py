@@ -1,7 +1,8 @@
 from datasets import Dataset
 from datasets_preparation.utils.common import (
     compute_stats,
-    token_budget_dataset_mix
+    token_budget_dataset_mix,
+    select_to_token_target
 )
 
 
@@ -148,3 +149,38 @@ def test_compute_stats():
         'tokens %': '57.14%',
         'supervised_tokens %': '57.14%'
     }
+
+def test_select_to_token_target_respects_target():
+    dataset = make_dataset('a', [10, 10, 10, 10])
+
+    selected = select_to_token_target(
+        dataset,
+        target_tokens=25
+    )
+
+    assert sum(selected['supervised_tokens']) == 30
+
+def test_select_to_token_target_preserves_order():
+    dataset = make_dataset('a', [10] * 10)
+
+    selected = select_to_token_target(
+        dataset,
+        target_tokens=30
+    )
+
+    assert selected['row_id'] == [
+        'a-0',
+        'a-1',
+        'a-2'
+    ]
+
+def test_select_to_token_target_uses_all_data_when_exhausted():
+    dataset = make_dataset('a', [10, 20])
+
+    selected = select_to_token_target(
+        dataset,
+        target_tokens=100
+    )
+
+    assert len(selected) == 2
+    assert sum(selected['supervised_tokens']) == 30
