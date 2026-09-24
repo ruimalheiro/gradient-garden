@@ -8,6 +8,7 @@ from datasets_preparation.evals.prepare_custom_sft_smoke_dataset import prepare_
 from datasets_preparation.prepare_pretraining_dataset import prepare_pretraining_dataset
 from datasets_preparation.prepare_instruct_dataset import prepare_instruct_dataset
 from datasets_preparation.prepare_dpo_dataset import prepare_dpo_dataset
+from datasets_preparation.utils.retry import prepare_with_retries
 
 
 def prepare_recipe_data(recipe, num_proc):
@@ -27,7 +28,7 @@ def prepare_recipe_data(recipe, num_proc):
         if config.training.stage == TrainingStage.PRETRAINING:
             if data_config.datasets_common_settings.shard_size is None:
                 raise ValueError('Pretraining recipes require data.shard_size.')
-            prepare_pretraining_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
+            prepare_with_retries(f=lambda: prepare_pretraining_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc))
         elif config.training.stage == TrainingStage.INSTRUCT:
             prepare_instruct_dataset(config=config, datasets_mix=datasets_mix, num_proc=num_proc)
         elif config.training.stage == TrainingStage.DPO:
