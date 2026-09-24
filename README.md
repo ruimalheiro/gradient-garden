@@ -8,7 +8,7 @@ The project currently focuses on CUDA-based language-model training, but it is n
 
 ## Quick start
 
-Gradient Garden uses Python 3.11 or above.
+Python 3.11 or above is required.
 
 Create and activate an environment:
 
@@ -88,7 +88,7 @@ Distributed execution:
 
 ### Models
 
-Gradient Garden uses a model registry so training and inference are not tied to a single architecture.
+A model registry keeps training and inference independent of a single architecture.
 
 Current implementations include:
 
@@ -113,7 +113,7 @@ A Mixture-of-Experts variant of Tendril with:
 
 #### Hugging Face model wrapper
 
-A wrapper for using supported Hugging Face causal language models with Gradient Garden training and inference.
+A wrapper for using supported Hugging Face causal language models with the existing training and inference stack.
 
 ### Post-training
 
@@ -150,7 +150,7 @@ Supported learning-rate schedules:
 
 ### Inference
 
-Gradient Garden supports:
+Current inference functionality includes:
 
 - Batched autoregressive generation
 - KV-cache generation
@@ -166,7 +166,7 @@ A small Gradio chat interface is also available for interactively testing instru
 
 ### Evaluation
 
-Gradient Garden supports validation during training and standalone benchmark evaluation.
+Evaluation can run during training or independently against a checkpoint.
 
 #### Multiple-choice evaluation
 
@@ -343,7 +343,7 @@ datasets:
 
 Using a commit SHA pins the recipe to the exact dataset snapshot used for preparation.
 
-If `revision` is omitted, Gradient Garden uses the Hugging Face `main` revision at preparation time.
+If `revision` is omitted, the Hugging Face `main` revision is used at preparation time.
 
 In both cases, the revision is resolved through the Hugging Face API to an immutable commit SHA. That resolved revision is used to load the source and stored in the preparation metadata.
 
@@ -353,7 +353,7 @@ For long-running experiments, pinning the dataset revision in the recipe is reco
 
 ## Dataset mixing strategies
 
-Gradient Garden supports two ways of defining source composition.
+Two source-mixing strategies are available.
 
 ### Weighted interleave
 
@@ -506,7 +506,7 @@ On resume:
 
 If preparation has already completed, running the preparation command again detects the completed state instead of rebuilding the dataset.
 
-Transient transport and connection failures during pretraining preparation are retried automatically with bounded exponential backoff. Each retry reconstructs the preparation from the persisted state, including source progress, writer buffers, and Parquet cursors when applicable. Non-transient preparation errors are propagated normally.
+Transient transport and connection failures during pretraining preparation are retried automatically with bounded exponential backoff. Each retry reconstructs preparation from persisted state, including source progress, writer buffers, and Parquet cursors when applicable. Non-transient preparation errors are propagated normally.
 
 ## Per-source starting offsets
 
@@ -745,7 +745,7 @@ When using `--recipe`, the recipe defines the training stage. The explicit `--pr
 
 ### Generate
 
-Generation can run against a Gradient Garden checkpoint or a supported Hugging Face checkpoint.
+Generation can run against a local checkpoint or a supported Hugging Face checkpoint.
 
 Example:
 
@@ -1039,9 +1039,9 @@ These are useful for machine-specific recipes, private dataset configurations, l
 
 ## Project status
 
-Gradient Garden is an actively evolving research project.
+This is an actively evolving research project.
 
-The codebase currently focuses on language-model training and experimentation, but Gradient Garden is intended as a broader machine learning research codebase. It will continue evolving as new architectures, modalities, training methods, datasets, and evaluations are explored.
+The current focus is language-model training and experimentation, but the intended scope is broader machine learning research. The codebase will continue evolving as new architectures, modalities, training methods, datasets, and evaluations are explored.
 
 Current expectations:
 
@@ -1076,13 +1076,13 @@ Those assets may be subject to their own licenses, access requirements, and term
 
 ## License
 
-Gradient Garden is licensed under the Apache License 2.0.
+Licensed under the Apache License 2.0.
 
 See [`LICENSE`](LICENSE) for details.
 
 ## Citation
 
-If Gradient Garden is useful in your work, you can cite the repository as:
+If this project is useful in your work, you can cite the repository as:
 
 ```bibtex
 @software{rui2024gradientgarden,
