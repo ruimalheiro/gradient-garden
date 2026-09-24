@@ -1,5 +1,4 @@
 import numpy as np
-import sys
 import multiprocessing as mp
 import math
 
@@ -128,7 +127,7 @@ class ShardWriter:
                 except OSError:
                     pass
 
-            sys.exit(1)
+            raise
 
     def save_shard(self):
         if self.token_count == 0:
@@ -279,7 +278,6 @@ def shard_and_tokenize(
             temp_state_path.replace(state_path)
         except Exception as e:
             logger.error(f'\nError saving state: {e}')
-            logger.error('Stopping processing. Need to rerun the script to resume...')
 
             for path in [temp_state_path, temp_train_buffer_path, temp_val_buffer_path]:
                 try:
@@ -288,7 +286,7 @@ def shard_and_tokenize(
                 except OSError:
                     pass
 
-            sys.exit(1)
+            raise
 
     shard_size = int(shard_size)
     assert shard_size > 0
