@@ -1,10 +1,10 @@
 # Gradient Garden
 
-Gradient Garden is a research codebase for training, post-training, evaluating, and experimenting with language models.
+Gradient Garden is an open research codebase for experimenting with machine learning models, training methods, data, and evaluation.
 
-The goal is to keep the important parts of the training stack easy to inspect and modify: model architectures, training objectives, optimizers, dataset preparation, distributed execution, checkpointing, inference, and evaluation all live in the same codebase.
+The goal is to keep the important parts of the research stack easy to inspect and modify: model architectures, training objectives, optimizers, dataset preparation, distributed execution, checkpointing, inference, and evaluation all live in the same codebase.
 
-The project currently focuses on CUDA-based language-model training.
+The project currently focuses on CUDA-based language-model training, but it is not intended to be limited to language models. The codebase is expected to evolve as I explore new architectures, modalities, training methods, datasets, and evaluation setups.
 
 ## Quick start
 
