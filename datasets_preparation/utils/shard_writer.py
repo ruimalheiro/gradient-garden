@@ -393,114 +393,122 @@ def shard_and_tokenize(
                 return
             yield doc
 
-    iterator = pool.imap(
-        partial(
-            tokenize_and_route,
-            tokenizer_kwargs,
-            tokenize_function,
-            seed,
-            validation_ratio
-        ),
-        # dataset,
-        stoppable_dataset(dataset, stop_event),
-        chunksize=chunksize
-    )
-    for source, tokens, split, status in iterator:
-        dataset.advance()
+    try:
+        iterator = pool.imap(
+            partial(
+                tokenize_and_route,
+                tokenizer_kwargs,
+                tokenize_function,
+                seed,
+                validation_ratio
+            ),
+            # dataset,
+            stoppable_dataset(dataset, stop_event),
+            chunksize=chunksize
+        )
+        for source, tokens, split, status in iterator:
+            dataset.advance()
 
-        if status == 'completed':
-            if all_sources_reached_target():
-                stop_event.set()
-                stopped_on_target = True
-                break
-            checkpoint_if_needed()
-            continue
+            if status == 'completed':
+                if all_sources_reached_target():
+                    stop_event.set()
+                    stopped_on_target = True
+                    break
+                checkpoint_if_needed()
+                continue
 
-        if status == 'exhausted':
-            if not source_reached_target(source):
-                stop_event.set()
-                break
-            dataset.mark_source_complete(source)
-
-            if all_sources_reached_target():
-                stop_event.set()
-                stopped_on_target = True
-                break
-
-            checkpoint_if_needed()
-            continue
-
-        if source_reached_target(source):
-            checkpoint_if_needed()
-            continue
-
-        dataset.commit(source)
-
-        if tokens.size == 0:
-            checkpoint_if_needed()
-            continue
-        if split == 'val':
-            written = val_writer.write(tokens)
-        else:
-            written = train_writer.write(tokens)
-
-        if written == 0:
-            if reached_mix_target():
-                stop_event.set()
-                stopped_on_target = True
-                break
-            continue
-
-        state.source_doc_counts[source] = state.source_doc_counts.get(source, 0) + 1
-        state.source_token_counts[source] = state.source_token_counts.get(source, 0) + written
-        state.split_doc_counts[split] += 1
-        state.split_token_counts[split] += written
-
-        if split == 'train':
-            state.source_train_token_counts[source] = state.source_train_token_counts.get(source, 0) + written
-
-            if source_reached_target(source):
+            if status == 'exhausted':
+                if not source_reached_target(source):
+                    stop_event.set()
+                    break
                 dataset.mark_source_complete(source)
 
-        checkpoint_if_needed()
+                if all_sources_reached_target():
+                    stop_event.set()
+                    stopped_on_target = True
+                    break
 
-        if reached_mix_target() or all_sources_reached_target():
-            stop_event.set()
-            stopped_on_target = True
-            break
+                checkpoint_if_needed()
+                continue
 
-    train_writer.finish()
-    val_writer.finish()
+            if source_reached_target(source):
+                checkpoint_if_needed()
+                continue
 
-    if train_mix_target_tokens is not None and not reached_mix_target():
-        state.status = 'exhausted_before_target'
+            dataset.commit(source)
+
+            if tokens.size == 0:
+                checkpoint_if_needed()
+                continue
+            if split == 'val':
+                written = val_writer.write(tokens)
+            else:
+                written = train_writer.write(tokens)
+
+            if written == 0:
+                if reached_mix_target():
+                    stop_event.set()
+                    stopped_on_target = True
+                    break
+                continue
+
+            state.source_doc_counts[source] = state.source_doc_counts.get(source, 0) + 1
+            state.source_token_counts[source] = state.source_token_counts.get(source, 0) + written
+            state.split_doc_counts[split] += 1
+            state.split_token_counts[split] += written
+
+            if split == 'train':
+                state.source_train_token_counts[source] = state.source_train_token_counts.get(source, 0) + written
+
+                if source_reached_target(source):
+                    dataset.mark_source_complete(source)
+
+            checkpoint_if_needed()
+
+            if reached_mix_target() or all_sources_reached_target():
+                stop_event.set()
+                stopped_on_target = True
+                break
+
+        train_writer.finish()
+        val_writer.finish()
+
+        if train_mix_target_tokens is not None and not reached_mix_target():
+            state.status = 'exhausted_before_target'
+            save_state(state, dataset, train_writer, val_writer)
+            raise RuntimeError(
+                'Pretraining dataset exhausted before reaching target tokens. '
+                f'train_tokens={train_writer.total_tokens:,}/{train_mix_target_tokens:,}, '
+                f'val_tokens={val_writer.total_tokens:,}/{val_mix_target_tokens:,}'
+            )
+
+        if dataset.mix_strategy == MixStrategy.TOKEN_BUDGET and not all_sources_reached_target():
+            state.status = 'exhausted_before_target'
+            save_state(state, dataset, train_writer, val_writer)
+            unfinished = [
+                (source, state.source_train_token_counts.get(source, 0), dataset.sources[source].target_tokens)
+                for source in dataset.source_keys if not source_reached_target(source)
+            ]
+            details = ', '.join(f'{source}={current:,}/{target:,}' for source, current, target in unfinished)
+            raise RuntimeError(f'Pretraining dataset exhausted before reaching per-source token targets. {details}')
+
+        state.status = 'completed'
         save_state(state, dataset, train_writer, val_writer)
-        raise RuntimeError(
-            'Pretraining dataset exhausted before reaching target tokens. '
-            f'train_tokens={train_writer.total_tokens:,}/{train_mix_target_tokens:,}, '
-            f'val_tokens={val_writer.total_tokens:,}/{val_mix_target_tokens:,}'
-        )
+    except Exception:
+        stop_event.set()
+        logger.warning('Pretraining shard preparation failed. Terminating multiprocessing pool...')
 
-    if dataset.mix_strategy == MixStrategy.TOKEN_BUDGET and not all_sources_reached_target():
-        state.status = 'exhausted_before_target'
-        save_state(state, dataset, train_writer, val_writer)
-        unfinished = [
-            (source, state.source_train_token_counts.get(source, 0), dataset.sources[source].target_tokens)
-            for source in dataset.source_keys if not source_reached_target(source)
-        ]
-        details = ', '.join(f'{source}={current:,}/{target:,}' for source, current, target in unfinished)
-        raise RuntimeError(f'Pretraining dataset exhausted before reaching per-source token targets. {details}')
-
-    state.status = 'completed'
-    save_state(state, dataset, train_writer, val_writer)
+        pool.terminate()
+        pool.join()
+        raise
+    else:
+        logger.info('\nTerminating pool...')
+        pool.close()
+        pool.join()
 
     if stopped_on_target:
         logger.info(f'Reached target train tokens: {train_writer.total_tokens:,}')
         logger.info(f'Reached target val tokens: {val_writer.total_tokens:,}')
-
-    logger.info('\nTerminating pool...')
-    pool.close()
-    pool.join()
 
     logger.info('Pretraining shard preparation complete.')
     logger.info(f'- Train tokens: {train_writer.total_tokens:,}')

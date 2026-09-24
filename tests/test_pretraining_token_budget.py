@@ -53,6 +53,9 @@ class FakePool:
     def join(self):
         pass
 
+    def terminate(self):
+        pass
+
 def make_state(tmp_path):
     state_dir = tmp_path / '.prep_state'
     state_dir.mkdir()

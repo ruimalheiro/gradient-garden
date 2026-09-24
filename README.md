@@ -506,6 +506,8 @@ On resume:
 
 If preparation has already completed, running the preparation command again detects the completed state instead of rebuilding the dataset.
 
+Transient transport and connection failures during pretraining preparation are retried automatically with bounded exponential backoff. Each retry reconstructs the preparation from the persisted state, including source progress, writer buffers, and Parquet cursors when applicable. Non-transient preparation errors are propagated normally.
+
 ## Per-source starting offsets
 
 Pretraining sources can define an initial physical offset with `start_document`:
