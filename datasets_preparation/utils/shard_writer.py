@@ -119,7 +119,6 @@ class ShardWriter:
             temp_path.replace(final_path)
         except Exception as e:
             logger.error(f'\nError saving shard {self.shard_index} to {final_path}: {e}')
-            logger.error('Stopping processing. Need to rerun the script to resume...')
 
             if temp_path.exists():
                 try:
