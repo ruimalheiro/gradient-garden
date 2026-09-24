@@ -1039,7 +1039,7 @@ These are useful for machine-specific recipes, private dataset configurations, l
 
 Gradient Garden is an actively evolving research project.
 
-The codebase currently focuses on language-model training and experimentation, and will continue changing as new models, training methods, datasets, and evaluations are explored.
+The codebase currently focuses on language-model training and experimentation, but Gradient Garden is intended as a broader machine learning research codebase. It will continue evolving as new architectures, modalities, training methods, datasets, and evaluations are explored.
 
 Current expectations:
 
