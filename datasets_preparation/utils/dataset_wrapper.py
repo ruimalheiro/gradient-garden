@@ -1,5 +1,5 @@
 from datasets import load_dataset
-from huggingface_hub import HfApi, HfFileSystem
+from huggingface_hub import HfFileSystem
 from datasets_preparation.utils.parquet_search import (
     load_dataset_with_search_parquet,
     advance_parquet_cursor
@@ -39,7 +39,6 @@ class DatasetSourceWrapper:
 
         self.documents_seen = 0
 
-        self.hf_api = None
         self.hf_file_system = None
         self.parquet_row_count_cache = None
         self.parquet_files = None
@@ -56,7 +55,6 @@ class DatasetSourceWrapper:
         if search_parquet is True:
             logger.info(f'The "search_parquet" flag is set. Using parquet loader...')
 
-            self.hf_api = HfApi(token=token)
             self.hf_file_system = HfFileSystem(token=token)
             self.parquet_row_count_cache = {}
 
@@ -68,12 +66,12 @@ class DatasetSourceWrapper:
 
             self.dataset, self.parquet_files, self.parquet_cursor = load_dataset_with_search_parquet(
                 ds_id=ds_id,
+                name=hf_name,
                 split=split,
                 streaming=True,
                 revision=resolved_revision,
                 start_document=resume_document,
                 token=token,
-                hf_api=self.hf_api,
                 hf_file_system=self.hf_file_system,
                 num_proc=num_proc,
                 cursor=self.parquet_cursor
