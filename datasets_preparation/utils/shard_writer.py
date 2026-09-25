@@ -20,6 +20,7 @@ class ShardWriter:
         shard_size,
         split_name,
         target_tokens=None,
+        progress_target_tokens=None,
         shard_bar_position=0,
         target_bar_position=2,
     ):
@@ -30,6 +31,7 @@ class ShardWriter:
         self.shard_size = int(shard_size)
         self.split_name = split_name
         self.target_tokens = target_tokens
+        self.progress_target_tokens = progress_target_tokens
 
         self.shard_index = 0
         self.token_count = 0
@@ -88,10 +90,10 @@ class ShardWriter:
             )
 
     def init_target_progress_bar(self):
-        if self.target_tokens is None or self.target_progress_bar is not None:
+        if self.progress_target_tokens is None or self.target_progress_bar is not None:
             return
         self.target_progress_bar = tqdm(
-            total=self.target_tokens,
+            total=self.progress_target_tokens,
             initial=self.total_tokens,
             unit='tokens',
             desc=f'{self.split_name} target',
@@ -306,11 +308,17 @@ def shard_and_tokenize(
         else:
             val_mix_target_tokens = 0
 
+    if dataset.mix_strategy == MixStrategy.TOKEN_BUDGET:
+        train_progress_target_tokens = sum(source.target_tokens for source in dataset.sources.values())
+    else:
+        train_progress_target_tokens = train_mix_target_tokens
+
     train_writer = ShardWriter(
         target_folder=train_path,
         shard_file_prefix=shard_file_prefix,
         shard_size=shard_size,
         target_tokens=train_mix_target_tokens,
+        progress_target_tokens=train_progress_target_tokens,
         split_name='train',
         shard_bar_position=0,
         target_bar_position=2
@@ -321,6 +329,7 @@ def shard_and_tokenize(
         shard_file_prefix=shard_file_prefix,
         shard_size=shard_size,
         target_tokens=val_mix_target_tokens,
+        progress_target_tokens=val_mix_target_tokens,
         split_name='val',
         shard_bar_position=1,
         target_bar_position=3
