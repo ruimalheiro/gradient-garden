@@ -329,7 +329,7 @@ def shard_and_tokenize(
         shard_file_prefix=shard_file_prefix,
         shard_size=shard_size,
         target_tokens=val_mix_target_tokens,
-        progress_target_tokens=train_progress_target_tokens,
+        progress_target_tokens=val_mix_target_tokens,
         split_name='val',
         shard_bar_position=1,
         target_bar_position=3
