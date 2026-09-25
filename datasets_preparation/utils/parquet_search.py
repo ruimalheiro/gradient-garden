@@ -1,8 +1,8 @@
 import pyarrow.parquet as pq
 
-from huggingface_hub import HfApi, HfFileSystem
+from huggingface_hub import HfFileSystem
 from concurrent.futures import ThreadPoolExecutor
-from datasets import load_dataset
+from datasets import load_dataset, load_dataset_builder
 from tqdm.auto import tqdm
 from functools import partial
 from logger import logger
@@ -11,15 +11,32 @@ from logger import logger
 def find_parquet_files(
     *,
     ds_id,
+    name,
+    split,
     revision,
-    hf_api: HfApi
+    dataset_builder
 ):
-    files = hf_api.list_repo_files(ds_id, repo_type='dataset', revision=revision)
+    files = dataset_builder.config.data_files
 
-    parquet_files = sorted(path for path in files if path.endswith('.parquet'))
+    if split not in files:
+        raise ValueError(f'Split {split!r} was not found for {ds_id}/{name}@{revision}')
+
+    repo_prefix = f'hf://datasets/{ds_id}@{revision}/'
+
+    parquet_files = []
+    for path in files[split]:
+        path = str(path)
+
+        if path.startswith(repo_prefix):
+            path = path[len(repo_prefix):]
+
+        if path.endswith('.parquet'):
+            parquet_files.append(path)
+
+    parquet_files = sorted(parquet_files)
 
     if not parquet_files:
-        raise ValueError(f'No parquet files found for {ds_id}@{revision}')
+        raise ValueError(f'No parquet files found for {ds_id}/{name}/{split}@{revision}')
 
     return parquet_files
 
@@ -137,22 +154,31 @@ def load_parquet_from_cursor(
 def load_dataset_with_search_parquet(
     *,
     ds_id,
+    name,
     split,
     streaming,
     revision,
     start_document,
     token,
     num_proc,
-    hf_api: HfApi,
     hf_file_system: HfFileSystem,
     batch_size=64,
     cursor=None
 ):
+    dataset_builder = load_dataset_builder(
+        ds_id,
+        name=name,
+        revision=revision,
+        token=token
+    )
+
     logger.info('finding parquet files...')
     files = find_parquet_files(
         ds_id=ds_id,
+        name=name,
+        split=split,
         revision=revision,
-        hf_api=hf_api
+        dataset_builder=dataset_builder
     )
     logger.info(f'found {len(files)} files.')
 
