@@ -49,20 +49,65 @@ class PretrainingDataLoader:
         self.shards = [shard_path for _, shard_path in valid_shards]
         assert self.shards, f'no shards found in split {split}'
 
+        self.group_undersized_final_shard()
+
         logger.info(f'found {len(self.shards)} shards for split {split}')
 
         self.validate_shards_size()
         self.reset()
 
+    def get_shard_paths(self, shard):
+        if isinstance(shard, tuple):
+            return shard
+        return (shard,)
+
+    def get_shard_size(self, shard):
+        total = 0
+        for shard_path in self.get_shard_paths(shard):
+            data = np.load(shard_path, mmap_mode='r', allow_pickle=False)
+            total += int(data.shape[0])
+            del data
+        return total
+
+    def load_shard(self, shard):
+        shard_paths = self.get_shard_paths(shard)
+
+        if len(shard_paths) == 1:
+            return load_tokens(shard_paths[0])
+
+        return torch.cat([load_tokens(shard_path) for shard_path in shard_paths])
+
+    def group_undersized_final_shard(self):
+        if len(self.shards) < 2:
+            return
+
+        required_tokens = self.B * self.S * self.ddp_world_size + 1
+        final_shard = self.shards[-1]
+        final_shard_size = self.get_shard_size(final_shard)
+
+        if final_shard_size >= required_tokens:
+            return
+
+        previous_shard = self.shards[-2]
+
+        grouped_shard = (
+            self.get_shard_paths(previous_shard) +
+            self.get_shard_paths(final_shard)
+        )
+
+        self.shards[-2:] = [grouped_shard]
+
+        logger.warning(f'Final shard has only {final_shard_size} tokens, below the {required_tokens} required for one distributed batch. Grouping it with the previous shard.')
+
     def validate_shards_size(self):
         required_tokens = self.B * self.S * self.ddp_world_size + 1
-        for shard_path in self.shards:
-            shard = np.load(shard_path, mmap_mode='r', allow_pickle=False)
-            shard_len = int(shard.shape[0])
+
+        for shard in self.shards:
+            shard_len = self.get_shard_size(shard)
 
             if shard_len < required_tokens:
                 raise ValueError(
-                    f'Shard is too small for distributed training: {shard_path}. '
+                    f'Shard is too small for distributed training: {shard}. '
                     f'Need a minimum of {required_tokens} tokens, got {shard_len}. '
                     f'B={self.B}, S={self.S}, world_size={self.ddp_world_size}.'
                 )
@@ -72,12 +117,7 @@ class PretrainingDataLoader:
             return self.total_tokens
 
         def _calculate():
-            total = 0
-            for path in self.shards:
-                shard = np.load(path, mmap_mode='r', allow_pickle=False)
-                total += int(shard.shape[0])
-                del shard
-            return total
+            return sum(self.get_shard_size(shard) for shard in self.shards)
 
         if self.ddp_world_size <= 1 or not dist.is_available() or not dist.is_initialized():
             return _calculate()
@@ -113,7 +153,7 @@ class PretrainingDataLoader:
     def reset(self):
         self.current_shard = 0
         self.sync_shuffle_shards()
-        self.tokens = load_tokens(self.shards[self.current_shard])
+        self.tokens = self.load_shard(self.shards[self.current_shard])
         if torch.cuda.is_available():
             self.tokens = self.tokens.pin_memory()
         self.current_position = 0
@@ -128,7 +168,7 @@ class PretrainingDataLoader:
     def load_state_dict(self, state):
         self.shards = state['shards']
         self.current_shard = state['current_shard']
-        self.tokens = load_tokens(self.shards[self.current_shard])
+        self.tokens = self.load_shard(self.shards[self.current_shard])
         if torch.cuda.is_available():
             self.tokens = self.tokens.pin_memory()
         self.current_position = state['current_position']
@@ -166,7 +206,7 @@ class PretrainingDataLoader:
             if self.current_shard == 0:
                 self.sync_shuffle_shards()
 
-            self.tokens = load_tokens(self.shards[self.current_shard])
+            self.tokens = self.load_shard(self.shards[self.current_shard])
             if torch.cuda.is_available():
                 self.tokens = self.tokens.pin_memory()
 
