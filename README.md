@@ -78,8 +78,9 @@ Supported training precision:
 - FP16
 - FP32
 
-Distributed execution:
+Execution:
 
+- Single-process CPU for debugging
 - Single GPU
 - Multi-GPU
 - Multi-node
@@ -713,6 +714,15 @@ Single GPU:
 
 ```bash
 python train.py --recipe recipes/pretraining/debug.yaml
+```
+
+CPU execution is supported for lightweight debugging and development workflows. It is not currently a primary or extensively tested training target, and distributed CPU training is not supported.
+
+```bash
+runtime:
+  device_type: cpu
+  training_precision: fp32
+  use_fsdp: false
 ```
 
 Resume from a Gradient Garden checkpoint:

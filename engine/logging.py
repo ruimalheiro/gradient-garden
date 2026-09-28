@@ -122,10 +122,21 @@ def prepare_train_step_log(
     dt = step_metrics.dt
     tokens_per_sec = step_metrics.tokens_per_sec
 
-    current_allocated_mb = memory_usage_metrics.current_allocated_mb
-    current_reserved_mb = memory_usage_metrics.current_reserved_mb
-    peak_allocated_mb = memory_usage_metrics.peak_allocated_mb
-    peak_reserved_mb = memory_usage_metrics.peak_reserved_mb
+    current_allocated_mb = memory_usage_metrics.current_allocated_mb if memory_usage_metrics else None
+    current_reserved_mb = memory_usage_metrics.current_reserved_mb if memory_usage_metrics else None
+    peak_allocated_mb = memory_usage_metrics.peak_allocated_mb if memory_usage_metrics else None
+    peak_reserved_mb = memory_usage_metrics.peak_reserved_mb if memory_usage_metrics else None
+
+    current_mem_log_text = (
+        f'\n       mem MiB current alloc/res: {current_allocated_mb:.0f} / {current_reserved_mb:.0f} | '
+        if current_allocated_mb and current_reserved_mb
+        else '\n       mem MiB current alloc/res: - / - | '
+    )
+    current_mem_peak_text = (
+        f'peak alloc/res: {peak_allocated_mb:.0f} / {peak_reserved_mb:.0f}'
+        if peak_allocated_mb and peak_reserved_mb
+        else 'peak alloc/res: - / -'
+    )
 
     dpo_console_message = format_dpo_console_metrics(aggregated_metrics)
 
@@ -137,8 +148,8 @@ def prepare_train_step_log(
         f'dt: {dt:.2f}s | '
         f'tok/s: {int(tokens_per_sec)}'
         f'\n       {scheduler_console_message}'
-        f'\n       mem MiB current alloc/res: {current_allocated_mb:.0f} / {current_reserved_mb:.0f} | '
-        f'peak alloc/res: {peak_allocated_mb:.0f} / {peak_reserved_mb:.0f}'
+        f'{current_mem_log_text}'
+        f'{current_mem_peak_text}'
         f'{dpo_console_message}'
     )
 

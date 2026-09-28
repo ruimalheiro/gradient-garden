@@ -1,6 +1,7 @@
 import math
 import torch
 import torch.distributed as dist
+import time
 
 from collections.abc import Callable
 from torch.distributed import (
@@ -163,8 +164,11 @@ class Trainer:
         config = self.config
 
         # device type
-        if self.config.runtime.device_type != DeviceType.CUDA:
-            raise ValueError('Only cuda is supported at the moment.')
+        if self.config.runtime.device_type not in (DeviceType.CPU, DeviceType.CUDA):
+            raise ValueError('Only cpu/cuda is supported at the moment. CPU support is single and does not support any distrubuted strategy for the moment.')
+
+        if self.config.runtime.device_type == DeviceType.CPU and config.runtime.use_fsdp:
+            raise ValueError('FSDP is not supported on CPU.')
 
         # validate assets exist
         self.validate_training_asset_exists(self.config.paths.datasets.training_path)
@@ -226,6 +230,9 @@ class Trainer:
             logger.info('\n', force=True)
 
     def setup_global_torch_optimizations(self):
+        if self.config.runtime.device_type != DeviceType.CUDA:
+            return
+
         torch.backends.cuda.matmul.fp32_precision = 'tf32'
         torch.backends.cudnn.conv.fp32_precision = 'tf32'
         torch.backends.cuda.enable_cudnn_sdp(True)
@@ -677,7 +684,7 @@ class Trainer:
             # for FSDP no need to move explicitly to device here as that would actually cost more VRAM, instead let FSDP initialization alocate the shard to the device id (ddp_local_rank).
             self.model = prepare_model_for_fsdp(self.model, ddp_local_rank, fsdp_mp)
         else:
-            # move to gpu
+            # move model to target device
             self.model.to(device=device, dtype=model_dtype)
             if dist.is_initialized():
                 logger.section('DDP')
@@ -1045,6 +1052,7 @@ class Trainer:
         ddp_local_rank = self.trainer_ctx.distributed.ddp_local_rank
         use_fsdp = self.trainer_ctx.distributed.use_fsdp
         device = self.trainer_ctx.device.device
+        device_type = self.trainer_ctx.device.device_type
         scaler = self.trainer_ctx.precision.scaler
         grad_accum_steps = self.trainer_ctx.grad_accum_steps
         tokens_processed_sum = torch.tensor(0.0, device=device)
@@ -1057,9 +1065,12 @@ class Trainer:
         self.model.train()
         self.zero_grad_optimizers()
 
-        t0 = torch.Event(enable_timing=True, device=device)
-        t1 = torch.Event(enable_timing=True, device=device)
-        t0.record()
+        if device_type == 'cuda':
+            t0 = torch.Event(enable_timing=True, device=device)
+            t1 = torch.Event(enable_timing=True, device=device)
+            t0.record()
+        else:
+            t0 = time.perf_counter()
 
         for micro_step in range(grad_accum_steps):
             output = self.task.train_micro_step(self.model, self.train_loader.next_batch(), self.task_assets)
@@ -1099,9 +1110,13 @@ class Trainer:
         self.optimizers_steps(scaler)
         self.zero_grad_optimizers()
 
-        t1.record()
-        t1.synchronize()
-        dt = t0.elapsed_time(t1) / 1000.0
+        if device_type == 'cuda':
+            t1.record()
+            t1.synchronize()
+            dt = t0.elapsed_time(t1) / 1000.0
+        else:
+            dt = time.perf_counter() - t0
+
         tokens_per_sec = int(tokens_processed_sum.item() / dt)
 
         step_metrics = StepMetrics(
