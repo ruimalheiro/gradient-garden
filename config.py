@@ -91,6 +91,7 @@ class TrainingConfig(BaseModel):
     total_batch_size: int = 524288
     micro_batch_size: int = 4
     max_steps: int = 200
+    max_steps_per_run: int | None = None
     early_stopping_patience: int = 100
     early_stopping_patience_skip_steps: int = 0
 
