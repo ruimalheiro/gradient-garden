@@ -26,6 +26,7 @@ class DatasetPreparationConfig(BaseModel):
     hf_map_writer_batch_size: int = 1000
 
 class DeviceType(str, Enum):
+    CPU = 'cpu'
     CUDA = 'cuda'
 
 class TrainingPrecision(str, Enum):

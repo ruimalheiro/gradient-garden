@@ -16,6 +16,9 @@ def reset_memory_usage_metrics():
     torch.cuda.reset_peak_memory_stats()
 
 def compute_memory_usage_metrics(ddp_local_rank):
+    if not torch.cuda.is_available():
+        return None
+
     return MemoryUsageMetrics(
         peak_allocated_mb=torch.cuda.max_memory_allocated(ddp_local_rank) / 1024**2,
         peak_reserved_mb=torch.cuda.max_memory_reserved(ddp_local_rank) / 1024**2,
