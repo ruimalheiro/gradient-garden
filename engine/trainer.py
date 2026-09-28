@@ -1547,8 +1547,9 @@ class Trainer:
                 steps_this_run += 1
                 reached_run_limit = max_steps_per_run is not None and steps_this_run >= max_steps_per_run and not self.trainer_state.is_last_step
                 if reached_run_limit:
+                    logger.info(f'Reached max_steps_per_run={max_steps_per_run}.')
                     if not self.should_run(run_config=self.config.checkpointing):
-                        logger.info(f'Reached max_steps_per_run={max_steps_per_run}. Saving checkpoint and stopping training.')
+                        logger.info('Saving checkpoint and stopping training.')
                         self.run_save_common_checkpoint(pbar)
                     self.trainer_state.should_stop = True
 
