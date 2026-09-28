@@ -10,10 +10,12 @@ from torch.distributed.fsdp import fully_shard
 os.environ.setdefault('TORCH_NCCL_ASYNC_ERROR_HANDLING', '1')
 
 def init_multi_gpu(device_type):
-    if device_type == 'cpu':
-        return False, 0, 0, 1, True, 'cpu'
-
     ddp = int(os.environ.get('RANK', -1)) != -1
+
+    if device_type == 'cpu':
+        if ddp:
+            raise ValueError('Distributed CPU training is not supported.')
+        return False, 0, 0, 1, True, 'cpu'
 
     assert torch.cuda.is_available()
 
