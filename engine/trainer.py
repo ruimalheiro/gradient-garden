@@ -179,6 +179,9 @@ class Trainer:
         if self.can_run_scheduled_action(self.config.evals.custom_sft_smoke):
             self.validate_eval_asset_exists(self.config.paths.evals.custom_sft_smoke_path)
 
+        if self.config.training.max_steps_per_run is not None and not self.config.checkpointing.save_checkpoints:
+            raise ValueError('training.max_steps_per_run requires checkpointing.save_checkpoints=true')
+
     def setup(self):
         self.set_seed()
         self.resolve_config_overrides()
@@ -1521,6 +1524,9 @@ class Trainer:
         tqdm_label = f'Training ({self.config.training.stage.value})'
         abort_signal = torch.tensor([0], device=device)
 
+        steps_this_run = 0
+        max_steps_per_run = self.config.training.max_steps_per_run
+
         with self.torch_profiler_context as torch_profiler_ctx:
             pbar = tqdm(
                 range(start_step, max_steps),
@@ -1537,6 +1543,16 @@ class Trainer:
                 self.trainer_state.is_last_step = (step == max_steps - 1)
                 self.process_step(pbar)
                 torch_profiler_ctx.step()
+
+                steps_this_run += 1
+                reached_run_limit = max_steps_per_run is not None and steps_this_run >= max_steps_per_run and not self.trainer_state.is_last_step
+                if reached_run_limit:
+                    logger.info(f'Reached max_steps_per_run={max_steps_per_run}.')
+                    if not self.should_run(run_config=self.config.checkpointing):
+                        logger.info('Saving checkpoint and stopping training.')
+                        self.run_save_common_checkpoint(pbar)
+                    self.trainer_state.should_stop = True
+
                 abort_signal[0] = 1 if self.trainer_state.should_stop else 0
                 if self.distributed_ctx.ddp:
                     broadcast(abort_signal, src=0)

@@ -723,6 +723,16 @@ python train.py \
   --checkpoint <CHECKPOINT_FILE>
 ```
 
+For intentionally phased training, `training.max_steps_per_run` can limit the number of training steps performed by a single invocation. When the limit is reached, training saves a checkpoint if needed and exits cleanly.
+
+For example:
+
+```yaml
+training:
+  max_steps: 9537
+  max_steps_per_run: 500
+```
+
 Useful CLI overrides include:
 
 ```text
