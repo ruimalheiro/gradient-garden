@@ -1,4 +1,6 @@
+import torch
 import argparse
+import gc
 
 from logger import logger
 from engine.checkpoints import (
@@ -59,12 +61,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Evals / Benchmark Script Options')
 
-    checkpoint_group = parser.add_mutually_exclusive_group(required=True)
-    checkpoint_group.add_argument('--checkpoint', type=str, help='Checkpoint file path to load.')
-    checkpoint_group.add_argument('--hf-checkpoint', type=str, help='Hugging Face model id or checkpoint path to load.')
+    parser.add_argument('--checkpoint', type=str, action='append', help='Checkpoint file path to load. Can be specified multiple times.')
+    parser.add_argument('--hf-checkpoint', type=str, action='append', help='Hugging Face model id or checkpoint path to load.')
 
     parser.add_argument('--validation', action='store_true', help='Run validation.')
-    parser.add_argument('--validation-steps', type=int, default=1000, help='Number of validation steps to take.')
+    parser.add_argument('--validation-steps', type=int, default=-1, help='Number of validation steps to run. Use -1 for the full validation dataset.')
     parser.add_argument('--validation-path', type=str, default=None, help='Dataset path')
 
     parser.add_argument('--hellaswag', action='store_true', help='Run HellaSwag eval.')
@@ -96,6 +97,12 @@ if __name__ == '__main__':
 
     validate_runtime_args(args, parser)
 
+    if not args.checkpoint and not args.hf_checkpoint:
+        parser.error('At least one --checkpoint or --hf-checkpoint must be provided.')
+
+    checkpoints = [{'type': 'checkpoint', 'path': checkpoint} for checkpoint in args.checkpoint]
+    checkpoints.extend([{'type': 'hf_checkpoint', 'path': checkpoint} for checkpoint in args.hf_checkpoint])
+
     if not any([
         args.validation,
         args.hellaswag,
@@ -110,8 +117,8 @@ if __name__ == '__main__':
             '--ifeval-no-external, or --custom-sft-smoke'
         )
 
-    if args.validation and args.validation_steps <= 0:
-        parser.error('--validation-steps must be greater than 0')
+    if args.validation and (args.validation_steps == 0 or args.validation_steps < -1):
+        parser.error('--validation-steps must be -1 or greater than 0')
 
     check_num_examples(enabled=args.hellaswag, flag_name='--hellaswag-examples', value=args.hellaswag_examples, parser=parser)
     check_num_examples(enabled=args.winogrande, flag_name='--winogrande-examples', value=args.winogrande_examples, parser=parser)
@@ -119,18 +126,32 @@ if __name__ == '__main__':
     check_num_examples(enabled=args.ifeval_no_external, flag_name='--ifeval-no-external-examples', value=args.ifeval_no_external_examples, parser=parser)
     check_num_examples(enabled=args.custom_sft_smoke, flag_name='--custom-sft-smoke-examples', value=args.custom_sft_smoke_examples, parser=parser)
 
-    if args.checkpoint:
-        checkpoint = args.checkpoint
-        validate_file_path(checkpoint, parser)
-        checkpoint_data = load_checkpoint_for_inference(checkpoint)
-    elif args.hf_checkpoint:
-        checkpoint = args.hf_checkpoint
-        checkpoint_data = load_shallow_hf_checkpoint_for_inference(checkpoint)
+    logger.section('\nCheckpoint Evaluation')
+    logger.info(f'Target checkpoints:')
+    for checkpoint in checkpoints:
+        logger.info(f'- {checkpoint}')
 
-        if not args.stage:
-            parser.error(f'--stage must be set when using --hf-checkpoint')
+    resolved_device = None
+    resolved_dtype = None
 
-        checkpoint_data.config.training.stage = TrainingStage(args.stage)
+    checkpoint_results = []
+
+    for checkpoint in checkpoints:
+        checkpoint_type = checkpoint['type']
+        checkpoint_path = checkpoint['path']
+
+        logger.info(f'\nEvaluating checkpoint type: {checkpoint_type} from path: {checkpoint_path}')
+
+        if checkpoint_type == 'checkpoint':
+            validate_file_path(checkpoint_path, parser)
+            checkpoint_data = load_checkpoint_for_inference(checkpoint_path)
+        elif checkpoint_type == 'hf_checkpoint':
+            checkpoint_data = load_shallow_hf_checkpoint_for_inference(checkpoint_path)
+
+            if not args.stage:
+                parser.error(f'--stage must be set when using --hf-checkpoint')
+
+            checkpoint_data.config.training.stage = TrainingStage(args.stage)
 
         if args.validation:
             check_dataset_path_is_set(enabled=args.validation, flag_name='--validation-path', value=args.validation_path, parser=parser)
@@ -151,84 +172,102 @@ if __name__ == '__main__':
             check_dataset_path_is_set(enabled=args.custom_sft_smoke, flag_name='--custom-sft-smoke-path', value=args.custom_sft_smoke_path, parser=parser)
             checkpoint_data.config.paths.evals.custom_sft_smoke_path = args.custom_sft_smoke_path
 
-    set_seed(args.seed)
+        set_seed(args.seed)
 
-    output_path, name, timestamp = build_output_path_for_run(
-        run_name=checkpoint_data.config.run.name,
-        stage=checkpoint_data.config.training.stage.value,
-        output_file_name=args.output_file_name,
-        output_dir=args.output_dir,
-        extension='json'
-    )
+        output_path, name, timestamp = build_output_path_for_run(
+            run_name=checkpoint_data.config.run.name,
+            stage=checkpoint_data.config.training.stage.value,
+            output_file_name=args.output_file_name,
+            output_dir=args.output_dir,
+            extension='json'
+        )
 
-    inference_runtime = prepare_runtime_for_inference(
-        checkpoint_data=checkpoint_data,
-        dtype=args.dtype,
-        device=args.device,
-        use_torch_compile=args.use_torch_compile
-    )
+        inference_runtime = prepare_runtime_for_inference(
+            checkpoint_data=checkpoint_data,
+            dtype=args.dtype,
+            device=args.device,
+            use_torch_compile=args.use_torch_compile
+        )
 
-    results = {}
+        if resolved_device is None:
+            resolved_device = str(inference_runtime.device)
+            resolved_dtype = str(inference_runtime.dtype)
 
-    if args.validation:
-        check_stage_for_validation(checkpoint_data.config.training.stage, parser)
-        results['validation'] = evaluate_validation_ppl(
-            inference_runtime=inference_runtime,
-            config=checkpoint_data.config,
-            batch_size=args.batch_size,
-            validation_steps=args.validation_steps,
-            ignore_index=checkpoint_data.config.tokenizer.ignore_index
-        )
-    if args.hellaswag:
-        check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
-        results['hellaswag'] = evaluate_hellaswag(
-            inference_runtime=inference_runtime,
-            config=checkpoint_data.config,
-            batch_size=args.batch_size,
-            num_examples=args.hellaswag_examples
-        )
-    if args.winogrande:
-        check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
-        results['winogrande'] = evaluate_winogrande(
-            inference_runtime=inference_runtime,
-            config=checkpoint_data.config,
-            batch_size=args.batch_size,
-            num_examples=args.winogrande_examples
-        )
-    if args.arc_challenge:
-        check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
-        results['arc_challenge'] = evaluate_arc_challenge(
-            inference_runtime=inference_runtime,
-            config=checkpoint_data.config,
-            batch_size=args.batch_size,
-            num_examples=args.arc_challenge_examples
-        )
-    if args.ifeval_no_external:
-        check_stage_for_instruction_following_evals(checkpoint_data.config.training.stage, parser)
-        results['ifeval_no_external'] = evaluate_ifeval_no_external(
-            inference_runtime=inference_runtime,
-            config=checkpoint_data.config,
-            batch_size=args.batch_size,
-            num_examples=args.ifeval_no_external_examples
-        )
-    if args.custom_sft_smoke:
-        check_stage_for_instruction_following_evals(checkpoint_data.config.training.stage, parser)
-        results['custom_sft_smoke'] = evaluate_custom_sft_smoke(
-            inference_runtime=inference_runtime,
-            config=checkpoint_data.config,
-            batch_size=args.batch_size,
-            num_examples=args.custom_sft_smoke_examples
-        )
+        results = {}
+
+        if args.validation:
+            check_stage_for_validation(checkpoint_data.config.training.stage, parser)
+            results['validation'] = evaluate_validation_ppl(
+                inference_runtime=inference_runtime,
+                config=checkpoint_data.config,
+                batch_size=args.batch_size,
+                validation_steps=args.validation_steps,
+                ignore_index=checkpoint_data.config.tokenizer.ignore_index
+            )
+        if args.hellaswag:
+            check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
+            results['hellaswag'] = evaluate_hellaswag(
+                inference_runtime=inference_runtime,
+                config=checkpoint_data.config,
+                batch_size=args.batch_size,
+                num_examples=args.hellaswag_examples
+            )
+        if args.winogrande:
+            check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
+            results['winogrande'] = evaluate_winogrande(
+                inference_runtime=inference_runtime,
+                config=checkpoint_data.config,
+                batch_size=args.batch_size,
+                num_examples=args.winogrande_examples
+            )
+        if args.arc_challenge:
+            check_stage_for_multiple_choice_evals(checkpoint_data.config.training.stage, parser)
+            results['arc_challenge'] = evaluate_arc_challenge(
+                inference_runtime=inference_runtime,
+                config=checkpoint_data.config,
+                batch_size=args.batch_size,
+                num_examples=args.arc_challenge_examples
+            )
+        if args.ifeval_no_external:
+            check_stage_for_instruction_following_evals(checkpoint_data.config.training.stage, parser)
+            results['ifeval_no_external'] = evaluate_ifeval_no_external(
+                inference_runtime=inference_runtime,
+                config=checkpoint_data.config,
+                batch_size=args.batch_size,
+                num_examples=args.ifeval_no_external_examples
+            )
+        if args.custom_sft_smoke:
+            check_stage_for_instruction_following_evals(checkpoint_data.config.training.stage, parser)
+            results['custom_sft_smoke'] = evaluate_custom_sft_smoke(
+                inference_runtime=inference_runtime,
+                config=checkpoint_data.config,
+                batch_size=args.batch_size,
+                num_examples=args.custom_sft_smoke_examples
+            )
+
+        checkpoint_results.append({
+            'type': checkpoint_type,
+            'checkpoint': checkpoint_path,
+            'step': getattr(checkpoint_data, 'step', None),
+            'results': results
+        })
+
+        del inference_runtime
+        del checkpoint_data
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     data = {
         'name': name,
         'created_at_utc': timestamp.isoformat(),
-        'checkpoint': checkpoint,
+        'checkpoints': checkpoint_results,
         'config': {
             'device': args.device,
             'dtype': args.dtype,
-            'resolved_device': str(inference_runtime.device),
-            'resolved_dtype': str(inference_runtime.dtype),
+            'resolved_device': resolved_device,
+            'resolved_dtype': resolved_dtype,
             'seed': args.seed,
             'batch_size': args.batch_size,
             'use_torch_compile': args.use_torch_compile,
@@ -244,14 +283,14 @@ if __name__ == '__main__':
             'ifeval_no_external_examples': args.ifeval_no_external_examples,
             'custom_sft_smoke': args.custom_sft_smoke,
             'custom_sft_smoke_examples': args.custom_sft_smoke_examples,
-        },
-        'results': results,
+        }
     }
 
+    logger.section('Results')
     logger.info({
         'name': name,
         'created_at_utc': timestamp.isoformat(),
-        'checkpoint': checkpoint,
+        'checkpoints': checkpoint_results,
         'output_path': str(output_path),
         'config': data['config'],
     }, is_json=True)

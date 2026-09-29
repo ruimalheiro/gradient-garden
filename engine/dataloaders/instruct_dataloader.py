@@ -126,6 +126,9 @@ class InstructDataLoader:
             self.sampler.set_epoch(update_epoch)
         self._iterator = iter(self._dataloader)
 
+    def __len__(self):
+        return len(self._dataloader)
+
     def num_examples(self):
         return len(self._dataloader.dataset)
 

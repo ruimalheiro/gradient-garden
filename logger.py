@@ -2,6 +2,7 @@ import json
 import re
 
 from pathlib import Path
+from contextlib import contextmanager
 
 
 ANSI_REMOVER_RGX = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -10,6 +11,22 @@ class ConsoleLogger:
     def __init__(self):
         self.is_master_process = False
         self.log_file_path = None
+        self.enabled = True
+
+    def enable(self):
+        self.enabled = True
+
+    def disable(self):
+        self.enabled = False
+
+    @contextmanager
+    def disabled(self):
+        previous = self.enabled
+        self.enabled = False
+        try:
+            yield
+        finally:
+            self.enabled = previous
     
     def set_master(self, is_master_process):
         self.is_master_process = is_master_process
@@ -26,6 +43,8 @@ class ConsoleLogger:
             file.write(f'{content}\n')
 
     def info(self, content, force=False, pbar=None, is_json=False):
+        if not self.enabled:
+            return
         if is_json:
             content = json.dumps(content, indent=4)
         if self.is_master_process or force:

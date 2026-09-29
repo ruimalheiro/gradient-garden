@@ -5,6 +5,7 @@ from inference.runtime import InferenceRuntime
 from config import GlobalConfig, TrainingStage
 from engine.dataloaders.dataloader import init_data_loaders
 from tqdm.auto import tqdm
+from logger import logger
 
 
 @torch.inference_mode()
@@ -18,26 +19,29 @@ def evaluate_validation_ppl(
     model = inference_runtime.model
     device = inference_runtime.device
 
-    _, val_loader = init_data_loaders(
-        batch_size=batch_size,
-        sequence_length=config.model.max_seq_len,
-        is_master_process=True,
-        ddp_rank=0,
-        ddp_world_size=1,
-        data_root=config.paths.datasets.training_path,
-        pad_id=inference_runtime.tokenizer.pad_id,
-        training_stage=config.training.stage,
-        number_of_cpu_processes=config.runtime.number_of_cpu_processes,
-        ignore_index=config.tokenizer.ignore_index,
-        validation_only=True
-    )
+    with logger.disabled():
+        _, val_loader = init_data_loaders(
+            batch_size=batch_size,
+            sequence_length=config.model.max_seq_len,
+            is_master_process=True,
+            ddp_rank=0,
+            ddp_world_size=1,
+            data_root=config.paths.datasets.training_path,
+            pad_id=inference_runtime.tokenizer.pad_id,
+            training_stage=config.training.stage,
+            number_of_cpu_processes=config.runtime.number_of_cpu_processes,
+            ignore_index=config.tokenizer.ignore_index,
+            validation_only=True
+        )
 
     model.eval()
 
     loss_sum = 0.0
     tokens_sum = 0
 
-    for step in tqdm(range(validation_steps), 'Validating'):
+    validation_steps = len(val_loader) if validation_steps == -1 else validation_steps
+
+    for step in tqdm(range(validation_steps), 'Running validation'):
         x, y, attention_mask = val_loader.next_batch()
 
         x = x.to(device, non_blocking=True)
