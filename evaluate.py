@@ -260,6 +260,7 @@ if __name__ == '__main__':
             'results': results
         })
 
+        logger.info('Cleanup...')
         del inference_runtime
         del checkpoint_data
 
