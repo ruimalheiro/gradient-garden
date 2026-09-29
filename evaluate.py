@@ -52,17 +52,13 @@ def check_num_examples(*, enabled: bool, flag_name: str, value: int, parser: arg
     if enabled and (value == 0 or value < -1):
         parser.error(f'{flag_name} must be -1 or greater than 0')
 
-def check_dataset_path_is_set(*, enabled: bool, flag_name: str, value: str, parser: argparse.ArgumentParser):
-    if enabled and not value:
-        parser.error(f'{flag_name} must be set.')
-
 if __name__ == '__main__':
     logger.set_master(True)
 
     parser = argparse.ArgumentParser(description='Evals / Benchmark Script Options')
 
-    parser.add_argument('--checkpoint', type=str, action='append', help='Checkpoint file path to load. Can be specified multiple times.')
-    parser.add_argument('--hf-checkpoint', type=str, action='append', help='Hugging Face model id or checkpoint path to load.')
+    parser.add_argument('--checkpoint', type=str, action='append', default=[], help='Checkpoint file path to load. Can be specified multiple times.')
+    parser.add_argument('--hf-checkpoint', type=str, action='append', default=[], help='Hugging Face model id or checkpoint path to load.')
 
     parser.add_argument('--validation', action='store_true', help='Run validation.')
     parser.add_argument('--validation-steps', type=int, default=-1, help='Number of validation steps to run. Use -1 for the full validation dataset.')
@@ -154,23 +150,35 @@ if __name__ == '__main__':
             checkpoint_data.config.training.stage = TrainingStage(args.stage)
 
         if args.validation:
-            check_dataset_path_is_set(enabled=args.validation, flag_name='--validation-path', value=args.validation_path, parser=parser)
-            checkpoint_data.config.paths.datasets.training_path = args.validation_path
+            if args.validation_path:
+                checkpoint_data.config.paths.datasets.training_path = args.validation_path
+            elif checkpoint_type == 'hf_checkpoint':
+                parser.error('--validation-path must be set when using --hf-checkpoint with --validation.')
         if args.hellaswag:
-            check_dataset_path_is_set(enabled=args.hellaswag, flag_name='--hellaswag-path', value=args.hellaswag_path, parser=parser)
-            checkpoint_data.config.paths.evals.hellaswag_path = args.hellaswag_path
+            if args.hellaswag_path:
+                checkpoint_data.config.paths.evals.hellaswag_path = args.hellaswag_path
+            elif checkpoint_type == 'hf_checkpoint':
+                parser.error('--hellaswag-path must be set when using --hf-checkpoint with --hellaswag.')
         if args.winogrande:
-            check_dataset_path_is_set(enabled=args.winogrande, flag_name='--winogrande-path', value=args.winogrande_path, parser=parser)
-            checkpoint_data.config.paths.evals.winogrande_path = args.winogrande_path
+            if args.winogrande_path:
+                checkpoint_data.config.paths.evals.winogrande_path = args.winogrande_path
+            elif checkpoint_type == 'hf_checkpoint':
+                parser.error('--winogrande-path must be set when using --hf-checkpoint with --winogrande.')
         if args.arc_challenge:
-            check_dataset_path_is_set(enabled=args.arc_challenge, flag_name='--arc-challenge-path', value=args.arc_challenge_path, parser=parser)
-            checkpoint_data.config.paths.evals.arc_challenge_path = args.arc_challenge_path
+            if args.arc_challenge_path:
+                checkpoint_data.config.paths.evals.arc_challenge_path = args.arc_challenge_path
+            elif checkpoint_type == 'hf_checkpoint':
+                parser.error('--arc-challenge-path must be set when using --hf-checkpoint with --arc-challenge.')
         if args.ifeval_no_external:
-            check_dataset_path_is_set(enabled=args.ifeval_no_external, flag_name='--ifeval-no-external-path', value=args.ifeval_no_external_path, parser=parser)
-            checkpoint_data.config.paths.evals.ifeval_no_external_path = args.ifeval_no_external_path
+            if args.ifeval_no_external_path:
+                checkpoint_data.config.paths.evals.ifeval_no_external_path = args.ifeval_no_external_path
+            elif checkpoint_type == 'hf_checkpoint':
+                parser.error('--ifeval-no-external-path must be set when using --hf-checkpoint with --ifeval-no-external.')
         if args.custom_sft_smoke:
-            check_dataset_path_is_set(enabled=args.custom_sft_smoke, flag_name='--custom-sft-smoke-path', value=args.custom_sft_smoke_path, parser=parser)
-            checkpoint_data.config.paths.evals.custom_sft_smoke_path = args.custom_sft_smoke_path
+            if args.custom_sft_smoke_path:
+                checkpoint_data.config.paths.evals.custom_sft_smoke_path = args.custom_sft_smoke_path
+            elif checkpoint_type == 'hf_checkpoint':
+                parser.error('--custom-sft-smoke-path must be set when using --hf-checkpoint with --custom-sft-smoke.')
 
         set_seed(args.seed)
 
