@@ -130,7 +130,7 @@ if __name__ == '__main__':
         logger.info(f'- {checkpoint}')
 
     output_path, name, timestamp = build_output_path_for_run(
-        run_name=checkpoint_data.config.run.name if len(checkpoints) == 1 else 'checkpoint_evaluation',
+        run_name='checkpoint_evaluation',
         stage=evaluation_stage.value,
         output_file_name=args.output_file_name,
         output_dir=args.output_dir,
