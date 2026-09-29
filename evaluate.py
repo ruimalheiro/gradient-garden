@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     evaluation_stage = TrainingStage(args.stage)
 
-    logger.section(f'\nCheckpoint Evaluation for stage: {evaluation_stage.value}')
+    logger.section(f'\nEvaluation for {evaluation_stage.value} checkpoints')
     logger.info(f'Target checkpoints:')
     for checkpoint in checkpoints:
         logger.info(f'- {checkpoint}')
