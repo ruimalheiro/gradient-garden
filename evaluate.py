@@ -124,8 +124,8 @@ if __name__ == '__main__':
 
     evaluation_stage = TrainingStage(args.stage)
 
-    logger.section(f'\nEvaluation for {evaluation_stage.value} checkpoints')
-    logger.info(f'Target checkpoints:')
+    logger.section(f'\nEvaluation ({evaluation_stage.value})')
+    logger.info(f'Checkpoints:')
     for checkpoint in checkpoints:
         logger.info(f'- {checkpoint}')
 
@@ -146,7 +146,7 @@ if __name__ == '__main__':
         checkpoint_type = checkpoint['type']
         checkpoint_path = checkpoint['path']
 
-        logger.info(f'\nEvaluating checkpoint type: {checkpoint_type} from path: {checkpoint_path}')
+        logger.info(f'\nEvaluating: {checkpoint}')
 
         if checkpoint_type == 'checkpoint':
             validate_file_path(checkpoint_path, parser)
@@ -272,7 +272,6 @@ if __name__ == '__main__':
     data = {
         'name': name,
         'created_at_utc': timestamp.isoformat(),
-        'checkpoints': checkpoint_results,
         'config': {
             'stage': evaluation_stage.value,
             'device': args.device,
@@ -294,16 +293,17 @@ if __name__ == '__main__':
             'ifeval_no_external_examples': args.ifeval_no_external_examples,
             'custom_sft_smoke': args.custom_sft_smoke,
             'custom_sft_smoke_examples': args.custom_sft_smoke_examples,
-        }
+        },
+        'checkpoints': checkpoint_results
     }
 
     logger.section('Results')
     logger.info({
         'name': name,
         'created_at_utc': timestamp.isoformat(),
-        'checkpoints': checkpoint_results,
         'output_path': str(output_path),
         'config': data['config'],
+        'checkpoints': checkpoint_results
     }, is_json=True)
 
     write_outputs(output_path, data)
