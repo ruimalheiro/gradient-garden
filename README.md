@@ -792,13 +792,14 @@ python generate.py --help
 
 ### Evaluate
 
-`evaluate.py` can run validation and one or more evaluation tasks against a checkpoint.
+`evaluate.py` can run validation and one or more evaluation tasks against one or more checkpoints.
 
 For example:
 
 ```bash
 python evaluate.py \
   --checkpoint <CHECKPOINT_FILE> \
+  --stage pretraining \
   --hellaswag \
   --winogrande \
   --arc-challenge \
@@ -811,6 +812,7 @@ Instruction checkpoints can additionally run:
 ```bash
 python evaluate.py \
   --checkpoint <CHECKPOINT_FILE> \
+  --stage instruct \
   --ifeval-no-external \
   --custom-sft-smoke \
   --device cuda \

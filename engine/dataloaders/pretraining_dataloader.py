@@ -112,6 +112,11 @@ class PretrainingDataLoader:
                     f'B={self.B}, S={self.S}, world_size={self.ddp_world_size}.'
                 )
 
+    def __len__(self):
+        # -1 here is to account for the extra token..
+        global_batch_tokens = self.B * self.S * self.ddp_world_size
+        return sum((self.get_shard_size(shard) - 1) // global_batch_tokens for shard in self.shards)
+
     def calculate_max_tokens(self):
         if self.total_tokens:
             return self.total_tokens

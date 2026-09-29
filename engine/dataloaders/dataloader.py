@@ -20,7 +20,7 @@ def init_data_loaders(
 ):
     train_loader = None
     if training_stage == TrainingStage.PRETRAINING:
-        logger.section('Pretraining Data Loaders')
+        logger.section('Pretraining Data Loaders' if validation_only is False else 'Pretraining Data Loader')
 
         if validation_only is False:
             train_loader = PretrainingDataLoader(
@@ -46,7 +46,7 @@ def init_data_loaders(
     elif training_stage == TrainingStage.INSTRUCT:
         assert pad_id is not None
 
-        logger.section('Instruct Finetuning Data Loaders')
+        logger.section('Instruct Finetuning Data Loaders' if validation_only is False else 'Instruct Finetuning Data Loader')
 
         if validation_only is False:
             train_loader = InstructDataLoader(
@@ -80,7 +80,7 @@ def init_data_loaders(
     elif training_stage == TrainingStage.DPO:
         assert pad_id is not None
 
-        logger.section('Direct Preference Optimization Data Loaders')
+        logger.section('Direct Preference Optimization Data Loaders' if validation_only is False else 'Direct Preference Optimization Data Loader')
 
         if validation_only is False:
             train_loader = DirectPreferenceOptimizationDataLoader(
