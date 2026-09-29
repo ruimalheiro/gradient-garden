@@ -84,7 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('--custom-sft-smoke-examples', type=int, default=-1, help='Number of custom SFT smoke examples to run. Use -1 for all.')
     parser.add_argument('--custom-sft-smoke-path', type=str, default=None, help='Dataset path')
 
-    parser.add_argument('--stage', choices=[stage.value for stage in TrainingStage], required=False, default=None, help='Training stage used to select the validation dataloader.')
+    parser.add_argument('--stage', choices=[stage.value for stage in TrainingStage], required=True, help='Training stage of the checkpoints being evaluated.')
 
     add_runtime_args(parser)
     add_output_args(parser, default_dir='outputs/evals')
@@ -122,10 +122,20 @@ if __name__ == '__main__':
     check_num_examples(enabled=args.ifeval_no_external, flag_name='--ifeval-no-external-examples', value=args.ifeval_no_external_examples, parser=parser)
     check_num_examples(enabled=args.custom_sft_smoke, flag_name='--custom-sft-smoke-examples', value=args.custom_sft_smoke_examples, parser=parser)
 
-    logger.section('\nCheckpoint Evaluation')
+    evaluation_stage = TrainingStage(args.stage)
+
+    logger.section(f'\nCheckpoint Evaluation for stage: {evaluation_stage.value}')
     logger.info(f'Target checkpoints:')
     for checkpoint in checkpoints:
         logger.info(f'- {checkpoint}')
+
+    output_path, name, timestamp = build_output_path_for_run(
+        run_name=checkpoint_data.config.run.name if len(checkpoints) == 1 else 'checkpoint_evaluation',
+        stage=evaluation_stage.value,
+        output_file_name=args.output_file_name,
+        output_dir=args.output_dir,
+        extension='json'
+    )
 
     resolved_device = None
     resolved_dtype = None
@@ -141,12 +151,11 @@ if __name__ == '__main__':
         if checkpoint_type == 'checkpoint':
             validate_file_path(checkpoint_path, parser)
             checkpoint_data = load_checkpoint_for_inference(checkpoint_path)
+
+            if checkpoint_data.config.training.stage != evaluation_stage:
+                parser.error(f'Checkpoint stage is {checkpoint_data.config.training.stage.value}, but --stage is {evaluation_stage.value}.')
         elif checkpoint_type == 'hf_checkpoint':
             checkpoint_data = load_shallow_hf_checkpoint_for_inference(checkpoint_path)
-
-            if not args.stage:
-                parser.error(f'--stage must be set when using --hf-checkpoint')
-
             checkpoint_data.config.training.stage = TrainingStage(args.stage)
 
         if args.validation:
@@ -181,14 +190,6 @@ if __name__ == '__main__':
                 parser.error('--custom-sft-smoke-path must be set when using --hf-checkpoint with --custom-sft-smoke.')
 
         set_seed(args.seed)
-
-        output_path, name, timestamp = build_output_path_for_run(
-            run_name=checkpoint_data.config.run.name,
-            stage=checkpoint_data.config.training.stage.value,
-            output_file_name=args.output_file_name,
-            output_dir=args.output_dir,
-            extension='json'
-        )
 
         inference_runtime = prepare_runtime_for_inference(
             checkpoint_data=checkpoint_data,
