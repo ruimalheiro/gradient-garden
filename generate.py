@@ -80,7 +80,7 @@ if __name__ == '__main__':
         if checkpoint_type == 'checkpoint':
             validate_file_path(checkpoint_path, parser)
             checkpoint_data = load_checkpoint_for_inference(checkpoint_path)
-        elif args.hf_checkpoint:
+        elif checkpoint_type == 'hf_checkpoint':
             checkpoint_data = load_shallow_hf_checkpoint_for_inference(checkpoint_path)
 
         set_seed(args.seed)
