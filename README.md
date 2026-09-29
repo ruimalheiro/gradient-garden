@@ -765,7 +765,7 @@ When using `--recipe`, the recipe defines the training stage. The explicit `--pr
 
 ### Generate
 
-Generation can run against a local checkpoint or a supported Hugging Face checkpoint.
+Generation can run the same prompt set against one or more checkpoints.
 
 Example:
 
@@ -784,7 +784,11 @@ python generate.py \
   --output-file-name <OUTPUT_FILE>
 ```
 
-For all options:
+Supported Hugging Face checkpoints can instead be loaded with `--hf-checkpoint`.
+
+Generation outputs are stored as structured JSON.
+
+For the complete CLI:
 
 ```bash
 python generate.py --help
@@ -792,7 +796,7 @@ python generate.py --help
 
 ### Evaluate
 
-`evaluate.py` can run validation and one or more evaluation tasks against one or more checkpoints.
+Evaluate can run validation and one or more evaluation tasks against one or more checkpoints.
 
 For example:
 

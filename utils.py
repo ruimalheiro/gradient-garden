@@ -33,10 +33,10 @@ def generate_name(timestamp=None, name=None) -> tuple[str, datetime]:
 def build_output_path_for_run(
     *,
     run_name: str,
-    stage: str,
     output_file_name: str,
     output_dir: str,
-    extension: str
+    extension: str,
+    stage: str = None
 ) -> tuple[Path, str, object]:
     if output_file_name is not None:
         output_file_name = Path(output_file_name).stem
@@ -44,8 +44,13 @@ def build_output_path_for_run(
         name=output_file_name if output_file_name is not None else run_name
     )
 
+    output_path = Path(output_dir)
+
+    if stage:
+        output_path = output_path / stage
+
     return (
-        Path(output_dir) / stage / f'{generation_name}.{extension}',
+        output_path / f'{generation_name}.{extension}',
         generation_name,
         timestamp
     )
