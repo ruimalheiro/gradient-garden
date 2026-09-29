@@ -274,6 +274,7 @@ if __name__ == '__main__':
         'created_at_utc': timestamp.isoformat(),
         'checkpoints': checkpoint_results,
         'config': {
+            'stage': evaluation_stage.value,
             'device': args.device,
             'dtype': args.dtype,
             'resolved_device': resolved_device,
