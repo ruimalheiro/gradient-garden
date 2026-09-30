@@ -8,6 +8,7 @@ import math
 
 from pathlib import Path
 from functools import partial
+from huggingface_hub import HfApi
 from tokenization.tokenizer import init_tokenizer
 from datasets import (
     load_dataset,
@@ -21,6 +22,7 @@ from datasets_preparation.utils.common import (
     select_to_token_target,
     compute_stats
 )
+from utils import save_json_file
 from datasets_preparation.default_mixes import DEFAULT_INSTRUCT_MIX
 from datasets_preparation.synthetic.instruct.generator import build_instruct_dataset
 from recipes.config import MixStrategy
@@ -258,10 +260,13 @@ def download_and_prepare_data(
 
     prepared_datasets = []
     source_target_tokens = []
+    source_metadata = {}
     for dataset in valid_datasets:
         ds_id, name, transforms, dataset_config = get_dataset_metadata(config, dataset)
 
-        if dataset_config.get('synthetic', False):
+        is_synthetic = dataset_config.get('synthetic', False)
+
+        if is_synthetic:
             dataset_config['synthetic_generator'](
                 config=config,
                 ds_id=ds_id,
@@ -278,16 +283,31 @@ def download_and_prepare_data(
             source_target_tokens.append(target_tokens)
 
         max_datapoints = transforms.get('max_datapoints', None)
+        revision = transforms.get('revision', 'main')
 
         hf_name = None if name == 'default' else name
         source_key = make_source_key(ds_id, name)
+
+        resolved_revision = None
+        if not is_synthetic:
+            resolved_revision = HfApi(token=config.third_party.hf_token).dataset_info(ds_id, revision=revision).sha
+            logger.info(f'Using {source_key} at revision {resolved_revision}')
+
+        source_metadata[source_key] = {
+            'dataset_id': ds_id,
+            'name': name,
+            'split': split,
+            'revision': resolved_revision,
+            'target_tokens': target_tokens
+        }
 
         ds = load_dataset(
             ds_id,
             name=hf_name,
             split=split,
             num_proc=num_proc,
-            token=config.third_party.hf_token
+            token=config.third_party.hf_token,
+            revision=resolved_revision
         )
 
         if max_datapoints is not None:
@@ -395,6 +415,15 @@ def download_and_prepare_data(
 
     train_ds.save_to_disk(os.path.join(config.paths.datasets.training_path, 'train'))
     val_ds.save_to_disk(os.path.join(config.paths.datasets.training_path, 'val'))
+
+    state = {
+        'status': 'completed',
+        'train': train_ds_stats,
+        'validation': val_ds_stats,
+        'source_metadata': source_metadata
+    }
+
+    save_json_file(os.path.join(config.paths.datasets.training_path, '.prep_state', 'state.json'), state, indent=2)
 
 def prepare_instruct_dataset(
     *,
