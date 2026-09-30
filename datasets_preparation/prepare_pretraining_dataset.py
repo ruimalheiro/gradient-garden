@@ -2,7 +2,6 @@ import os
 import numpy as np
 import copy
 
-from dataclasses import dataclass
 from pathlib import Path
 from tokenization.tokenizer import init_tokenizer
 from huggingface_hub import HfApi
