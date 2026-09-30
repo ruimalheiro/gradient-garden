@@ -264,7 +264,9 @@ def download_and_prepare_data(
     for dataset in valid_datasets:
         ds_id, name, transforms, dataset_config = get_dataset_metadata(config, dataset)
 
-        if dataset_config.get('synthetic', False):
+        is_synthetic = dataset_config.get('synthetic', False)
+
+        if is_synthetic:
             dataset_config['synthetic_generator'](
                 config=config,
                 ds_id=ds_id,
@@ -286,8 +288,10 @@ def download_and_prepare_data(
         hf_name = None if name == 'default' else name
         source_key = make_source_key(ds_id, name)
 
-        resolved_revision = HfApi(token=config.third_party.hf_token).dataset_info(ds_id, revision=revision).sha
-        logger.info(f'Using {source_key} at revision {resolved_revision}')
+        resolved_revision = None
+        if not is_synthetic:
+            resolved_revision = HfApi(token=config.third_party.hf_token).dataset_info(ds_id, revision=revision).sha
+            logger.info(f'Using {source_key} at revision {resolved_revision}')
 
         source_metadata[source_key] = {
             'dataset_id': ds_id,
