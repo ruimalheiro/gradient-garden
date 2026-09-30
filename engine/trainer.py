@@ -1167,7 +1167,11 @@ class Trainer:
         self.model.eval()
         self.prepare_model_specific_metrics()
 
-        for _ in tqdm(range(self.config.validation.validation_steps), 'Validating', disable=not is_master_process, leave=False):
+        validation_steps = self.config.validation.validation_steps
+        if validation_steps == -1:
+            validation_steps = len(self.val_loader)
+
+        for _ in tqdm(range(validation_steps), 'Validating', disable=not is_master_process, leave=False):
             output = self.task.validation_step(self.model, self.val_loader.next_batch(), self.task_assets)
             loss = output.loss
             n_valid = output.n_valid
