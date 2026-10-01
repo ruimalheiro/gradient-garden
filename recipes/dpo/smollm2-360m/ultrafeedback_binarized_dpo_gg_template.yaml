@@ -131,6 +131,8 @@ data:
     HuggingFaceH4/ultrafeedback_binarized:
       default:
         weight: 1.0
+        transforms:
+          revision: 3949bf5f8c17c394422ccfab0c31ea9c20bdeb85
 
   evals:
     hellaswag:

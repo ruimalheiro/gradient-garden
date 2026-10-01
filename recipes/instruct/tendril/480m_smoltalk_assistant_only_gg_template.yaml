@@ -21,7 +21,7 @@ config:
     seed: 42
     total_batch_size: 319488
     micro_batch_size: 2
-    max_steps: 5801
+    max_steps: 5800
     early_stopping_patience: 1000000
     early_stopping_patience_skip_steps: 0
 
@@ -55,7 +55,7 @@ config:
 
   optimizers:
     adamw:
-      max_lr: 1.0e-3
+      max_lr: 2.0e-4
       min_lr: 0.0
       betas: [0.9, 0.999]
       weight_decay: 0.0
@@ -63,14 +63,15 @@ config:
         active: cosine
         cosine:
           start_step: 0
-          warmup_steps: 580
-          max_steps: 5801
+          warmup_steps: 290
+          max_steps: 5800
+
     muon:
       enabled: false
 
   validation:
     every_x_steps: 500
-    validation_steps: 2286
+    validation_steps: -1
     run_on_first_step: true
     run_on_last_step: true
 
@@ -135,6 +136,8 @@ data:
     HuggingFaceTB/smol-smoltalk:
       default:
         weight: 1.0
+        transforms:
+          revision: f73fe857d519ff6ac5af2ea67c4d3834da7b8bcc
 
   evals:
     hellaswag:
