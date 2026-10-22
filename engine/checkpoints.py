@@ -112,6 +112,9 @@ def save_checkpoint(
 
         manage_checkpoints(directory=checkpoint_dir, max_files=max_number_checkpoints, step=step, pbar=pbar)
 
+    if dist.is_initialized():
+        dist.barrier()
+
 @dataclass
 class CheckpointData:
     file_path: str | None = None
