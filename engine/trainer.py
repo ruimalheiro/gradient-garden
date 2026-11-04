@@ -764,15 +764,11 @@ class Trainer:
             wandb_api_key=self.config.third_party.wandb_api_key
         )
 
-        can_fork_history_from_parent_run = self.args.fork_wandb and self.checkpoint_data
-
         self.wandb.init(
             self.config.wandb.project_name,
             job_name=self.config.wandb.run_name if self.config.wandb.run_name else self.run_ctx.name,
             config=self.workload_summary,
-            output_path=self.get_run_output_dir_path(),
-            parent_run_id=self.checkpoint_data.metadata.get('wandb_run_id', None) if can_fork_history_from_parent_run else None,
-            fork_step=self.trainer_state.current_step
+            output_path=self.get_run_output_dir_path()
         )
 
     def setup_torch_profiler(self):
