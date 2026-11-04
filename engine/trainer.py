@@ -763,6 +763,7 @@ class Trainer:
             is_master_process=self.distributed_ctx.is_master_process,
             wandb_api_key=self.config.third_party.wandb_api_key
         )
+
         self.wandb.init(
             self.config.wandb.project_name,
             job_name=self.config.wandb.run_name if self.config.wandb.run_name else self.run_ctx.name,
@@ -830,7 +831,11 @@ class Trainer:
             raise ValueError(f'Invalid step type for logging: {step_metrics.step_type.value}')
         for log in console_logs:
             logger.info(log, pbar=pbar)
-        self.wandb.log(wanb_log)
+        self.wandb.log(
+            wanb_log,
+            step=self.trainer_state.current_step,
+            commit=False
+        )
 
     def should_run(
         self,
@@ -1192,11 +1197,12 @@ class Trainer:
             dist.all_reduce(loss_sum, op=dist.ReduceOp.SUM)
             dist.all_reduce(tokens_sum, op=dist.ReduceOp.SUM)
 
+        save_best_checkpoint = False
         self.trainer_state.last_val_loss = (loss_sum / tokens_sum).item()
         if self.trainer_state.last_val_loss < self.trainer_state.best_val_loss:
             self.trainer_state.best_val_loss = self.trainer_state.last_val_loss
             self.trainer_state.num_val_runs_no_improve = 0
-            self.run_save_best_checkpoint(pbar)
+            save_best_checkpoint = True
         else:
             skip_phase = (self.trainer_state.current_step < early_stopping_patience_skip_steps)
             if not skip_phase:
@@ -1227,6 +1233,8 @@ class Trainer:
             pbar=pbar
         )
 
+        return save_best_checkpoint
+
     def run_save_checkpoint(self, *, path, max_number_checkpoints, pbar):
         save_checkpoint(
             path,
@@ -1241,7 +1249,8 @@ class Trainer:
             {
                 'training_stage': self.config.training.stage.value,
                 'lora_enabled': self.config.lora.enabled,
-                'ddp_world_size': self.distributed_ctx.ddp_world_size
+                'ddp_world_size': self.distributed_ctx.ddp_world_size,
+                'wandb_run_id': self.wandb.run_id
             },
             max_number_checkpoints,
             self.distributed_ctx.is_master_process,
@@ -1513,12 +1522,14 @@ class Trainer:
             logger.info(output['result_decoded'], pbar=pbar)
         logger.separator(pbar=pbar)
 
+    def run_commit_wandb_logs(self):
+        self.wandb.log({}, step=self.trainer_state.current_step, commit=True)
+
     def process_step(self, pbar):
         self.run_train(pbar)
+        save_best_checkpoint = False
         if self.should_run(run_config=self.config.validation):
-            self.run_validation(pbar)
-        if self.should_run(run_config=self.config.checkpointing):
-            self.run_save_common_checkpoint(pbar)
+            save_best_checkpoint = self.run_validation(pbar)
         if self.should_run(run_config=self.config.evals.hellaswag):
             self.run_hellaswag_eval(pbar)
         if self.should_run(run_config=self.config.evals.winogrande):
@@ -1531,6 +1542,13 @@ class Trainer:
             self.run_custom_sft_smoke(pbar)
         if self.should_run(run_config=self.config.generation):
             self.run_generation(pbar)
+
+        self.run_commit_wandb_logs()
+
+        if save_best_checkpoint:
+            self.run_save_best_checkpoint(pbar)
+        if self.should_run(run_config=self.config.checkpointing):
+            self.run_save_common_checkpoint(pbar)
 
     def start_training_loop(self):
         is_master_process = self.trainer_ctx.distributed.is_master_process
