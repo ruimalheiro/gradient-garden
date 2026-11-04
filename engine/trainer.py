@@ -763,11 +763,16 @@ class Trainer:
             is_master_process=self.distributed_ctx.is_master_process,
             wandb_api_key=self.config.third_party.wandb_api_key
         )
+
+        can_fork_history_from_parent_run = self.args.fork_wandb and self.checkpoint_data
+
         self.wandb.init(
             self.config.wandb.project_name,
             job_name=self.config.wandb.run_name if self.config.wandb.run_name else self.run_ctx.name,
             config=self.workload_summary,
-            output_path=self.get_run_output_dir_path()
+            output_path=self.get_run_output_dir_path(),
+            parent_run_id=self.checkpoint_data.metadata.get('wandb_run_id', None) if can_fork_history_from_parent_run else None,
+            fork_step=self.trainer_state.current_step
         )
 
     def setup_torch_profiler(self):
@@ -1248,7 +1253,8 @@ class Trainer:
             {
                 'training_stage': self.config.training.stage.value,
                 'lora_enabled': self.config.lora.enabled,
-                'ddp_world_size': self.distributed_ctx.ddp_world_size
+                'ddp_world_size': self.distributed_ctx.ddp_world_size,
+                'wandb_run_id': self.wandb.run_id
             },
             max_number_checkpoints,
             self.distributed_ctx.is_master_process,
