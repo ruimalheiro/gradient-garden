@@ -15,7 +15,7 @@ class WandbWrapper():
                 self.WANDB = True
                 logger.info('Wandb enabled.')
 
-    def init(self, project_name, *, job_name=None, config=None, output_path=None):
+    def init(self, project_name, *, job_name=None, config=None, output_path=None, parent_run_id=None, fork_step=None):
         if not self.WANDB:
             return
         
@@ -27,13 +27,14 @@ class WandbWrapper():
             project=project_name,
             name=job_name,
             config=config,
-            dir=output_path
+            dir=output_path,
+            fork_from=f'{parent_run_id}?_step={fork_step}' if parent_run_id else None
         )
 
-    def log(self, data):
+    def log(self, data, step, commit=True):
         if not self.WANDB:
             return
-        wandb.log(data)
+        wandb.log(data, step=step, commit=commit)
 
     def finish(self):
         if not self.WANDB:
